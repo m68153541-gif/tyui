@@ -1,11 +1,33 @@
 // ============================================================
-//  ПОЛНАЯ ЛОГИКА ИГРЫ + СЕРВЕР
+//  ПОЛНАЯ ЛОГИКА ИГРЫ + СЕРВЕР (РАБОЧАЯ ВЕРСИЯ)
 // ============================================================
 
-// ---------- Хранилище ----------
+console.log('🚀 Игра загружается...');
+
+// ---------- ПРИВЯЗКА К TELEGRAM ----------
+function getTelegramUserId() {
+    try {
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                return String(tg.initDataUnsafe.user.id);
+            }
+        }
+    } catch(e) {}
+    
+    let userId = localStorage.getItem('telegram_user_id');
+    if (!userId) {
+        userId = 'user_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        localStorage.setItem('telegram_user_id', userId);
+    }
+    return userId;
+}
+
+// ---------- ХРАНИЛИЩЕ ----------
 let users = {};
 let uidMap = {};
-let bannedUsers = {}; // { uid: reason }
+let bannedUsers = {};
 let oneTimeCodes = new Set();
 let multiUseCodes = {};
 let boosterCodes = new Set();
@@ -13,92 +35,13 @@ let boosterMultiCodes = {};
 let reports = [];
 let activeChats = {};
 let adminCodes = [];
-
-// Конкурс
 let contestActive = false;
-let contestStartTime = null;
-let contestDuration = 6 * 60 * 60 * 1000; // 6 часов
-let contestWinner = null;
 let contestEndTime = null;
+let contestWinner = null;
 
 const PASSIVE_INCOME = { 1: 0, 2: 20, 3: 50, "giant": 300 };
 const SERVER_URL = window.location.origin;
-
-// ============================================================
-//  СОХРАНЕНИЕ НА СЕРВЕР
-// ============================================================
-
-async function saveToServer() {
-    try {
-        const user = getCurrentUser();
-        if (!user.uid) return false;
-        
-        const response = await fetch(SERVER_URL + '/api/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                user_id: user.uid, 
-                user_data: user 
-            })
-        });
-        const result = await response.json();
-        console.log('✅ Сохранено на сервер:', result);
-        return result.success;
-    } catch(e) {
-        console.log('❌ Ошибка сохранения:', e);
-        return false;
-    }
-}
-
-async function loadFromServer() {
-    try {
-        const user = getCurrentUser();
-        if (!user.uid) return false;
-        
-        const response = await fetch(SERVER_URL + `/api/load/${user.uid}`);
-        if (response.ok) {
-            const data = await response.json();
-            // Сохраняем важные поля, не перезаписывая uid
-            const oldUid = user.uid;
-            Object.assign(user, data);
-            user.uid = oldUid;
-            render();
-            console.log('✅ Загружено с сервера:', data);
-            return true;
-        }
-    } catch(e) {
-        console.log('❌ Ошибка загрузки:', e);
-    }
-    return false;
-}
-
-async function syncAllUsers() {
-    try {
-        const response = await fetch(SERVER_URL + '/api/all_users');
-        if (response.ok) {
-            const data = await response.json();
-            // Обновляем uidMap из данных сервера
-            for (const item of data) {
-                if (item.uid && !uidMap[item.uid]) {
-                    uidMap[item.uid] = item.uid;
-                }
-            }
-            console.log('✅ Синхронизировано пользователей:', data.length);
-            return data;
-        }
-    } catch(e) {
-        console.log('❌ Ошибка синхронизации:', e);
-    }
-    return [];
-}
-
-// Автосохранение каждые 15 секунд
-setInterval(() => {
-    const user = getCurrentUser();
-    if (user.registered && user.uid) {
-        saveToServer();
-    }
-}, 15000);
+let userDataLoaded = false;
 
 // ---------- ОСНОВНЫЕ ФУНКЦИИ ----------
 function thresholdForStage(stage) {
@@ -151,18 +94,13 @@ function getUser(userId) {
             notifications: []
         };
         uidMap[uid] = userId;
-        // Сохраняем нового пользователя на сервер
-        setTimeout(() => saveToServer(), 500);
+        saveToServer();
     }
     return users[userId];
 }
 
 function getCurrentUser() {
-    let userId = localStorage.getItem('userId');
-    if (!userId) {
-        userId = 'user_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-        localStorage.setItem('userId', userId);
-    }
+    const userId = getTelegramUserId();
     return getUser(userId);
 }
 
@@ -172,14 +110,55 @@ function getUserByUid(uid) {
     return null;
 }
 
-function isBanned(uid) {
-    return bannedUsers[uid] !== undefined;
+// ---------- СОХРАНЕНИЕ ----------
+async function saveToServer() {
+    try {
+        const user = getCurrentUser();
+        const telegramId = getTelegramUserId();
+        console.log('📤 Сохраняем данные:', { telegramId, uid: user.uid, stars: user.stars });
+        
+        const response = await fetch(SERVER_URL + '/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                user_id: user.uid, 
+                user_data: user 
+            })
+        });
+        const result = await response.json();
+        console.log('✅ Сохранено на сервер:', result);
+        return result.success;
+    } catch(e) {
+        console.error('❌ Ошибка сохранения:', e);
+        return false;
+    }
 }
 
-function getBanReason(uid) {
-    return bannedUsers[uid] || null;
+async function loadFromServer() {
+    try {
+        const user = getCurrentUser();
+        const telegramId = getTelegramUserId();
+        console.log('📥 Загружаем данные для:', telegramId);
+        
+        const response = await fetch(SERVER_URL + `/api/load/${user.uid}`);
+        if (response.ok) {
+            const data = await response.json();
+            const oldUid = user.uid;
+            Object.assign(user, data);
+            user.uid = oldUid;
+            console.log('✅ Загружено с сервера:', data);
+            render();
+            return true;
+        } else {
+            console.log('ℹ️ Пользователь не найден на сервере');
+        }
+    } catch(e) {
+        console.error('❌ Ошибка загрузки:', e);
+    }
+    return false;
 }
 
+// ---------- ОБНОВЛЕНИЯ ----------
 function updatePassiveIncome(userData) {
     const now = Date.now();
     const lastTime = userData.lastPassiveTime || now;
@@ -204,23 +183,16 @@ function updateBankInterest(userData) {
     const deposit = userData.bankDeposit || 0;
     if (deposit > 0) {
         const earned = Math.floor(deposit * 0.20 * delta);
-        if (earned > 0) {
-            userData.bank = (userData.bank || 0) + earned;
-        }
+        if (earned > 0) userData.bank = (userData.bank || 0) + earned;
     }
     userData.bankTime = now;
 }
 
-// ---------- Уведомления ----------
 function addNotification(uid, message) {
     const user = getUserByUid(uid);
     if (user) {
         if (!user.notifications) user.notifications = [];
-        user.notifications.push({
-            text: message,
-            time: new Date().toLocaleString(),
-            read: false
-        });
+        user.notifications.push({ text: message, time: new Date().toLocaleString(), read: false });
         saveToServer();
     }
 }
@@ -235,64 +207,78 @@ function getNotifications(uid) {
     return [];
 }
 
-// ---------- Отрисовка ----------
+// ---------- ОТРИСОВКА ----------
 function render() {
+    console.log('🔄 Рендеринг...');
     const user = getCurrentUser();
     updatePassiveIncome(user);
     updateBankInterest(user);
 
-    document.getElementById('userName').textContent = user.name || '—';
-    document.getElementById('userGender').textContent = user.gender || '—';
-    document.getElementById('userAge').textContent = user.age || '—';
-    document.getElementById('userUid').textContent = user.uid || '—';
-    document.getElementById('userAttempts').textContent = user.attempts || 0;
+    const userName = document.getElementById('userName');
+    const userGender = document.getElementById('userGender');
+    const userAge = document.getElementById('userAge');
+    const userUid = document.getElementById('userUid');
+    const userAttempts = document.getElementById('userAttempts');
+    const userRegStatus = document.getElementById('userRegStatus');
+    const starsBalance = document.getElementById('starsBalance');
+    const bankBalance = document.getElementById('bankBalance');
+    const petStage = document.getElementById('petStage');
+    const petProgress = document.getElementById('petProgress');
+
+    if (userName) userName.textContent = user.name || '—';
+    if (userGender) userGender.textContent = user.gender || '—';
+    if (userAge) userAge.textContent = user.age || '—';
+    if (userUid) userUid.textContent = user.uid || '—';
+    if (userAttempts) userAttempts.textContent = user.attempts || 0;
     
-    const statusEl = document.getElementById('userRegStatus');
-    if (bannedUsers[user.uid]) {
-        statusEl.textContent = '🚫 ЗАБЛОКИРОВАН: ' + bannedUsers[user.uid];
-        statusEl.style.color = '#ff4757';
-    } else {
-        statusEl.textContent = user.registered ? '✅ Зарегистрирован' : '❌ Не зарегистрирован';
-        statusEl.style.color = '#c8c8ff';
+    if (userRegStatus) {
+        if (bannedUsers[user.uid]) {
+            userRegStatus.textContent = '🚫 ЗАБЛОКИРОВАН: ' + bannedUsers[user.uid];
+            userRegStatus.style.color = '#ff4757';
+        } else {
+            userRegStatus.textContent = user.registered ? '✅ Зарегистрирован' : '❌ Не зарегистрирован';
+            userRegStatus.style.color = '#c8c8ff';
+        }
     }
 
-    document.getElementById('starsBalance').textContent = user.stars || 0;
-    document.getElementById('bankBalance').textContent = user.bank || 0;
+    if (starsBalance) starsBalance.textContent = user.stars || 0;
+    if (bankBalance) bankBalance.textContent = user.bank || 0;
 
     const stage = user.petStage || 1;
     const progress = user.petProgress || 0;
     const threshold = thresholdForStage(stage);
     let stageText = '';
-    let emoji = '🪳';
     if (stage === 1) stageText = 'Малыш';
     else if (stage === 2) stageText = 'Подросток';
     else if (stage === 3) stageText = 'Взрослый';
     else stageText = 'Гигант 👑';
-    document.getElementById('petStage').textContent = emoji + ' ' + stageText;
-    document.getElementById('petProgress').textContent = `${progress} / ${threshold} ⭐`;
+    if (petStage) petStage.textContent = '🪳 ' + stageText;
+    if (petProgress) petProgress.textContent = `${progress} / ${threshold} ⭐`;
 
     const supportBtn = document.getElementById('btnSupport');
     const userId = getCurrentUser().uid;
-    if (activeChats[userId]) {
-        if (activeChats[userId].hasNew) {
-            supportBtn.classList.add('support-active');
-            supportBtn.innerHTML = '💬 Новое сообщение! <span class="badge">1</span>';
-        } else if (activeChats[userId].admin) {
-            supportBtn.classList.add('support-active');
-            supportBtn.textContent = '💬 Чат с админом';
+    if (supportBtn) {
+        if (activeChats[userId]) {
+            if (activeChats[userId].hasNew) {
+                supportBtn.classList.add('support-active');
+                supportBtn.innerHTML = '💬 Новое сообщение! <span class="badge">1</span>';
+            } else if (activeChats[userId].admin) {
+                supportBtn.classList.add('support-active');
+                supportBtn.textContent = '💬 Чат с админом';
+            } else {
+                supportBtn.classList.remove('support-active');
+                supportBtn.textContent = '🆘 Поддержка';
+            }
         } else {
             supportBtn.classList.remove('support-active');
             supportBtn.textContent = '🆘 Поддержка';
         }
-    } else {
-        supportBtn.classList.remove('support-active');
-        supportBtn.textContent = '🆘 Поддержка';
     }
 
     renderAdminCodes();
     renderContest();
     renderNotifications();
-
+    
     const wheelAttempts = document.getElementById('wheelAttemptsCount');
     if (wheelAttempts) wheelAttempts.textContent = user.attempts || 0;
 }
@@ -310,12 +296,11 @@ function renderNotifications() {
 function renderAdminCodes() {
     const panel = document.getElementById('codesPanel');
     const list = document.getElementById('codesList');
-    
+    if (!panel || !list) return;
     if (adminCodes.length === 0) {
         panel.style.display = 'none';
         return;
     }
-
     panel.style.display = 'block';
     list.innerHTML = adminCodes.map((item, index) => `
         <div class="code-item">
@@ -328,32 +313,22 @@ function renderAdminCodes() {
 
 function renderContest() {
     const banner = document.getElementById('contestBanner');
+    if (!banner) return;
     if (!contestActive) {
         banner.style.display = 'none';
         return;
     }
-
     banner.style.display = 'block';
     const now = Date.now();
     const remaining = contestEndTime - now;
-
-    if (remaining <= 0) {
-        endContest();
-        return;
-    }
-
+    if (remaining <= 0) { endContest(); return; }
     const hours = Math.floor(remaining / 3600000);
     const minutes = Math.floor((remaining % 3600000) / 60000);
     const seconds = Math.floor((remaining % 60000) / 1000);
-
     let winnerText = '';
     if (contestWinner) {
-        const winner = getUserByUid(contestWinner);
-        winnerText = `
-            <div class="winner">🏆 Победитель: <strong>${contestWinner}</strong></div>
-        `;
+        winnerText = `<div class="winner">🏆 Победитель: <strong>${contestWinner}</strong></div>`;
     }
-
     banner.innerHTML = `
         <div class="title">🏆 КОНКУРС</div>
         <div class="timer">⏱ ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}</div>
@@ -363,13 +338,9 @@ function renderContest() {
 }
 
 function startContest() {
-    if (contestActive) {
-        showToast('❌ Конкурс уже запущен');
-        return;
-    }
+    if (contestActive) { showToast('❌ Конкурс уже запущен'); return; }
     contestActive = true;
-    contestStartTime = Date.now();
-    contestEndTime = contestStartTime + contestDuration;
+    contestEndTime = Date.now() + 6 * 60 * 60 * 1000;
     contestWinner = null;
     showToast('🏆 Конкурс запущен на 6 часов!');
     render();
@@ -379,10 +350,8 @@ function startContest() {
 function endContest() {
     if (!contestActive) return;
     contestActive = false;
-
     let maxStars = -1;
     let winnerUid = null;
-
     for (const uid in uidMap) {
         if (bannedUsers[uid]) continue;
         const user = getUserByUid(uid);
@@ -394,7 +363,6 @@ function endContest() {
             }
         }
     }
-
     if (winnerUid) {
         contestWinner = winnerUid;
         const winner = getUserByUid(winnerUid);
@@ -413,21 +381,50 @@ function endContest() {
 }
 
 function forceEndContest() {
-    if (!contestActive) {
-        showToast('❌ Конкурс не запущен');
-        return;
-    }
+    if (!contestActive) { showToast('❌ Конкурс не запущен'); return; }
     endContest();
 }
 
+// ---------- TOAST ----------
+let toastTimeout;
+
+function showToast(text, duration = 2500) {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// ---------- МОДАЛКА ----------
+function openModal(title, html) {
+    const titleEl = document.getElementById('modalTitle');
+    const bodyEl = document.getElementById('modalBody');
+    const overlay = document.getElementById('modalOverlay');
+    if (titleEl) titleEl.textContent = title;
+    if (bodyEl) bodyEl.innerHTML = html;
+    if (overlay) overlay.classList.add('active');
+}
+
+function closeModal() {
+    const overlay = document.getElementById('modalOverlay');
+    if (overlay) overlay.classList.remove('active');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+});
+
+// ---------- КОПИРОВАНИЕ ----------
 window.copyUid = function() {
-    const uid = document.getElementById('userUid').textContent;
-    if (uid && uid !== '—') {
-        navigator.clipboard.writeText(uid).then(() => {
+    const uid = document.getElementById('userUid');
+    if (uid && uid.textContent && uid.textContent !== '—') {
+        navigator.clipboard.writeText(uid.textContent).then(() => {
             showToast('✅ ID скопирован!');
         }).catch(() => {
             const textarea = document.createElement('textarea');
-            textarea.value = uid;
+            textarea.value = uid.textContent;
             document.body.appendChild(textarea);
             textarea.select();
             document.execCommand('copy');
@@ -437,30 +434,47 @@ window.copyUid = function() {
     }
 };
 
-// ---------- Toast ----------
-let toastTimeout;
+window.copyCode = function(code) {
+    navigator.clipboard.writeText(code).then(() => {
+        showToast('✅ Код скопирован!');
+    }).catch(() => {
+        const textarea = document.createElement('textarea');
+        textarea.value = code;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast('✅ Код скопирован!');
+    });
+};
 
-function showToast(text, duration = 2500) {
-    const el = document.getElementById('toast');
-    el.textContent = text;
-    el.classList.add('show');
-    clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => el.classList.remove('show'), duration);
-}
+window.deleteCode = function(index) {
+    const item = adminCodes[index];
+    if (!item) return;
+    const code = item.code;
+    if (oneTimeCodes.has(code)) oneTimeCodes.delete(code);
+    if (multiUseCodes[code]) delete multiUseCodes[code];
+    if (boosterCodes.has(code)) boosterCodes.delete(code);
+    if (boosterMultiCodes[code]) delete boosterMultiCodes[code];
+    adminCodes.splice(index, 1);
+    showToast('🗑️ Код удалён');
+    render();
+    saveToServer();
+};
 
-// ---------- Модалка ----------
-function openModal(title, html) {
-    document.getElementById('modalTitle').textContent = title;
-    document.getElementById('modalBody').innerHTML = html;
-    document.getElementById('modalOverlay').classList.add('active');
-}
-
-function closeModal() {
-    document.getElementById('modalOverlay').classList.remove('active');
-}
-document.getElementById('modalOverlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeModal();
-});
+window.copyText = function(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('✅ ID скопирован!');
+    }).catch(() => {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast('✅ ID скопирован!');
+    });
+};
 
 // ============================================================
 //  КОЛЕСО УДАЧИ
@@ -487,12 +501,14 @@ let winIndex = 0;
 
 function initWheel() {
     wheelCanvas = document.getElementById('wheelCanvas');
+    if (!wheelCanvas) return;
     ctx = wheelCanvas.getContext('2d');
     wheelSegments = SEGMENTS.map(s => ({ ...s }));
     drawWheel();
 }
 
 function drawWheel(highlightIndex = -1) {
+    if (!ctx || !wheelCanvas) return;
     const w = wheelCanvas.width;
     const h = wheelCanvas.height;
     const centerX = w / 2;
@@ -583,50 +599,38 @@ function drawWheel(highlightIndex = -1) {
 function spinWheel() {
     if (isSpinning) return;
     const user = getCurrentUser();
-    
     if (bannedUsers[user.uid]) {
         showToast('🚫 Вы заблокированы. Причина: ' + bannedUsers[user.uid]);
         return;
     }
-    
     if (!user.registered) {
         showToast('❌ Сначала зарегистрируйтесь!');
         return;
     }
-    
     if (user.attempts <= 0) {
         showToast('❌ Попыток нет! Купите в меню.');
         return;
     }
 
     isSpinning = true;
-    document.getElementById('wheelSpinBtn').disabled = true;
-    document.getElementById('wheelResult').textContent = '🔄 Крутим...';
+    const spinBtn = document.getElementById('wheelSpinBtn');
+    if (spinBtn) spinBtn.disabled = true;
+    const resultEl = document.getElementById('wheelResult');
+    if (resultEl) resultEl.textContent = '🔄 Крутим...';
 
     user.attempts--;
 
     const roll = Math.random() * 100;
-    if (roll < 60) {
-        winIndex = 0;
-    } else if (roll < 68) {
-        winIndex = 1;
-    } else if (roll < 75) {
-        winIndex = 2;
-    } else if (roll < 81) {
-        winIndex = 3;
-    } else if (roll < 86) {
-        winIndex = 4;
-    } else if (roll < 90) {
-        winIndex = 5;
-    } else if (roll < 94) {
-        winIndex = 6;
-    } else if (roll < 97) {
-        winIndex = 7;
-    } else if (roll < 99.3) {
-        winIndex = 8;
-    } else {
-        winIndex = 9;
-    }
+    if (roll < 60) winIndex = 0;
+    else if (roll < 68) winIndex = 1;
+    else if (roll < 75) winIndex = 2;
+    else if (roll < 81) winIndex = 3;
+    else if (roll < 86) winIndex = 4;
+    else if (roll < 90) winIndex = 5;
+    else if (roll < 94) winIndex = 6;
+    else if (roll < 97) winIndex = 7;
+    else if (roll < 99.3) winIndex = 8;
+    else winIndex = 9;
 
     const segCount = wheelSegments.length;
     const angleStep = (2 * Math.PI) / segCount;
@@ -643,19 +647,16 @@ function spinWheel() {
         const progress = step / totalSteps;
         const eased = 1 - Math.pow(1 - progress, 3);
         currentAngle = startAngle + (targetAngle - startAngle) * eased;
-
         drawWheel(step === totalSteps ? winIndex : -1);
 
         if (step >= totalSteps) {
             clearInterval(spinInterval);
             currentAngle = targetAngle;
             drawWheel(winIndex);
-            
             const result = wheelSegments[winIndex];
             showWheelResult(result, user);
-
             isSpinning = false;
-            document.getElementById('wheelSpinBtn').disabled = false;
+            if (spinBtn) spinBtn.disabled = false;
             render();
             saveToServer();
         }
@@ -667,18 +668,13 @@ function showWheelResult(result, user) {
     const coeff = user.coefficientRate || 0;
 
     if (result.value === 0) {
-        resultDiv.innerHTML = `
-            <span>😔</span>
-            <span>К сожалению, ничего не выиграно!</span>
-        `;
+        if (resultDiv) resultDiv.innerHTML = `<span>😔</span><span>К сожалению, ничего не выиграно!</span>`;
         showToast('😔 Ничего не выиграно');
         return;
     }
 
     let finalValue = result.value;
-    if (coeff > 0) {
-        finalValue = Math.round(result.value + coeff);
-    }
+    if (coeff > 0) finalValue = Math.round(result.value + coeff);
 
     user.stars += finalValue;
     user.wins.push({
@@ -689,13 +685,14 @@ function showWheelResult(result, user) {
         status: 'won'
     });
 
-    resultDiv.innerHTML = `
-        <span style="font-size:40px;">${result.icon}</span>
-        <span class="highlight">+${finalValue} ⭐</span>
-        <span style="font-size:14px;color:#aaa;">(${result.label})</span>
-        ${coeff > 0 ? `<span style="font-size:12px;color:#6bcbff;">коэфф: +${coeff}</span>` : ''}
-    `;
-
+    if (resultDiv) {
+        resultDiv.innerHTML = `
+            <span style="font-size:40px;">${result.icon}</span>
+            <span class="highlight">+${finalValue} ⭐</span>
+            <span style="font-size:14px;color:#aaa;">(${result.label})</span>
+            ${coeff > 0 ? `<span style="font-size:12px;color:#6bcbff;">коэфф: +${coeff}</span>` : ''}
+        `;
+    }
     showToast(`🎉 +${finalValue} ⭐ (${result.label})`);
     render();
     saveToServer();
@@ -703,214 +700,21 @@ function showWheelResult(result, user) {
 
 function openWheel() {
     const overlay = document.getElementById('wheelOverlay');
+    if (!overlay) return;
     overlay.classList.add('active');
-    document.getElementById('wheelResult').innerHTML = 'Нажмите "Крутить"!';
+    const resultEl = document.getElementById('wheelResult');
+    if (resultEl) resultEl.innerHTML = 'Нажмите "Крутить"!';
     wheelSegments = SEGMENTS.map(s => ({ ...s }));
     currentAngle = 0;
     drawWheel();
-    
     const user = getCurrentUser();
     const wheelAttempts = document.getElementById('wheelAttemptsCount');
     if (wheelAttempts) wheelAttempts.textContent = user.attempts || 0;
 }
 
 function closeWheel() {
-    document.getElementById('wheelOverlay').classList.remove('active');
-}
-
-// ============================================================
-//  КЛИКЕР ЗВЁЗД
-// ============================================================
-
-function handleClicker() {
-    const user = getCurrentUser();
-    
-    if (bannedUsers[user.uid]) {
-        showToast('🚫 Вы заблокированы. Причина: ' + bannedUsers[user.uid]);
-        return;
-    }
-    
-    if (!user.registered) {
-        showToast('❌ Сначала зарегистрируйтесь!');
-        return;
-    }
-    
-    const progress = user.clickerProgress || 0;
-    const remaining = 400 - progress;
-    const reward = 20;
-
-    openModal('⭐ Кликер звёзд', `
-        <div style="text-align:center;">
-            <div class="clicker-star" id="clickerStar" onclick="clickStar()">⭐</div>
-            <div class="clicker-stats">
-                <span>Прогресс: <strong id="clickerProgress">${progress}</strong> / 400</span>
-                <span>Награда: <strong id="clickerReward">${reward}</strong> ⭐</span>
-            </div>
-            <div class="clicker-progress">
-                <div class="fill" id="clickerFill" style="width: ${(progress/400)*100}%;"></div>
-            </div>
-            <p style="font-size:13px;color:#888;margin-top:8px;">
-                ${remaining > 0 ? `Осталось кликов: ${remaining}` : '🎉 Готово! Заберите награду!'}
-            </p>
-            ${progress >= 400 ? `
-                <button class="btn primary full" onclick="claimClickerReward()">🎁 Забрать ${reward} ⭐</button>
-            ` : ''}
-            <button class="btn full small" onclick="closeModal(); render();">🏠 В меню</button>
-        </div>
-    `);
-
-    document.addEventListener('keydown', function clickerKeyHandler(e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-            clickStar();
-        }
-    });
-}
-
-window.clickStar = function() {
-    const user = getCurrentUser();
-    if (bannedUsers[user.uid]) {
-        showToast('🚫 Вы заблокированы');
-        return;
-    }
-    if (user.clickerProgress >= 400) {
-        showToast('🎉 Вы уже накликали 400 раз! Заберите награду!');
-        return;
-    }
-
-    user.clickerProgress = (user.clickerProgress || 0) + 1;
-    const progress = user.clickerProgress;
-
-    const star = document.getElementById('clickerStar');
-    if (star) {
-        star.classList.remove('pop');
-        void star.offsetWidth;
-        star.classList.add('pop');
-    }
-
-    const progressEl = document.getElementById('clickerProgress');
-    const fillEl = document.getElementById('clickerFill');
-    if (progressEl) progressEl.textContent = progress;
-    if (fillEl) fillEl.style.width = (progress/400)*100 + '%';
-
-    const remaining = 400 - progress;
-    const infoP = document.querySelector('.clicker-stats + p');
-    if (infoP) {
-        infoP.textContent = remaining > 0 ? `Осталось кликов: ${remaining}` : '🎉 Готово! Заберите награду!';
-    }
-
-    if (progress >= 400) {
-        const btn = document.querySelector('button[onclick="claimClickerReward()"]');
-        if (!btn) {
-            const container = document.querySelector('.clicker-stats + p');
-            if (container) {
-                container.innerHTML = `
-                    <button class="btn primary full" onclick="claimClickerReward()">🎁 Забрать 20 ⭐</button>
-                `;
-            }
-        }
-        showToast('🎉 400 кликов! Заберите награду!');
-    }
-
-    render();
-    saveToServer();
-};
-
-window.claimClickerReward = function() {
-    const user = getCurrentUser();
-    if (bannedUsers[user.uid]) {
-        showToast('🚫 Вы заблокированы');
-        return;
-    }
-    if (user.clickerProgress < 400) {
-        showToast('❌ Нужно накликать 400 раз!');
-        return;
-    }
-
-    user.stars += 20;
-    user.clickerProgress = 0;
-    closeModal();
-    showToast('✅ +20 ⭐ за клики!');
-    render();
-    saveToServer();
-};
-
-// ============================================================
-//  КОДЫ АДМИНИСТРАТОРА
-// ============================================================
-
-window.copyCode = function(code) {
-    navigator.clipboard.writeText(code).then(() => {
-        showToast('✅ Код скопирован!');
-    }).catch(() => {
-        const textarea = document.createElement('textarea');
-        textarea.value = code;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        showToast('✅ Код скопирован!');
-    });
-};
-
-window.deleteCode = function(index) {
-    const item = adminCodes[index];
-    if (!item) return;
-    
-    const code = item.code;
-    if (oneTimeCodes.has(code)) oneTimeCodes.delete(code);
-    if (multiUseCodes[code]) delete multiUseCodes[code];
-    if (boosterCodes.has(code)) boosterCodes.delete(code);
-    if (boosterMultiCodes[code]) delete boosterMultiCodes[code];
-    
-    adminCodes.splice(index, 1);
-    showToast('🗑️ Код удалён');
-    render();
-    saveToServer();
-};
-
-function sendCodeToPlayer(uid, code, type) {
-    adminCodes.push({ 
-        code: code, 
-        type: type + ' → ' + uid,
-        target: uid
-    });
-    
-    addNotification(uid, `🎫 Вам отправлен код: ${code} (${type})`);
-    
-    if (activeChats[uid]) {
-        activeChats[uid].messages.push({
-            from: 'admin',
-            text: `🎫 Вам отправлен код: ${code} (${type})`,
-            time: new Date().toLocaleString()
-        });
-        activeChats[uid].hasNew = true;
-    }
-    
-    render();
-    saveToServer();
-}
-
-function sendCodeToAllPlayers(code, type) {
-    const userKeys = Object.keys(uidMap);
-    for (const uid of userKeys) {
-        if (bannedUsers[uid]) continue;
-        addNotification(uid, `🎫 Всем игрокам: ${code} (${type})`);
-        if (activeChats[uid]) {
-            activeChats[uid].messages.push({
-                from: 'admin',
-                text: `🎫 Всем игрокам: ${code} (${type})`,
-                time: new Date().toLocaleString()
-            });
-            activeChats[uid].hasNew = true;
-        }
-    }
-    adminCodes.push({ 
-        code: code, 
-        type: type + ' (всем)',
-        target: 'всем'
-    });
-    render();
-    saveToServer();
+    const overlay = document.getElementById('wheelOverlay');
+    if (overlay) overlay.classList.remove('active');
 }
 
 // ============================================================
@@ -918,6 +722,7 @@ function sendCodeToAllPlayers(code, type) {
 // ============================================================
 
 function handlePlay() {
+    console.log('🎮 Нажата кнопка Играть');
     const user = getCurrentUser();
     if (bannedUsers[user.uid]) {
         showToast('🚫 Вы заблокированы. Причина: ' + bannedUsers[user.uid]);
@@ -934,8 +739,8 @@ function handlePlay() {
     openWheel();
 }
 
-// ---------- Банк ----------
 function handleBank() {
+    console.log('🏦 Нажата кнопка Банк');
     const user = getCurrentUser();
     if (bannedUsers[user.uid]) {
         showToast('🚫 Вы заблокированы. Причина: ' + bannedUsers[user.uid]);
@@ -948,21 +753,18 @@ function handleBank() {
     updateBankInterest(user);
     const bank = user.bank || 0;
     const deposit = user.bankDeposit || 0;
-    
     if (bank > 0) {
         openModal('🏦 Банк (20% в час)', `
             <p>💰 В банке: <strong>${bank}</strong> ⭐</p>
             <p>📊 Первоначальный вклад: <strong>${deposit}</strong> ⭐</p>
-            <p>📈 Ставка: <strong style="color:#ffd700;">20% в час</strong> от первоначальной суммы</p>
-            <p style="font-size:12px;color:#888;">💰 Проценты начисляются каждый час</p>
+            <p>📈 Ставка: <strong style="color:#ffd700;">20% в час</strong></p>
             <button class="btn primary full" onclick="withdrawBank()">💰 Забрать все ⭐</button>
             <button class="btn full small" onclick="closeModal(); render();">🏠 В меню</button>
         `);
     } else {
         openModal('🏦 Банк (20% в час)', `
             <p>Банк пуст.</p>
-            <p>📈 Ставка: <strong style="color:#ffd700;">20% в час</strong> от первоначальной суммы</p>
-            <p style="font-size:12px;color:#888;">💰 Проценты начисляются каждый час</p>
+            <p>📈 Ставка: <strong style="color:#ffd700;">20% в час</strong></p>
             <input type="number" id="bankDepositInput" placeholder="Сумма для вклада" min="1" />
             <button class="btn primary full" onclick="depositBank()">💵 Положить в банк</button>
             <button class="btn full small" onclick="closeModal(); render();">🏠 В меню</button>
@@ -970,4 +772,81 @@ function handleBank() {
     }
 }
 
-window.withdraw
+window.withdrawBank = function() {
+    const user = getCurrentUser();
+    if (bannedUsers[user.uid]) { showToast('🚫 Вы заблокированы'); return; }
+    const amount = user.bank || 0;
+    if (amount <= 0) { showToast('❌ Банк пуст'); return; }
+    user.stars += amount;
+    user.bank = 0;
+    user.bankDeposit = 0;
+    user.bankTime = Date.now();
+    closeModal();
+    showToast(`✅ Забрано ${amount} ⭐ из банка`);
+    render();
+    saveToServer();
+};
+
+window.depositBank = function() {
+    const user = getCurrentUser();
+    if (bannedUsers[user.uid]) { showToast('🚫 Вы заблокированы'); return; }
+    const input = document.getElementById('bankDepositInput');
+    if (!input) return;
+    const amount = parseInt(input.value);
+    if (!amount || amount <= 0) { showToast('❌ Введите сумму'); return; }
+    if (user.stars < amount) { showToast('❌ Недостаточно звёзд'); return; }
+    user.stars -= amount;
+    user.bank = amount;
+    user.bankDeposit = amount;
+    user.bankTime = Date.now();
+    closeModal();
+    showToast(`✅ ${amount} ⭐ положены в банк под 20% в час`);
+    render();
+    saveToServer();
+};
+
+// ============================================================
+//  РЕГИСТРАЦИЯ
+// ============================================================
+
+function checkRegistration() {
+    const user = getCurrentUser();
+    if (!user.registered) {
+        showRegistration();
+    }
+}
+
+let regData = { name: '', gender: '', age: '' };
+let genderSelected = false;
+
+function showRegistration() {
+    openModal('📝 Регистрация', `
+        <p>Добро пожаловать! Давайте зарегистрируемся.</p>
+        <p>Введите ваше имя:</p>
+        <input type="text" id="regName" placeholder="Имя" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <p>Выберите пол:</p>
+        <div class="flex">
+            <button class="btn" id="genderMale" onclick="selectGender('Мужской')" style="flex:1;">👨 Мужской</button>
+            <button class="btn" id="genderFemale" onclick="selectGender('Женский')" style="flex:1;">👩 Женский</button>
+        </div>
+        <p>Введите возраст:</p>
+        <input type="number" id="regAge" placeholder="Возраст" min="1" max="120" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn primary full" id="regCompleteBtn" onclick="completeRegistration()" disabled>✅ Завершить</button>
+    `);
+}
+
+window.selectGender = function(g) {
+    genderSelected = true;
+    regData.gender = g;
+    document.getElementById('genderMale').classList.toggle('selected', g === 'Мужской');
+    document.getElementById('genderFemale').classList.toggle('selected', g === 'Женский');
+    document.getElementById('genderMale').disabled = true;
+    document.getElementById('genderFemale').disabled = true;
+    showToast(`✅ Пол: ${g}`);
+    checkRegistrationReady();
+};
+
+function checkRegistrationReady() {
+    const nameInput = document.getElementById('regName');
+    const ageInput = document.getElementById('regAge');
+    const btn = document.getElementById('regCompleteBtn
