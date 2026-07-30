@@ -1,22 +1,16 @@
 console.log('🚀 Игра загружается...');
 
 // ============================================================
-//  ПРИВЯЗКА К TELEGRAM (ТОЛЬКО TELEGRAM ID)
+//  ПОСТОЯННЫЙ ID (ТОЛЬКО TELEGRAM ID)
 // ============================================================
 
 function getUserId() {
-    // Используем ТОЛЬКО Telegram ID
     try {
         if (window.Telegram && window.Telegram.WebApp) {
             const tg = window.Telegram.WebApp;
             tg.ready();
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                const userId = 'tg_' + String(tg.initDataUnsafe.user.id);
-                // Сохраняем в localStorage, но НЕ используем как основной
-                try {
-                    localStorage.setItem('game_user_id', userId);
-                } catch(e) {}
-                return userId;
+                return String(tg.initDataUnsafe.user.id);
             }
         }
     } catch(e) {
@@ -33,29 +27,84 @@ function getUserId() {
 }
 
 // ============================================================
-//  ХРАНИЛИЩЕ
+//  ХРАНИЛИЩЕ (СОХРАНЯЕТСЯ В localStorage)
 // ============================================================
 
-let users = {};
-let uidMap = {};
-let bannedUsers = {};
-let oneTimeCodes = new Set();
-let multiUseCodes = {};
-let boosterCodes = new Set();
-let boosterMultiCodes = {};
-let reports = [];
-let activeChats = {};
-let adminCodes = [];
-let contestActive = false;
-let contestEndTime = null;
-let contestWinner = null;
+function loadAllData() {
+    try {
+        const data = localStorage.getItem('zabava_game_full_data');
+        if (data) {
+            const parsed = JSON.parse(data);
+            window.users = parsed.users || {};
+            window.uidMap = parsed.uidMap || {};
+            window.bannedUsers = parsed.bannedUsers || {};
+            window.oneTimeCodes = new Set(parsed.oneTimeCodes || []);
+            window.multiUseCodes = parsed.multiUseCodes || {};
+            window.boosterCodes = new Set(parsed.boosterCodes || []);
+            window.boosterMultiCodes = parsed.boosterMultiCodes || {};
+            window.adminCodes = parsed.adminCodes || [];
+            window.activeChats = parsed.activeChats || {};
+            window.reports = parsed.reports || [];
+            window.contestActive = parsed.contestActive || false;
+            window.contestEndTime = parsed.contestEndTime || null;
+            window.contestWinner = parsed.contestWinner || null;
+            console.log('✅ Данные загружены из localStorage');
+            return true;
+        }
+    } catch(e) {}
+    return false;
+}
 
-const PASSIVE_INCOME = { 1: 0, 2: 20, 3: 50, "giant": 300 };
-const SERVER_URL = window.location.origin;
+function saveAllData() {
+    try {
+        const data = {
+            users: window.users || {},
+            uidMap: window.uidMap || {},
+            bannedUsers: window.bannedUsers || {},
+            oneTimeCodes: Array.from(window.oneTimeCodes || []),
+            multiUseCodes: window.multiUseCodes || {},
+            boosterCodes: Array.from(window.boosterCodes || []),
+            boosterMultiCodes: window.boosterMultiCodes || {},
+            adminCodes: window.adminCodes || [],
+            activeChats: window.activeChats || {},
+            reports: window.reports || [],
+            contestActive: window.contestActive || false,
+            contestEndTime: window.contestEndTime || null,
+            contestWinner: window.contestWinner || null
+        };
+        localStorage.setItem('zabava_game_full_data', JSON.stringify(data));
+        console.log('✅ Данные сохранены в localStorage');
+        return true;
+    } catch(e) {
+        console.error('❌ Ошибка сохранения:', e);
+        return false;
+    }
+}
+
+// Инициализация хранилища
+window.users = {};
+window.uidMap = {};
+window.bannedUsers = {};
+window.oneTimeCodes = new Set();
+window.multiUseCodes = {};
+window.boosterCodes = new Set();
+window.boosterMultiCodes = {};
+window.reports = [];
+window.activeChats = {};
+window.adminCodes = [];
+window.contestActive = false;
+window.contestEndTime = null;
+window.contestWinner = null;
+
+// Загружаем данные
+loadAllData();
 
 // ============================================================
 //  ОСНОВНЫЕ ФУНКЦИИ
 // ============================================================
+
+const PASSIVE_INCOME = { 1: 0, 2: 20, 3: 50, "giant": 300 };
+const SERVER_URL = window.location.origin;
 
 function thresholdForStage(stage) {
     if (stage === 1) return 100;
@@ -69,7 +118,7 @@ function generateUid() {
     while (true) {
         let uid = '';
         for (let i = 0; i < 6; i++) uid += chars[Math.floor(Math.random() * chars.length)];
-        if (!uidMap[uid] && uid !== "admin74zyza") return uid;
+        if (!window.uidMap[uid] && uid !== "admin74zyza") return uid;
     }
 }
 
@@ -81,9 +130,9 @@ function generateCode(len = 10) {
 }
 
 function getUser(userId) {
-    if (!users[userId]) {
+    if (!window.users[userId]) {
         const uid = generateUid();
-        users[userId] = {
+        window.users[userId] = {
             username: null,
             attempts: 1,
             chatId: null,
@@ -106,23 +155,67 @@ function getUser(userId) {
             clickerProgress: 0,
             notifications: []
         };
-        uidMap[uid] = userId;
-        setTimeout(() => saveToServer(), 500);
-        console.log('🆕 Создан новый пользователь:', userId);
+        window.uidMap[uid] = userId;
+        saveAllData();
+        console.log('🆕 Создан пользователь:', userId);
     }
-    return users[userId];
+    return window.users[userId];
 }
 
 function getCurrentUser() {
     const userId = getUserId();
-    console.log('👤 Текущий пользователь:', userId);
     return getUser(userId);
 }
 
 function getUserByUid(uid) {
-    const userId = uidMap[uid];
+    const userId = window.uidMap[uid];
     if (userId) return getUser(userId);
     return null;
+}
+
+function getAllUsers() {
+    const result = [];
+    for (const userId in window.users) {
+        const user = window.users[userId];
+        result.push({
+            userId: userId,
+            uid: user.uid,
+            name: user.name || '—',
+            stars: user.stars || 0,
+            bank: user.bank || 0,
+            attempts: user.attempts || 0
+        });
+    }
+    return result;
+}
+
+// ============================================================
+//  УВЕДОМЛЕНИЯ
+// ============================================================
+
+function addNotification(uid, message) {
+    const user = getUserByUid(uid);
+    if (user) {
+        if (!user.notifications) user.notifications = [];
+        user.notifications.push({ 
+            text: message, 
+            time: new Date().toLocaleString(), 
+            read: false 
+        });
+        saveAllData();
+        render();
+    }
+}
+
+function getNotifications(uid) {
+    const user = getUserByUid(uid);
+    if (user && user.notifications) {
+        const unread = user.notifications.filter(n => !n.read);
+        user.notifications.forEach(n => n.read = true);
+        saveAllData();
+        return unread;
+    }
+    return [];
 }
 
 // ============================================================
@@ -136,8 +229,6 @@ async function saveToServer() {
         if (!user || !user.uid) return false;
         if (!user.registered) return false;
         
-        console.log('📤 Сохраняем:', { userId, uid: user.uid, stars: user.stars });
-        
         const response = await fetch(SERVER_URL + '/api/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -147,7 +238,7 @@ async function saveToServer() {
             })
         });
         const result = await response.json();
-        console.log('✅ Сохранено:', result);
+        console.log('✅ Сохранено на сервер:', result);
         return result.success;
     } catch(e) {
         console.error('❌ Ошибка сохранения:', e);
@@ -159,8 +250,6 @@ async function loadFromServer() {
     try {
         const userId = getUserId();
         if (!userId) return false;
-        
-        console.log('📥 Загружаем:', userId);
         
         const response = await fetch(SERVER_URL + `/api/load/${userId}`);
         if (response.ok) {
@@ -176,8 +265,9 @@ async function loadFromServer() {
                 user.registered = true;
             }
             
-            console.log('✅ Загружено:', data);
+            console.log('✅ Загружено с сервера:', data);
             render();
+            saveAllData();
             return true;
         } else {
             console.log('ℹ️ Новый пользователь, данных на сервере нет');
@@ -221,26 +311,6 @@ function updateBankInterest(userData) {
     userData.bankTime = now;
 }
 
-function addNotification(uid, message) {
-    const user = getUserByUid(uid);
-    if (user) {
-        if (!user.notifications) user.notifications = [];
-        user.notifications.push({ text: message, time: new Date().toLocaleString(), read: false });
-        saveToServer();
-        render();
-    }
-}
-
-function getNotifications(uid) {
-    const user = getUserByUid(uid);
-    if (user && user.notifications) {
-        const unread = user.notifications.filter(n => !n.read);
-        user.notifications.forEach(n => n.read = true);
-        return unread;
-    }
-    return [];
-}
-
 // ============================================================
 //  ОТРИСОВКА
 // ============================================================
@@ -259,8 +329,8 @@ function render() {
     document.getElementById('bankBalance').textContent = user.bank || 0;
 
     const statusEl = document.getElementById('userRegStatus');
-    if (bannedUsers[user.uid]) {
-        statusEl.textContent = '🚫 ЗАБЛОКИРОВАН: ' + bannedUsers[user.uid];
+    if (window.bannedUsers[user.uid]) {
+        statusEl.textContent = '🚫 ЗАБЛОКИРОВАН: ' + window.bannedUsers[user.uid];
         statusEl.style.color = '#ff4757';
     } else {
         statusEl.textContent = user.registered ? '✅ Зарегистрирован' : '❌ Не зарегистрирован';
@@ -281,11 +351,11 @@ function render() {
     const supportBtn = document.getElementById('btnSupport');
     const userId = getCurrentUser().uid;
     if (supportBtn) {
-        if (activeChats[userId]) {
-            if (activeChats[userId].hasNew) {
+        if (window.activeChats[userId]) {
+            if (window.activeChats[userId].hasNew) {
                 supportBtn.classList.add('support-active');
                 supportBtn.innerHTML = '💬 Новое сообщение! <span class="badge">1</span>';
-            } else if (activeChats[userId].admin) {
+            } else if (window.activeChats[userId].admin) {
                 supportBtn.classList.add('support-active');
                 supportBtn.textContent = '💬 Чат с админом';
             } else {
@@ -324,12 +394,12 @@ function renderAdminCodes() {
     const panel = document.getElementById('codesPanel');
     const list = document.getElementById('codesList');
     if (!panel || !list) return;
-    if (adminCodes.length === 0) {
+    if (window.adminCodes.length === 0) {
         panel.style.display = 'none';
         return;
     }
     panel.style.display = 'block';
-    list.innerHTML = adminCodes.map((item, index) => `
+    list.innerHTML = window.adminCodes.map((item, index) => `
         <div class="code-item">
             <span class="code-text" onclick="copyCode('${item.code}')">${item.code}</span>
             <span class="code-type">${item.type} ${item.target ? '→ ' + item.target : ''}</span>
@@ -341,20 +411,20 @@ function renderAdminCodes() {
 function renderContest() {
     const banner = document.getElementById('contestBanner');
     if (!banner) return;
-    if (!contestActive) {
+    if (!window.contestActive) {
         banner.style.display = 'none';
         return;
     }
     banner.style.display = 'block';
     const now = Date.now();
-    const remaining = contestEndTime - now;
+    const remaining = window.contestEndTime - now;
     if (remaining <= 0) { endContest(); return; }
     const hours = Math.floor(remaining / 3600000);
     const minutes = Math.floor((remaining % 3600000) / 60000);
     const seconds = Math.floor((remaining % 60000) / 1000);
     let winnerText = '';
-    if (contestWinner) {
-        winnerText = `<div class="winner">🏆 Победитель: <strong>${contestWinner}</strong></div>`;
+    if (window.contestWinner) {
+        winnerText = `<div class="winner">🏆 Победитель: <strong>${window.contestWinner}</strong></div>`;
     }
     banner.innerHTML = `
         <div class="title">🏆 КОНКУРС</div>
@@ -365,21 +435,22 @@ function renderContest() {
 }
 
 function startContest() {
-    if (contestActive) { showToast('❌ Конкурс уже запущен'); return; }
-    contestActive = true;
-    contestEndTime = Date.now() + 6 * 60 * 60 * 1000;
-    contestWinner = null;
+    if (window.contestActive) { showToast('❌ Конкурс уже запущен'); return; }
+    window.contestActive = true;
+    window.contestEndTime = Date.now() + 6 * 60 * 60 * 1000;
+    window.contestWinner = null;
     showToast('🏆 Конкурс запущен на 6 часов!');
     render();
+    saveAllData();
 }
 
 function endContest() {
-    if (!contestActive) return;
-    contestActive = false;
+    if (!window.contestActive) return;
+    window.contestActive = false;
     let maxStars = -1;
     let winnerUid = null;
-    for (const uid in uidMap) {
-        if (bannedUsers[uid]) continue;
+    for (const uid in window.uidMap) {
+        if (window.bannedUsers[uid]) continue;
         const user = getUserByUid(uid);
         if (user) {
             const total = (user.stars || 0) + (user.bank || 0);
@@ -390,22 +461,24 @@ function endContest() {
         }
     }
     if (winnerUid) {
-        contestWinner = winnerUid;
+        window.contestWinner = winnerUid;
         const winner = getUserByUid(winnerUid);
         if (winner) {
             winner.stars += 500;
             winner.attempts += 3;
             addNotification(winnerUid, '🏆 Вы победили в конкурсе! +500 ⭐ и +3 попытки!');
             showToast(`🏆 Победитель: ${winnerUid}! +500 ⭐ и +3 попытки!`);
+            saveAllData();
         }
     } else {
         showToast('❌ Нет участников для конкурса');
     }
     render();
+    saveAllData();
 }
 
 function forceEndContest() {
-    if (!contestActive) { showToast('❌ Конкурс не запущен'); return; }
+    if (!window.contestActive) { showToast('❌ Конкурс не запущен'); return; }
     endContest();
 }
 
@@ -478,16 +551,17 @@ window.copyCode = function(code) {
 };
 
 window.deleteCode = function(index) {
-    const item = adminCodes[index];
+    const item = window.adminCodes[index];
     if (!item) return;
     const code = item.code;
-    if (oneTimeCodes.has(code)) oneTimeCodes.delete(code);
-    if (multiUseCodes[code]) delete multiUseCodes[code];
-    if (boosterCodes.has(code)) boosterCodes.delete(code);
-    if (boosterMultiCodes[code]) delete boosterMultiCodes[code];
-    adminCodes.splice(index, 1);
+    if (window.oneTimeCodes.has(code)) window.oneTimeCodes.delete(code);
+    if (window.multiUseCodes[code]) delete window.multiUseCodes[code];
+    if (window.boosterCodes.has(code)) window.boosterCodes.delete(code);
+    if (window.boosterMultiCodes[code]) delete window.boosterMultiCodes[code];
+    window.adminCodes.splice(index, 1);
     showToast('🗑️ Код удалён');
     render();
+    saveAllData();
 };
 
 window.copyText = function(text) {
@@ -701,6 +775,7 @@ function showWheelResult(result, user) {
     resultDiv.innerHTML = `🎉 +${finalValue} ⭐ (${result.label})`;
     showToast(`🎉 +${finalValue} ⭐`);
     render();
+    saveAllData();
 }
 
 function openWheel() {
@@ -727,7 +802,7 @@ function handleClicker() {
         showToast('❌ Сначала зарегистрируйтесь!');
         return;
     }
-    if (bannedUsers[user.uid]) {
+    if (window.bannedUsers[user.uid]) {
         showToast('🚫 Вы заблокированы');
         return;
     }
@@ -799,6 +874,7 @@ window.clickStar = function() {
     }
 
     render();
+    saveAllData();
 };
 
 window.claimClickerReward = function() {
@@ -817,6 +893,7 @@ window.claimClickerReward = function() {
     closeModal();
     showToast('✅ +20 ⭐ за клики!');
     render();
+    saveAllData();
 };
 
 // ============================================================
@@ -829,7 +906,7 @@ function handleCoeff() {
         showToast('❌ Сначала зарегистрируйтесь!');
         return;
     }
-    if (bannedUsers[user.uid]) {
+    if (window.bannedUsers[user.uid]) {
         showToast('🚫 Вы заблокированы');
         return;
     }
@@ -853,6 +930,7 @@ window.setCoeff = function() {
     closeModal();
     showToast(`✅ Коэффициент: +${user.coefficientRate} ⭐`);
     render();
+    saveAllData();
 };
 
 // ============================================================
@@ -865,7 +943,7 @@ function handlePet() {
         showToast('❌ Сначала зарегистрируйтесь!');
         return;
     }
-    if (bannedUsers[user.uid]) {
+    if (window.bannedUsers[user.uid]) {
         showToast('🚫 Вы заблокированы');
         return;
     }
@@ -927,6 +1005,7 @@ window.feedPet = function() {
     }
     closeModal();
     render();
+    saveAllData();
 };
 
 // ============================================================
@@ -939,7 +1018,7 @@ function handleBuy() {
         showToast('❌ Сначала зарегистрируйтесь!');
         return;
     }
-    if (bannedUsers[user.uid]) {
+    if (window.bannedUsers[user.uid]) {
         showToast('🚫 Вы заблокированы');
         return;
     }
@@ -962,6 +1041,7 @@ window.buyAttempts = function(count, price) {
     closeModal();
     showToast(`✅ Куплено ${count} попыток`);
     render();
+    saveAllData();
 };
 
 // ============================================================
@@ -974,7 +1054,7 @@ function handleCode() {
         showToast('❌ Сначала зарегистрируйтесь!');
         return;
     }
-    if (bannedUsers[user.uid]) {
+    if (window.bannedUsers[user.uid]) {
         showToast('🚫 Вы заблокированы');
         return;
     }
@@ -994,73 +1074,77 @@ window.applyCode = function() {
     if (!text) { showToast('❌ Введите код'); return; }
 
     let found = false;
-    for (const code of boosterCodes) {
+    for (const code of window.boosterCodes) {
         if (code.toUpperCase() === text) {
-            boosterCodes.delete(code);
+            window.boosterCodes.delete(code);
             user.attempts += 1;
             user.boosted = true;
-            const idx = adminCodes.findIndex(item => item.code.toUpperCase() === text);
-            if (idx !== -1) adminCodes.splice(idx, 1);
+            const idx = window.adminCodes.findIndex(item => item.code.toUpperCase() === text);
+            if (idx !== -1) window.adminCodes.splice(idx, 1);
             found = true;
             closeModal();
             showToast('🚀 Бустер активирован!');
             render();
+            saveAllData();
             return;
         }
     }
-    for (const code in boosterMultiCodes) {
+    for (const code in window.boosterMultiCodes) {
         if (code.toUpperCase() === text) {
-            if (boosterMultiCodes[code].usedUsers.has(user.uid)) {
+            if (window.boosterMultiCodes[code].usedUsers.has(user.uid)) {
                 showToast('❌ Уже использован');
                 return;
             }
             user.attempts += 1;
             user.boosted = true;
-            boosterMultiCodes[code].usedUsers.add(user.uid);
-            boosterMultiCodes[code].remaining--;
-            if (boosterMultiCodes[code].remaining <= 0) {
-                const idx = adminCodes.findIndex(item => item.code.toUpperCase() === text);
-                if (idx !== -1) adminCodes.splice(idx, 1);
-                delete boosterMultiCodes[code];
+            window.boosterMultiCodes[code].usedUsers.add(user.uid);
+            window.boosterMultiCodes[code].remaining--;
+            if (window.boosterMultiCodes[code].remaining <= 0) {
+                const idx = window.adminCodes.findIndex(item => item.code.toUpperCase() === text);
+                if (idx !== -1) window.adminCodes.splice(idx, 1);
+                delete window.boosterMultiCodes[code];
             }
             found = true;
             closeModal();
             showToast('🚀 Бустер активирован!');
             render();
+            saveAllData();
             return;
         }
     }
-    for (const code of oneTimeCodes) {
+    for (const code of window.oneTimeCodes) {
         if (code.toUpperCase() === text) {
-            oneTimeCodes.delete(code);
+            window.oneTimeCodes.delete(code);
             user.attempts += 1;
-            const idx = adminCodes.findIndex(item => item.code.toUpperCase() === text);
-            if (idx !== -1) adminCodes.splice(idx, 1);
+            const idx = window.adminCodes.findIndex(item => item.code.toUpperCase() === text);
+            if (idx !== -1) window.adminCodes.splice(idx, 1);
             found = true;
             closeModal();
             showToast('✅ Код принят!');
             render();
+            saveAllData();
             return;
         }
     }
-    for (const code in multiUseCodes) {
+    for (const code in window.multiUseCodes) {
         if (code.toUpperCase() === text) {
-            if (multiUseCodes[code].usedUsers.has(user.uid)) {
+            if (window.multiUseCodes[code].usedUsers.has(user.uid)) {
                 showToast('❌ Уже использован');
                 return;
             }
             user.attempts += 1;
-            multiUseCodes[code].usedUsers.add(user.uid);
-            multiUseCodes[code].remaining--;
-            if (multiUseCodes[code].remaining <= 0) {
-                const idx = adminCodes.findIndex(item => item.code.toUpperCase() === text);
-                if (idx !== -1) adminCodes.splice(idx, 1);
-                delete multiUseCodes[code];
+            window.multiUseCodes[code].usedUsers.add(user.uid);
+            window.multiUseCodes[code].remaining--;
+            if (window.multiUseCodes[code].remaining <= 0) {
+                const idx = window.adminCodes.findIndex(item => item.code.toUpperCase() === text);
+                if (idx !== -1) window.adminCodes.splice(idx, 1);
+                delete window.multiUseCodes[code];
             }
             found = true;
             closeModal();
             showToast('✅ Код принят!');
             render();
+            saveAllData();
             return;
         }
     }
@@ -1077,7 +1161,7 @@ function handleBank() {
         showToast('❌ Сначала зарегистрируйтесь!');
         return;
     }
-    if (bannedUsers[user.uid]) {
+    if (window.bannedUsers[user.uid]) {
         showToast('🚫 Вы заблокированы');
         return;
     }
@@ -1113,6 +1197,7 @@ window.withdrawBank = function() {
     closeModal();
     showToast(`✅ Забрано ${amount} ⭐ из банка`);
     render();
+    saveAllData();
 };
 
 window.depositBank = function() {
@@ -1128,6 +1213,7 @@ window.depositBank = function() {
     closeModal();
     showToast(`✅ ${amount} ⭐ положены в банк под 20% в час`);
     render();
+    saveAllData();
 };
 
 // ============================================================
@@ -1136,7 +1222,7 @@ window.depositBank = function() {
 
 function handleLeaderboard() {
     const user = getCurrentUser();
-    if (bannedUsers[user.uid]) {
+    if (window.bannedUsers[user.uid]) {
         showToast('🚫 Вы заблокированы');
         return;
     }
@@ -1192,8 +1278,8 @@ function handleSupport() {
     const user = getCurrentUser();
     const userId = user.uid;
 
-    if (activeChats[userId]) {
-        activeChats[userId].hasNew = false;
+    if (window.activeChats[userId]) {
+        window.activeChats[userId].hasNew = false;
         render();
         showChatWindow(userId);
         return;
@@ -1215,22 +1301,23 @@ window.sendSupport = function() {
     const user = getCurrentUser();
     const userId = user.uid;
 
-    reports.push({ uid: userId, username: user.name || 'No name', text: text, time: new Date().toLocaleString() });
+    window.reports.push({ uid: userId, username: user.name || 'No name', text: text, time: new Date().toLocaleString() });
 
-    if (!activeChats[userId]) {
-        activeChats[userId] = { messages: [], admin: false, hasNew: false };
+    if (!window.activeChats[userId]) {
+        window.activeChats[userId] = { messages: [], admin: false, hasNew: false };
     }
-    activeChats[userId].messages.push({ from: 'user', text: text, time: new Date().toLocaleString() });
+    window.activeChats[userId].messages.push({ from: 'user', text: text, time: new Date().toLocaleString() });
 
     closeModal();
     showToast('✅ Сообщение отправлено администратору!');
     render();
+    saveAllData();
 
     setTimeout(() => showChatWindow(userId), 500);
 };
 
 function showChatWindow(userId) {
-    const chat = activeChats[userId];
+    const chat = window.activeChats[userId];
     if (!chat) { showToast('❌ Чат не найден'); return; }
     chat.hasNew = false;
     render();
@@ -1266,20 +1353,22 @@ window.sendChatMessage = function(userId) {
     if (!input) return;
     const text = input.value.trim();
     if (!text) { showToast('❌ Введите сообщение'); return; }
-    const chat = activeChats[userId];
+    const chat = window.activeChats[userId];
     if (!chat) { showToast('❌ Чат не найден'); return; }
     chat.messages.push({ from: 'user', text: text, time: new Date().toLocaleString() });
     if (!chat.admin) showToast('✅ Сообщение отправлено. Ожидайте ответа.');
     closeModal();
     showChatWindow(userId);
     render();
+    saveAllData();
 };
 
 window.adminOpenChat = function(uid) {
-    if (!activeChats[uid]) activeChats[uid] = { messages: [], admin: false, hasNew: false };
-    activeChats[uid].admin = true;
+    if (!window.activeChats[uid]) window.activeChats[uid] = { messages: [], admin: false, hasNew: false };
+    window.activeChats[uid].admin = true;
     showAdminChat(uid);
     render();
+    saveAllData();
 };
 
 window.adminSendMessage = function(uid) {
@@ -1287,19 +1376,20 @@ window.adminSendMessage = function(uid) {
     if (!input) return;
     const text = input.value.trim();
     if (!text) { showToast('❌ Введите сообщение'); return; }
-    if (!activeChats[uid]) activeChats[uid] = { messages: [], admin: false, hasNew: false };
-    activeChats[uid].admin = true;
-    activeChats[uid].messages.push({ from: 'admin', text: text, time: new Date().toLocaleString() });
-    activeChats[uid].hasNew = true;
+    if (!window.activeChats[uid]) window.activeChats[uid] = { messages: [], admin: false, hasNew: false };
+    window.activeChats[uid].admin = true;
+    window.activeChats[uid].messages.push({ from: 'admin', text: text, time: new Date().toLocaleString() });
+    window.activeChats[uid].hasNew = true;
     render();
     showToast('✅ Сообщение отправлено игроку');
     closeModal();
     showAdminChat(uid);
     render();
+    saveAllData();
 };
 
 function showAdminChat(uid) {
-    const chat = activeChats[uid];
+    const chat = window.activeChats[uid];
     if (!chat) { showToast('❌ Чат не найден'); return; }
     let messagesHtml = '';
     chat.messages.forEach(msg => {
@@ -1321,11 +1411,12 @@ function showAdminChat(uid) {
 }
 
 window.closeChat = function(uid) {
-    if (activeChats[uid]) {
-        delete activeChats[uid];
+    if (window.activeChats[uid]) {
+        delete window.activeChats[uid];
         closeModal();
         showToast('✅ Чат завершён');
         render();
+        saveAllData();
     }
 };
 
@@ -1352,20 +1443,20 @@ window.adminLogin = function() {
 
 function showAdminPanel() {
     let chatList = '';
-    const chatKeys = Object.keys(activeChats);
+    const chatKeys = Object.keys(window.activeChats);
     if (chatKeys.length > 0) {
         chatList = '<p><strong>Активные чаты:</strong></p><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">';
         chatKeys.forEach(uid => {
             const user = getUserByUid(uid);
             const name = user ? user.name || uid : uid;
-            const hasNew = activeChats[uid].hasNew ? ' 🔔' : '';
+            const hasNew = window.activeChats[uid].hasNew ? ' 🔔' : '';
             chatList += `<button class="btn small" onclick="adminOpenChat('${uid}')" style="margin:2px;">💬 ${name}${hasNew}</button>`;
         });
         chatList += '</div>';
     }
 
-    const contestStatus = contestActive ? 
-        `<span style="color:#ffd700;">🟢 Активен (${Math.floor((contestEndTime - Date.now()) / 60000)} мин)</span>` : 
+    const contestStatus = window.contestActive ? 
+        `<span style="color:#ffd700;">🟢 Активен (${Math.floor((window.contestEndTime - Date.now()) / 60000)} мин)</span>` : 
         `<span style="color:#888;">🔴 Не активен</span>`;
 
     openModal('🔧 Панель управления', `
@@ -1402,34 +1493,38 @@ function showAdminPanel() {
 
 window.adminCodeSingle = function() {
     const code = generateCode(10);
-    oneTimeCodes.add(code);
-    adminCodes.push({ code: code, type: '🔑 Одноразовый' });
+    window.oneTimeCodes.add(code);
+    window.adminCodes.push({ code: code, type: '🔑 Одноразовый' });
     showToast(`✅ Код: ${code}`);
     render();
+    saveAllData();
 };
 
 window.adminCodeMulti = function() {
     const code = generateCode(10);
-    multiUseCodes[code] = { remaining: 5, usedUsers: new Set() };
-    adminCodes.push({ code: code, type: '🔑 На 5' });
+    window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() };
+    window.adminCodes.push({ code: code, type: '🔑 На 5' });
     showToast(`✅ Код на 5: ${code}`);
     render();
+    saveAllData();
 };
 
 window.adminBoostSingle = function() {
     const code = generateCode(16);
-    boosterCodes.add(code);
-    adminCodes.push({ code: code, type: '🚀 Бустер' });
+    window.boosterCodes.add(code);
+    window.adminCodes.push({ code: code, type: '🚀 Бустер' });
     showToast(`✅ Бустер: ${code}`);
     render();
+    saveAllData();
 };
 
 window.adminBoostMulti = function() {
     const code = generateCode(16);
-    boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() };
-    adminCodes.push({ code: code, type: '🚀 Бустер x5' });
+    window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() };
+    window.adminCodes.push({ code: code, type: '🚀 Бустер x5' });
     showToast(`✅ Бустер на 5: ${code}`);
     render();
+    saveAllData();
 };
 
 window.adminSendCodeToPlayer = function() {
@@ -1457,25 +1552,29 @@ window.sendCodeToPlayerWithType = function(type) {
 
     let code, typeLabel;
     switch(type) {
-        case 'single': code = generateCode(10); oneTimeCodes.add(code); typeLabel = '🔑 Одноразовый'; break;
-        case 'multi': code = generateCode(10); multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🔑 На 5'; break;
-        case 'boost': code = generateCode(16); boosterCodes.add(code); typeLabel = '🚀 Бустер'; break;
-        case 'boostmulti': code = generateCode(16); boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🚀 Бустер x5'; break;
+        case 'single': code = generateCode(10); window.oneTimeCodes.add(code); typeLabel = '🔑 Одноразовый'; break;
+        case 'multi': code = generateCode(10); window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🔑 На 5'; break;
+        case 'boost': code = generateCode(16); window.boosterCodes.add(code); typeLabel = '🚀 Бустер'; break;
+        case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🚀 Бустер x5'; break;
     }
 
-    adminCodes.push({ code: code, type: typeLabel + ' → ' + uid, target: uid });
+    window.adminCodes.push({ code: code, type: typeLabel + ' → ' + uid, target: uid });
+    
+    // Уведомление игроку
     addNotification(uid, `🎫 Вам отправлен код: ${code} (${typeLabel})`);
-    if (activeChats[uid]) {
-        activeChats[uid].messages.push({ 
+    if (window.activeChats[uid]) {
+        window.activeChats[uid].messages.push({ 
             from: 'admin', 
             text: `🎫 Вам отправлен код: ${code} (${typeLabel})`, 
             time: new Date().toLocaleString() 
         });
-        activeChats[uid].hasNew = true;
+        window.activeChats[uid].hasNew = true;
     }
+    
     closeModal();
     showToast(`✅ Код отправлен игроку ${uid}`);
     render();
+    saveAllData();
     showAdminPanel();
 };
 
@@ -1495,39 +1594,46 @@ window.adminSendCodeToAll = function() {
 window.sendCodeToAllWithType = function(type) {
     let code, typeLabel;
     switch(type) {
-        case 'single': code = generateCode(10); oneTimeCodes.add(code); typeLabel = '🔑 Одноразовый'; break;
-        case 'multi': code = generateCode(10); multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🔑 На 5'; break;
-        case 'boost': code = generateCode(16); boosterCodes.add(code); typeLabel = '🚀 Бустер'; break;
-        case 'boostmulti': code = generateCode(16); boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🚀 Бустер x5'; break;
+        case 'single': code = generateCode(10); window.oneTimeCodes.add(code); typeLabel = '🔑 Одноразовый'; break;
+        case 'multi': code = generateCode(10); window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🔑 На 5'; break;
+        case 'boost': code = generateCode(16); window.boosterCodes.add(code); typeLabel = '🚀 Бустер'; break;
+        case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🚀 Бустер x5'; break;
     }
 
-    const userKeys = Object.keys(uidMap);
-    for (const uid of userKeys) {
-        if (bannedUsers[uid]) continue;
-        addNotification(uid, `🎫 Всем игрокам: ${code} (${typeLabel})`);
-        if (activeChats[uid]) {
-            activeChats[uid].messages.push({ 
-                from: 'admin', 
-                text: `🎫 Всем игрокам: ${code} (${typeLabel})`, 
-                time: new Date().toLocaleString() 
-            });
-            activeChats[uid].hasNew = true;
+    const userKeys = Object.keys(window.users);
+    for (const userId of userKeys) {
+        const user = window.users[userId];
+        if (user && user.uid) {
+            if (window.bannedUsers[user.uid]) continue;
+            addNotification(user.uid, `🎫 Всем игрокам: ${code} (${typeLabel})`);
+            if (window.activeChats[user.uid]) {
+                window.activeChats[user.uid].messages.push({ 
+                    from: 'admin', 
+                    text: `🎫 Всем игрокам: ${code} (${typeLabel})`, 
+                    time: new Date().toLocaleString() 
+                });
+                window.activeChats[user.uid].hasNew = true;
+            }
         }
     }
-    adminCodes.push({ code: code, type: typeLabel + ' (всем)', target: 'всем' });
+    
+    window.adminCodes.push({ code: code, type: typeLabel + ' (всем)', target: 'всем' });
     closeModal();
     showToast(`✅ Код отправлен всем игрокам`);
     render();
+    saveAllData();
     showAdminPanel();
 };
 
 window.adminMassGive = function() {
-    for (const uid in uidMap) {
-        if (bannedUsers[uid]) continue;
-        const user = getUserByUid(uid);
-        if (user) user.attempts = 1;
+    for (const userId in window.users) {
+        const user = window.users[userId];
+        if (user && !window.bannedUsers[user.uid]) {
+            user.attempts = 1;
+        }
     }
     showToast('✅ Попытки выданы всем активным игрокам');
+    saveAllData();
 };
 
 window.adminGiveSelfStars = function() {
@@ -1548,6 +1654,7 @@ window.doGiveSelfStars = function() {
     closeModal();
     showToast(`✅ +${amount} ⭐`);
     render();
+    saveAllData();
     showAdminPanel();
 };
 
@@ -1568,8 +1675,8 @@ window.showPlayerInfo = function() {
     const user = getUserByUid(uid);
     if (!user) { showToast('❌ Игрок не найден'); return; }
 
-    const isBanned = bannedUsers[uid] !== undefined;
-    const banReason = bannedUsers[uid] || '—';
+    const isBanned = window.bannedUsers[uid] !== undefined;
+    const banReason = window.bannedUsers[uid] || '—';
     const name = user.name || '—';
     const gender = user.gender || '—';
     const age = user.age || '—';
@@ -1627,6 +1734,7 @@ window.doAddStars = function(uid) {
         closeModal();
         showPlayerInfo();
         render();
+        saveAllData();
     }
 };
 
@@ -1652,6 +1760,7 @@ window.doRemoveStars = function(uid) {
         closeModal();
         showPlayerInfo();
         render();
+        saveAllData();
     }
 };
 
@@ -1668,22 +1777,24 @@ window.doBanUser = function(uid) {
     const input = document.getElementById('banReasonInput');
     if (!input) return;
     const reason = input.value.trim() || 'Нарушение правил';
-    bannedUsers[uid] = reason;
+    window.bannedUsers[uid] = reason;
     addNotification(uid, `🚫 Вас заблокировали. Причина: ${reason}`);
     showToast(`✅ ${uid} заблокирован. Причина: ${reason}`);
     closeModal();
     showPlayerInfo();
     render();
+    saveAllData();
 };
 
 window.adminUnbanUserByUid = function(uid) {
-    if (bannedUsers[uid]) {
-        delete bannedUsers[uid];
+    if (window.bannedUsers[uid]) {
+        delete window.bannedUsers[uid];
         addNotification(uid, '✅ Вас разблокировали!');
         showToast(`✅ ${uid} разблокирован`);
         closeModal();
         showPlayerInfo();
         render();
+        saveAllData();
     }
 };
 
@@ -1704,24 +1815,25 @@ window.adminResetPlayer = function(uid) {
         showToast(`✅ Игрок ${uid} сброшен`);
         closeModal();
         render();
+        saveAllData();
         showAdminPanel();
     }
 };
 
 window.adminReports = function() {
-    if (reports.length === 0 && Object.keys(activeChats).length === 0) {
+    if (window.reports.length === 0 && Object.keys(window.activeChats).length === 0) {
         showToast('📭 Жалоб и чатов нет');
         return;
     }
 
     let text = '📩 Жалобы:\n\n';
-    const last = reports.slice(-10);
+    const last = window.reports.slice(-10);
     for (const r of last) {
         text += `От ${r.username} (ID: ${r.uid}) [${r.time}]:\n${r.text}\n\n`;
     }
 
     let chatButtons = '';
-    const chatKeys = Object.keys(activeChats);
+    const chatKeys = Object.keys(window.activeChats);
     if (chatKeys.length > 0) {
         chatButtons = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0;">';
         chatKeys.forEach(uid => {
@@ -1735,7 +1847,7 @@ window.adminReports = function() {
     openModal('📩 Жалобы и чаты', `
         <div class="scrollable"><pre style="color:#c0c0e0;font-family:inherit;white-space:pre-wrap;font-size:14px;">${text}</pre></div>
         ${chatButtons}
-        <button class="btn danger full" onclick="reports=[]; closeModal(); showToast('✅ Жалобы очищены'); showAdminPanel();">🗑️ Очистить жалобы</button>
+        <button class="btn danger full" onclick="window.reports=[]; closeModal(); showToast('✅ Жалобы очищены'); showAdminPanel(); saveAllData();">🗑️ Очистить жалобы</button>
         <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
     `);
 };
@@ -1819,6 +1931,7 @@ window.completeRegistration = function() {
     closeModal();
     showToast('✅ Регистрация завершена!');
     render();
+    saveAllData();
 };
 
 // ============================================================
@@ -1827,6 +1940,7 @@ window.completeRegistration = function() {
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ DOM загружен!');
+    console.log('📊 Загружено пользователей:', Object.keys(window.users).length);
     
     document.getElementById('btnPlay').addEventListener('click', function() {
         console.log('🎮 Играть');
@@ -1874,3 +1988,5 @@ setInterval(() => {
         saveToServer();
     }
 }, 15000);
+
+setInterval(saveAllData, 30000);
