@@ -38,10 +38,10 @@ def load_global_data():
         'contest_active': False,
         'contest_end_time': None,
         'contest_winner': None,
-        'admin_codes': [],
-        'reports': [],
-        'active_chats': {},
-        'banned_users': {}
+        'admin_codes': [],  # Список кодов
+        'reports': [],      # Жалобы
+        'active_chats': {}, # Чаты
+        'banned_users': {}  # Баны
     }
 
 # Сохранение глобальных данных
@@ -68,10 +68,8 @@ def save_user():
     data = request.json
     user_id = data.get('user_id')
     user_data = data.get('user_data')
-    
     if not user_id or not user_data:
         return jsonify({'error': 'Missing data'}), 400
-    
     users = load_users()
     users[user_id] = user_data
     save_users(users)
@@ -105,12 +103,13 @@ def all_users():
         })
     return jsonify(result)
 
-# Глобальные данные
+# API: получить глобальные данные
 @app.route('/api/get_global_data')
 def get_global_data():
     data = load_global_data()
     return jsonify(data)
 
+# API: установить активность конкурса
 @app.route('/api/set_contest', methods=['POST'])
 def set_contest():
     data = request.json
@@ -121,6 +120,7 @@ def set_contest():
     save_global_data(global_data)
     return jsonify({'success': True})
 
+# API: добавление жалобы
 @app.route('/api/add_report', methods=['POST'])
 def add_report():
     data = request.json
@@ -136,6 +136,7 @@ def add_report():
     save_global_data(global_data)
     return jsonify({'success': True})
 
+# API: очистить жалобы
 @app.route('/api/clear_reports', methods=['POST'])
 def clear_reports():
     global_data = load_global_data()
@@ -143,6 +144,7 @@ def clear_reports():
     save_global_data(global_data)
     return jsonify({'success': True})
 
+# API: чат - добавить сообщение
 @app.route('/api/add_chat_message', methods=['POST'])
 def add_chat_message():
     data = request.json
@@ -175,7 +177,6 @@ def get_chat(uid):
     chat = global_data.get('active_chats', {}).get(uid)
     if chat:
         return jsonify(chat)
-    # Возвращаем пустой чат, если не найден
     return jsonify({'messages': [], 'admin': False})
 
 # API: закрыть чат
@@ -198,8 +199,8 @@ def add_code():
         global_data['admin_codes'] = []
     global_data['admin_codes'].append({
         'code': data.get('code'),
-        'type': data.get('type'),
-        'target': data.get('target')
+        'type': data.get('type'),  # например, 'ban'
+        'target': data.get('target')  # может быть uid или 'all'
     })
     save_global_data(global_data)
     return jsonify({'success': True})
@@ -208,43 +209,79 @@ def add_code():
 @app.route('/api/delete_code', methods=['POST'])
 def delete_code():
     data = request.json
-    code = data.get('code')
+    code_value = data.get('code')
     global_data = load_global_data()
     if 'admin_codes' in global_data:
-        global_data['admin_codes'] = [c for c in global_data['admin_codes'] if c.get('code') != code]
+        global_data['admin_codes'] = [c for c in global_data['admin_codes'] if c.get('code') != code_value]
         save_global_data(global_data)
     return jsonify({'success': True})
 
-# API: синхронизация забаненных
+# API: использовать код
+@app.route('/api/use_code', methods=['POST'])
+def use_code():
+    data = request.json
+    code_value = data.get('code')
+    user_id = data.get('user_id')
+    global_data = load_global_data()
+
+    code_obj = None
+    for c in global_data.get('admin_codes', []):
+        if c.get('code') == code_value:
+            code_obj = c
+            break
+
+    if not code_obj:
+        return jsonify({'success': False, 'message': 'Код не найден'}), 404
+
+    # Проверка target
+    target = code_obj.get('target')
+    if target and target != 'all' and target != user_id:
+        return jsonify({'success': False, 'message': 'Этот код не для вас'}), 403
+
+    # Пример действия: бан пользователя
+    if code_obj.get('type') == 'ban':
+        users = load_users()
+        user = users.get(user_id)
+        if user:
+            user['banned'] = True
+            user['banned_reason'] = 'Использован код для бана'
+            save_users(users)
+            return jsonify({'success': True, 'message': 'Пользователь забанен'})
+        else:
+            return jsonify({'success': False, 'message': 'Пользователь не найден'}), 404
+
+    # Другие действия по типу
+    return jsonify({'success': True, 'message': 'Действие выполнено'})
+
+# API: синхронизация банов
 @app.route('/api/sync_banned', methods=['POST'])
 def sync_banned():
     data = request.json
-    banned_data = data.get('banned', {})
+    banned_data = data.get('banned', {})  # {uid: reason}
     global_data = load_global_data()
     global_data['banned_users'] = banned_data
-    
-    # Обновляем статус бана у пользователей
+
     users = load_users()
     for user_id, user_data in users.items():
         uid = user_data.get('uid')
         if uid and uid in banned_data:
             user_data['banned'] = True
             user_data['banned_reason'] = banned_data[uid]
-        elif uid:
+        else:
             user_data['banned'] = False
             user_data['banned_reason'] = ''
     save_users(users)
     save_global_data(global_data)
     return jsonify({'success': True})
 
-# API: полный сброс данных
+# API: сброс всех данных
 @app.route('/api/reset', methods=['POST'])
-def reset_data():
+def reset():
     if os.path.exists(DATA_FILE):
         os.remove(DATA_FILE)
     if os.path.exists(GLOBAL_DATA_FILE):
         os.remove(GLOBAL_DATA_FILE)
-    return jsonify({'success': True, 'message': 'Все данные сброшены!'})
+    return jsonify({'success': True, 'message': 'Все данные сброшены'})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
