@@ -1,35 +1,29 @@
 console.log('🚀 Игра загружается...');
 
 // ============================================================
-//  ПРИВЯЗКА К TELEGRAM ИЛИ localStorage (ФИКСИРОВАННЫЙ ID)
+//  ПРИВЯЗКА К TELEGRAM (ТОЛЬКО TELEGRAM ID)
 // ============================================================
 
-function getTelegramUserId() {
+function getUserId() {
+    // Используем ТОЛЬКО Telegram ID
     try {
         if (window.Telegram && window.Telegram.WebApp) {
             const tg = window.Telegram.WebApp;
             tg.ready();
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                return String(tg.initDataUnsafe.user.id);
+                const userId = 'tg_' + String(tg.initDataUnsafe.user.id);
+                // Сохраняем в localStorage, но НЕ используем как основной
+                try {
+                    localStorage.setItem('game_user_id', userId);
+                } catch(e) {}
+                return userId;
             }
         }
     } catch(e) {
         console.log('Telegram WebApp не доступен');
     }
-    return null;
-}
-
-function getUserId() {
-    // Сначала проверяем Telegram ID
-    const tgId = getTelegramUserId();
-    if (tgId) {
-        const userId = 'tg_' + tgId;
-        // Сохраняем в localStorage для постоянства
-        localStorage.setItem('game_user_id', userId);
-        return userId;
-    }
     
-    // Если не в Telegram - используем сохранённый ID
+    // Fallback для браузера
     let userId = localStorage.getItem('game_user_id');
     if (!userId) {
         userId = 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
@@ -114,12 +108,14 @@ function getUser(userId) {
         };
         uidMap[uid] = userId;
         setTimeout(() => saveToServer(), 500);
+        console.log('🆕 Создан новый пользователь:', userId);
     }
     return users[userId];
 }
 
 function getCurrentUser() {
     const userId = getUserId();
+    console.log('👤 Текущий пользователь:', userId);
     return getUser(userId);
 }
 
@@ -140,6 +136,8 @@ async function saveToServer() {
         if (!user || !user.uid) return false;
         if (!user.registered) return false;
         
+        console.log('📤 Сохраняем:', { userId, uid: user.uid, stars: user.stars });
+        
         const response = await fetch(SERVER_URL + '/api/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -149,7 +147,7 @@ async function saveToServer() {
             })
         });
         const result = await response.json();
-        console.log('✅ Сохранено на сервер:', result);
+        console.log('✅ Сохранено:', result);
         return result.success;
     } catch(e) {
         console.error('❌ Ошибка сохранения:', e);
@@ -161,6 +159,8 @@ async function loadFromServer() {
     try {
         const userId = getUserId();
         if (!userId) return false;
+        
+        console.log('📥 Загружаем:', userId);
         
         const response = await fetch(SERVER_URL + `/api/load/${userId}`);
         if (response.ok) {
@@ -176,7 +176,7 @@ async function loadFromServer() {
                 user.registered = true;
             }
             
-            console.log('✅ Загружено с сервера:', data);
+            console.log('✅ Загружено:', data);
             render();
             return true;
         } else {
@@ -965,7 +965,7 @@ window.buyAttempts = function(count, price) {
 };
 
 // ============================================================
-//  КОДЫ (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+//  КОДЫ
 // ============================================================
 
 function handleCode() {
@@ -1330,7 +1330,7 @@ window.closeChat = function(uid) {
 };
 
 // ============================================================
-//  АДМИН-ПАНЕЛЬ (ИСПРАВЛЕННАЯ)
+//  АДМИН-ПАНЕЛЬ
 // ============================================================
 
 function handleAdmin() {
@@ -1397,7 +1397,7 @@ function showAdminPanel() {
 }
 
 // ============================================================
-//  АДМИН-ФУНКЦИИ (С УВЕДОМЛЕНИЯМИ)
+//  АДМИН-ФУНКЦИИ
 // ============================================================
 
 window.adminCodeSingle = function() {
@@ -1432,7 +1432,6 @@ window.adminBoostMulti = function() {
     render();
 };
 
-// ===== ОТПРАВКА КОДА ИГРОКУ (С УВЕДОМЛЕНИЕМ) =====
 window.adminSendCodeToPlayer = function() {
     openModal('📤 Отправить код игроку', `
         <p>Введите ID игрока:</p>
@@ -1465,8 +1464,6 @@ window.sendCodeToPlayerWithType = function(type) {
     }
 
     adminCodes.push({ code: code, type: typeLabel + ' → ' + uid, target: uid });
-    
-    // Уведомление игроку
     addNotification(uid, `🎫 Вам отправлен код: ${code} (${typeLabel})`);
     if (activeChats[uid]) {
         activeChats[uid].messages.push({ 
@@ -1476,14 +1473,12 @@ window.sendCodeToPlayerWithType = function(type) {
         });
         activeChats[uid].hasNew = true;
     }
-    
     closeModal();
     showToast(`✅ Код отправлен игроку ${uid}`);
     render();
     showAdminPanel();
 };
 
-// ===== ОТПРАВКА КОДА ВСЕМ (С УВЕДОМЛЕНИЕМ) =====
 window.adminSendCodeToAll = function() {
     openModal('📤 Отправить код всем игрокам', `
         <p>Выберите тип кода:</p>
@@ -1509,7 +1504,6 @@ window.sendCodeToAllWithType = function(type) {
     const userKeys = Object.keys(uidMap);
     for (const uid of userKeys) {
         if (bannedUsers[uid]) continue;
-        // Уведомление каждому игроку
         addNotification(uid, `🎫 Всем игрокам: ${code} (${typeLabel})`);
         if (activeChats[uid]) {
             activeChats[uid].messages.push({ 
@@ -1520,7 +1514,6 @@ window.sendCodeToAllWithType = function(type) {
             activeChats[uid].hasNew = true;
         }
     }
-    
     adminCodes.push({ code: code, type: typeLabel + ' (всем)', target: 'всем' });
     closeModal();
     showToast(`✅ Код отправлен всем игрокам`);
