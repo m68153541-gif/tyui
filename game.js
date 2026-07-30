@@ -17,7 +17,6 @@ function getUserId() {
         console.log('Telegram WebApp не доступен');
     }
     
-    // Fallback для браузера
     let userId = localStorage.getItem('game_user_id');
     if (!userId) {
         userId = 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
@@ -27,8 +26,49 @@ function getUserId() {
 }
 
 // ============================================================
-//  ХРАНИЛИЩЕ (СОХРАНЯЕТСЯ В localStorage)
+//  ХРАНИЛИЩЕ
 // ============================================================
+
+// Глобальные объекты (доступны всем)
+window.users = window.users || {};
+window.uidMap = window.uidMap || {};
+window.bannedUsers = window.bannedUsers || {};
+window.oneTimeCodes = window.oneTimeCodes || new Set();
+window.multiUseCodes = window.multiUseCodes || {};
+window.boosterCodes = window.boosterCodes || new Set();
+window.boosterMultiCodes = window.boosterMultiCodes || {};
+window.reports = window.reports || [];
+window.activeChats = window.activeChats || {};
+window.adminCodes = window.adminCodes || [];
+window.contestActive = window.contestActive || false;
+window.contestEndTime = window.contestEndTime || null;
+window.contestWinner = window.contestWinner || null;
+
+function saveAllData() {
+    try {
+        const data = {
+            users: window.users,
+            uidMap: window.uidMap,
+            bannedUsers: window.bannedUsers,
+            oneTimeCodes: Array.from(window.oneTimeCodes || []),
+            multiUseCodes: window.multiUseCodes,
+            boosterCodes: Array.from(window.boosterCodes || []),
+            boosterMultiCodes: window.boosterMultiCodes,
+            adminCodes: window.adminCodes,
+            activeChats: window.activeChats,
+            reports: window.reports,
+            contestActive: window.contestActive,
+            contestEndTime: window.contestEndTime,
+            contestWinner: window.contestWinner
+        };
+        localStorage.setItem('zabava_game_full_data', JSON.stringify(data));
+        console.log('✅ Данные сохранены');
+        return true;
+    } catch(e) {
+        console.error('❌ Ошибка сохранения:', e);
+        return false;
+    }
+}
 
 function loadAllData() {
     try {
@@ -48,53 +88,14 @@ function loadAllData() {
             window.contestActive = parsed.contestActive || false;
             window.contestEndTime = parsed.contestEndTime || null;
             window.contestWinner = parsed.contestWinner || null;
-            console.log('✅ Данные загружены из localStorage');
+            console.log('✅ Данные загружены, пользователей:', Object.keys(window.users).length);
             return true;
         }
-    } catch(e) {}
+    } catch(e) {
+        console.error('❌ Ошибка загрузки:', e);
+    }
     return false;
 }
-
-function saveAllData() {
-    try {
-        const data = {
-            users: window.users || {},
-            uidMap: window.uidMap || {},
-            bannedUsers: window.bannedUsers || {},
-            oneTimeCodes: Array.from(window.oneTimeCodes || []),
-            multiUseCodes: window.multiUseCodes || {},
-            boosterCodes: Array.from(window.boosterCodes || []),
-            boosterMultiCodes: window.boosterMultiCodes || {},
-            adminCodes: window.adminCodes || [],
-            activeChats: window.activeChats || {},
-            reports: window.reports || [],
-            contestActive: window.contestActive || false,
-            contestEndTime: window.contestEndTime || null,
-            contestWinner: window.contestWinner || null
-        };
-        localStorage.setItem('zabava_game_full_data', JSON.stringify(data));
-        console.log('✅ Данные сохранены в localStorage');
-        return true;
-    } catch(e) {
-        console.error('❌ Ошибка сохранения:', e);
-        return false;
-    }
-}
-
-// Инициализация хранилища
-window.users = {};
-window.uidMap = {};
-window.bannedUsers = {};
-window.oneTimeCodes = new Set();
-window.multiUseCodes = {};
-window.boosterCodes = new Set();
-window.boosterMultiCodes = {};
-window.reports = [];
-window.activeChats = {};
-window.adminCodes = [];
-window.contestActive = false;
-window.contestEndTime = null;
-window.contestWinner = null;
 
 // Загружаем данные
 loadAllData();
@@ -157,7 +158,7 @@ function getUser(userId) {
         };
         window.uidMap[uid] = userId;
         saveAllData();
-        console.log('🆕 Создан пользователь:', userId);
+        console.log('🆕 Создан пользователь:', userId, 'UID:', uid);
     }
     return window.users[userId];
 }
@@ -169,11 +170,19 @@ function getCurrentUser() {
 
 function getUserByUid(uid) {
     const userId = window.uidMap[uid];
-    if (userId) return getUser(userId);
+    if (userId) {
+        return getUser(userId);
+    }
+    // Если не нашли по uidMap, ищем во всех пользователях
+    for (const id in window.users) {
+        if (window.users[id].uid === uid) {
+            return window.users[id];
+        }
+    }
     return null;
 }
 
-function getAllUsers() {
+function getAllUsersList() {
     const result = [];
     for (const userId in window.users) {
         const user = window.users[userId];
@@ -183,7 +192,8 @@ function getAllUsers() {
             name: user.name || '—',
             stars: user.stars || 0,
             bank: user.bank || 0,
-            attempts: user.attempts || 0
+            attempts: user.attempts || 0,
+            registered: user.registered || false
         });
     }
     return result;
@@ -204,6 +214,8 @@ function addNotification(uid, message) {
         });
         saveAllData();
         render();
+        // Показываем уведомление сразу
+        showToast('📩 ' + message, 4000);
     }
 }
 
@@ -394,7 +406,7 @@ function renderAdminCodes() {
     const panel = document.getElementById('codesPanel');
     const list = document.getElementById('codesList');
     if (!panel || !list) return;
-    if (window.adminCodes.length === 0) {
+    if (!window.adminCodes || window.adminCodes.length === 0) {
         panel.style.display = 'none';
         return;
     }
@@ -418,7 +430,10 @@ function renderContest() {
     banner.style.display = 'block';
     const now = Date.now();
     const remaining = window.contestEndTime - now;
-    if (remaining <= 0) { endContest(); return; }
+    if (remaining <= 0) { 
+        endContest(); 
+        return; 
+    }
     const hours = Math.floor(remaining / 3600000);
     const minutes = Math.floor((remaining % 3600000) / 60000);
     const seconds = Math.floor((remaining % 60000) / 1000);
@@ -440,8 +455,8 @@ function startContest() {
     window.contestEndTime = Date.now() + 6 * 60 * 60 * 1000;
     window.contestWinner = null;
     showToast('🏆 Конкурс запущен на 6 часов!');
-    render();
     saveAllData();
+    render();
 }
 
 function endContest() {
@@ -449,17 +464,18 @@ function endContest() {
     window.contestActive = false;
     let maxStars = -1;
     let winnerUid = null;
-    for (const uid in window.uidMap) {
-        if (window.bannedUsers[uid]) continue;
-        const user = getUserByUid(uid);
-        if (user) {
+    
+    for (const userId in window.users) {
+        const user = window.users[userId];
+        if (user && user.uid && !window.bannedUsers[user.uid]) {
             const total = (user.stars || 0) + (user.bank || 0);
             if (total > maxStars) {
                 maxStars = total;
-                winnerUid = uid;
+                winnerUid = user.uid;
             }
         }
     }
+    
     if (winnerUid) {
         window.contestWinner = winnerUid;
         const winner = getUserByUid(winnerUid);
@@ -468,13 +484,12 @@ function endContest() {
             winner.attempts += 3;
             addNotification(winnerUid, '🏆 Вы победили в конкурсе! +500 ⭐ и +3 попытки!');
             showToast(`🏆 Победитель: ${winnerUid}! +500 ⭐ и +3 попытки!`);
-            saveAllData();
         }
     } else {
         showToast('❌ Нет участников для конкурса');
     }
-    render();
     saveAllData();
+    render();
 }
 
 function forceEndContest() {
@@ -754,6 +769,7 @@ function spinWheel() {
             isSpinning = false;
             document.getElementById('wheelSpinBtn').disabled = false;
             render();
+            saveAllData();
         }
     }, 30);
 }
@@ -1230,13 +1246,31 @@ function handleLeaderboard() {
         .then(res => res.json())
         .then(data => {
             let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>⭐</th></tr></thead><tbody>';
-            data.sort((a, b) => (b.stars || 0) - (a.stars || 0)).slice(0, 30).forEach((item, i) => {
+            const sorted = data.sort((a, b) => (b.stars || 0) - (a.stars || 0)).slice(0, 30);
+            if (sorted.length === 0) {
+                html += '<tr><td colspan="4" style="text-align:center;color:#888;">Нет игроков</td></tr>';
+            }
+            sorted.forEach((item, i) => {
                 html += `<tr><td>${i+1}</td><td>${item.uid}</td><td>${item.name}</td><td>${item.stars}</td></tr>`;
             });
             html += '</tbody></table><button class="btn full small" onclick="closeModal();">🏠 В меню</button>';
             openModal('🏆 Таблица лидеров', html);
         })
-        .catch(() => showToast('❌ Ошибка загрузки'));
+        .catch(() => {
+            // Если сервер не отвечает, показываем локальные данные
+            const usersList = getAllUsersList();
+            let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>⭐</th></tr></thead><tbody>';
+            const sorted = usersList.sort((a, b) => (b.stars || 0) - (a.stars || 0)).slice(0, 30);
+            if (sorted.length === 0) {
+                html += '<tr><td colspan="4" style="text-align:center;color:#888;">Нет игроков</td></tr>';
+            }
+            sorted.forEach((item, i) => {
+                html += `<tr><td>${i+1}</td><td>${item.uid}</td><td>${item.name}</td><td>${item.stars}</td></tr>`;
+            });
+            html += '</tbody></table><button class="btn full small" onclick="closeModal();">🏠 В меню</button>';
+            openModal('🏆 Таблица лидеров (локальная)', html);
+            showToast('❌ Ошибка загрузки с сервера, показаны локальные данные');
+        });
 }
 
 // ============================================================
@@ -1529,8 +1563,8 @@ window.adminBoostMulti = function() {
 
 window.adminSendCodeToPlayer = function() {
     openModal('📤 Отправить код игроку', `
-        <p>Введите ID игрока:</p>
-        <input type="text" id="sendCodeUid" placeholder="UID игрока" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <p>Введите ID игрока (UID из профиля):</p>
+        <input type="text" id="sendCodeUid" placeholder="UID игрока (например, aBc123)" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
         <p>Выберите тип кода:</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn small" onclick="sendCodeToPlayerWithType('single')">🔑 Одноразовый</button>
@@ -1547,8 +1581,12 @@ window.sendCodeToPlayerWithType = function(type) {
     if (!uidInput) return;
     const uid = uidInput.value.trim();
     if (!uid) { showToast('❌ Введите ID игрока'); return; }
+    
     const user = getUserByUid(uid);
-    if (!user) { showToast('❌ Игрок не найден'); return; }
+    if (!user) { 
+        showToast('❌ Игрок с таким UID не найден!');
+        return; 
+    }
 
     let code, typeLabel;
     switch(type) {
@@ -1600,11 +1638,10 @@ window.sendCodeToAllWithType = function(type) {
         case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🚀 Бустер x5'; break;
     }
 
-    const userKeys = Object.keys(window.users);
-    for (const userId of userKeys) {
+    // Отправляем код всем игрокам
+    for (const userId in window.users) {
         const user = window.users[userId];
-        if (user && user.uid) {
-            if (window.bannedUsers[user.uid]) continue;
+        if (user && user.uid && !window.bannedUsers[user.uid]) {
             addNotification(user.uid, `🎫 Всем игрокам: ${code} (${typeLabel})`);
             if (window.activeChats[user.uid]) {
                 window.activeChats[user.uid].messages.push({ 
@@ -1626,13 +1663,15 @@ window.sendCodeToAllWithType = function(type) {
 };
 
 window.adminMassGive = function() {
+    let count = 0;
     for (const userId in window.users) {
         const user = window.users[userId];
         if (user && !window.bannedUsers[user.uid]) {
-            user.attempts = 1;
+            user.attempts += 1;
+            count++;
         }
     }
-    showToast('✅ Попытки выданы всем активным игрокам');
+    showToast(`✅ +1 попытка выдана ${count} игрокам`);
     saveAllData();
 };
 
@@ -1660,8 +1699,8 @@ window.doGiveSelfStars = function() {
 
 window.adminPlayerMenu = function() {
     openModal('👤 Управление игроком', `
-        <p>Введите ID игрока:</p>
-        <input type="text" id="playerUidInput" placeholder="UID игрока" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <p>Введите ID игрока (UID из профиля):</p>
+        <input type="text" id="playerUidInput" placeholder="UID игрока (например, aBc123)" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
         <button class="btn primary full" onclick="showPlayerInfo()">🔍 Найти</button>
         <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
     `);
@@ -1672,8 +1711,12 @@ window.showPlayerInfo = function() {
     if (!input) return;
     const uid = input.value.trim();
     if (!uid) { showToast('❌ Введите ID'); return; }
+    
     const user = getUserByUid(uid);
-    if (!user) { showToast('❌ Игрок не найден'); return; }
+    if (!user) { 
+        showToast('❌ Игрок с таким UID не найден!');
+        return; 
+    }
 
     const isBanned = window.bannedUsers[uid] !== undefined;
     const banReason = window.bannedUsers[uid] || '—';
@@ -1853,17 +1896,21 @@ window.adminReports = function() {
 };
 
 window.adminTop = function() {
-    fetch(SERVER_URL + '/api/all_users')
-        .then(res => res.json())
-        .then(data => {
-            let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>⭐</th></tr></thead><tbody>';
-            data.sort((a, b) => (b.stars || 0) - (a.stars || 0)).slice(0, 30).forEach((item, i) => {
-                html += `<tr><td>${i+1}</td><td>${item.uid}</td><td>${item.name}</td><td>${item.stars}</td></tr>`;
-            });
-            html += '</tbody></table><button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>';
-            openModal('🏆 Топ-30', html);
-        })
-        .catch(() => showToast('❌ Ошибка загрузки'));
+    const usersList = getAllUsersList();
+    let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>⭐</th></tr></thead><tbody>';
+    const sorted = usersList
+        .filter(u => !window.bannedUsers[u.uid])
+        .sort((a, b) => (b.stars || 0) - (a.stars || 0))
+        .slice(0, 30);
+    
+    if (sorted.length === 0) {
+        html += '<tr><td colspan="4" style="text-align:center;color:#888;">Нет игроков</td></tr>';
+    }
+    sorted.forEach((item, i) => {
+        html += `<tr><td>${i+1}</td><td>${item.uid}</td><td>${item.name}</td><td>${item.stars}</td></tr>`;
+    });
+    html += '</tbody></table><button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>';
+    openModal('🏆 Топ-30', html);
 };
 
 // ============================================================
@@ -1980,6 +2027,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 500);
     
     console.log('✅ Все обработчики назначены!');
+    console.log('📊 Всего игроков в базе:', Object.keys(window.users).length);
 });
 
 setInterval(() => {
@@ -1990,3 +2038,4 @@ setInterval(() => {
 }, 15000);
 
 setInterval(saveAllData, 30000);
+setInterval(renderContest, 1000);
