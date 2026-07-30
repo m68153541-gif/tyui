@@ -63,9 +63,12 @@ function generateCode(len = 10) {
 }
 
 function getUser(userId) {
-    if (!users[userId]) {
+    const telegramId = getTelegramUserId();
+    let user = users[telegramId];
+    
+    if (!user) {
         const uid = generateUid();
-        users[userId] = {
+        user = {
             username: null,
             attempts: 1,
             chatId: null,
@@ -88,10 +91,12 @@ function getUser(userId) {
             clickerProgress: 0,
             notifications: []
         };
-        uidMap[uid] = userId;
+        users[telegramId] = user;
+        uidMap[uid] = telegramId;
         saveToServer();
+        console.log('🆕 Создан новый пользователь с Telegram ID:', telegramId);
     }
-    return users[userId];
+    return user;
 }
 
 function getCurrentUser() {
@@ -109,8 +114,11 @@ function getUserByUid(uid) {
 async function saveToServer() {
     try {
         const user = getCurrentUser();
+        const telegramId = getTelegramUserId();
         if (!user || !user.uid) return false;
         if (!user.registered) return false;
+        
+        console.log('📤 Сохраняем на сервер:', { telegramId, uid: user.uid, stars: user.stars });
         
         const response = await fetch(SERVER_URL + '/api/save', {
             method: 'POST',
@@ -132,14 +140,22 @@ async function saveToServer() {
 async function loadFromServer() {
     try {
         const user = getCurrentUser();
+        const telegramId = getTelegramUserId();
         if (!user || !user.uid) return false;
+        
+        console.log('📥 Загружаем с сервера uid:', user.uid);
         
         const response = await fetch(SERVER_URL + `/api/load/${user.uid}`);
         if (response.ok) {
             const data = await response.json();
             const oldUid = user.uid;
+            const oldRegistered = user.registered;
             Object.assign(user, data);
             user.uid = oldUid;
+            // Если данные загружены, но registered = false, оставляем как есть
+            if (data.registered) {
+                user.registered = true;
+            }
             console.log('✅ Загружено с сервера:', data);
             render();
             return true;
@@ -262,7 +278,7 @@ function render() {
     const wheelAttempts = document.getElementById('wheelAttemptsCount');
     if (wheelAttempts) wheelAttempts.textContent = user.attempts || 0;
 
-    // ===== АВТОСОХРАНЕНИЕ ПРИ КАЖДОМ РЕНДЕРИНГЕ =====
+    // Автосохранение при каждом рендеринге
     if (user.registered && user.uid) {
         saveToServer();
     }
