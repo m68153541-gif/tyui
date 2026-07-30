@@ -20,13 +20,11 @@ function getTelegramUserId() {
 }
 
 function getUserId() {
-    // Пытаемся получить Telegram ID
     const tgId = getTelegramUserId();
     if (tgId) {
-        return 'tg_' + tgId;  // Префикс для Telegram
+        return 'tg_' + tgId;
     }
     
-    // Если не в Telegram - используем localStorage
     let userId = localStorage.getItem('game_user_id');
     if (!userId) {
         userId = 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
@@ -110,7 +108,6 @@ function getUser(userId) {
             notifications: []
         };
         uidMap[uid] = userId;
-        // Сохраняем нового пользователя
         setTimeout(() => saveToServer(), 500);
     }
     return users[userId];
@@ -142,7 +139,7 @@ async function saveToServer() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                user_id: userId,  // Используем полный ID
+                user_id: userId,
                 user_data: user 
             })
         });
@@ -165,16 +162,11 @@ async function loadFromServer() {
             const data = await response.json();
             const user = getCurrentUser();
             const oldUid = user.uid;
-            // Сохраняем старые данные, если они есть
             const oldRegistered = user.registered;
-            const oldStars = user.stars;
-            const oldAttempts = user.attempts;
             
-            // Загружаем с сервера
             Object.assign(user, data);
             user.uid = oldUid;
             
-            // Если на сервере registered = false, но локально true - оставляем локальное
             if (oldRegistered && !data.registered) {
                 user.registered = true;
             }
@@ -307,7 +299,6 @@ function render() {
     const wheelAttempts = document.getElementById('wheelAttemptsCount');
     if (wheelAttempts) wheelAttempts.textContent = user.attempts || 0;
 
-    // Автосохранение при каждом рендеринге
     if (user.registered && user.uid) {
         saveToServer();
     }
@@ -413,7 +404,7 @@ function forceEndContest() {
 }
 
 // ============================================================
-//  TOAST
+//  TOAST И МОДАЛКА
 // ============================================================
 
 let toastTimeout;
@@ -426,10 +417,6 @@ function showToast(text, duration = 2500) {
     clearTimeout(toastTimeout);
     toastTimeout = setTimeout(() => el.classList.remove('show'), duration);
 }
-
-// ============================================================
-//  МОДАЛКА
-// ============================================================
 
 function openModal(title, html) {
     const titleEl = document.getElementById('modalTitle');
@@ -489,7 +476,7 @@ window.deleteCode = function(index) {
     if (!item) return;
     const code = item.code;
     if (oneTimeCodes.has(code)) oneTimeCodes.delete(code);
-    if (multiUseCodes[code]) delete multiUseCodes[code);
+    if (multiUseCodes[code]) delete multiUseCodes[code];
     if (boosterCodes.has(code)) boosterCodes.delete(code);
     if (boosterMultiCodes[code]) delete boosterMultiCodes[code];
     adminCodes.splice(index, 1);
@@ -1827,7 +1814,6 @@ window.completeRegistration = function() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ DOM загружен!');
     
-    // Назначаем обработчики
     document.getElementById('btnPlay').addEventListener('click', function() {
         console.log('🎮 Играть');
         const user = getCurrentUser();
@@ -1853,7 +1839,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btnSupport').addEventListener('click', handleSupport);
     document.getElementById('btnAdmin').addEventListener('click', handleAdmin);
     
-    // Колесо
     document.getElementById('wheelSpinBtn').addEventListener('click', spinWheel);
     document.getElementById('wheelCloseBtn').addEventListener('click', closeWheel);
     document.getElementById('wheelCanvas').addEventListener('click', spinWheel);
@@ -1861,7 +1846,6 @@ document.addEventListener('DOMContentLoaded', function() {
     render();
     initWheel();
     
-    // Загружаем данные с сервера
     setTimeout(async function() {
         await loadFromServer();
         setTimeout(checkRegistration, 500);
@@ -1870,7 +1854,6 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Все обработчики назначены!');
 });
 
-// Автосохранение каждые 15 секунд
 setInterval(() => {
     const user = getCurrentUser();
     if (user.registered) {
