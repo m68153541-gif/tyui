@@ -4,7 +4,7 @@ console.log('🚀 Игра загружается...');
 //  ID
 // ============================================================
 
-function getUserId() {
+function getTelegramUserId() {
     try {
         if (window.Telegram && window.Telegram.WebApp) {
             const tg = window.Telegram.WebApp;
@@ -14,7 +14,14 @@ function getUserId() {
             }
         }
     } catch(e) {}
-    
+    return null;
+}
+
+function getUserId() {
+    const tgId = getTelegramUserId();
+    if (tgId) {
+        return 'tg_' + tgId;
+    }
     let userId = localStorage.getItem('game_user_id');
     if (!userId) {
         userId = 'local_' + Date.now();
@@ -92,16 +99,27 @@ function loadAllData() {
 loadAllData();
 
 // ============================================================
-//  ОСНОВНЫЕ ФУНКЦИИ
+//  ГЕНЕРАЦИЯ UID
 // ============================================================
 
 function generateUid() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    while (true) {
-        let uid = '';
-        for (let i = 0; i < 6; i++) uid += chars[Math.floor(Math.random() * chars.length)];
-        if (!window.uidMap[uid] && uid !== "admin74zyza") return uid;
+    let uid = '';
+    for (let i = 0; i < 6; i++) uid += chars[Math.floor(Math.random() * chars.length)];
+    return uid;
+}
+
+function generateThreeUids() {
+    const uids = [];
+    const used = new Set();
+    while (uids.length < 3) {
+        const uid = generateUid();
+        if (!used.has(uid) && !window.uidMap[uid]) {
+            used.add(uid);
+            uids.push(uid);
+        }
     }
+    return uids;
 }
 
 function generateCode(len = 10) {
@@ -113,7 +131,6 @@ function generateCode(len = 10) {
 
 function getUser(userId) {
     if (!window.users[userId]) {
-        const uid = generateUid();
         window.users[userId] = {
             username: null,
             attempts: 1,
@@ -121,7 +138,7 @@ function getUser(userId) {
             boosted: false,
             stars: 300,
             petProgress: 0,
-            uid: uid,
+            uid: null,
             coefficientRate: 0.0,
             petStage: 1,
             lastPassiveTime: Date.now(),
@@ -137,7 +154,6 @@ function getUser(userId) {
             banned: false,
             banned_reason: ''
         };
-        window.uidMap[uid] = userId;
         saveAllData();
         saveToServer();
     }
@@ -166,7 +182,7 @@ function getAllUsersList() {
     const result = [];
     for (const userId in window.users) {
         const user = window.users[userId];
-        if (user) {
+        if (user && user.uid) {
             result.push({
                 userId: userId,
                 uid: user.uid,
@@ -182,17 +198,116 @@ function getAllUsersList() {
     return result;
 }
 
-function isUserBanned(uid) {
-    if (window.bannedUsers[uid]) return true;
-    const user = getUserByUid(uid);
-    return user && user.banned;
+// ============================================================
+//  РЕГИСТРАЦИЯ С ВЫБОРОМ UID
+// ============================================================
+
+function showRegistration() {
+    const uids = generateThreeUids();
+    
+    openModal('📝 Регистрация', `
+        <p>Добро пожаловать! Давайте зарегистрируемся.</p>
+        <p>Введите ваше имя:</p>
+        <input type="text" id="regName" placeholder="Имя" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <p>Выберите пол:</p>
+        <div style="display:flex;gap:8px;margin:5px 0;">
+            <button class="btn" onclick="selectGender('Мужской')" style="flex:1;">👨 Мужской</button>
+            <button class="btn" onclick="selectGender('Женский')" style="flex:1;">👩 Женский</button>
+        </div>
+        <p>Введите возраст:</p>
+        <input type="number" id="regAge" placeholder="Возраст" min="1" max="120" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <p style="color:#ffd700;font-weight:bold;">Выберите ваш уникальный ID (навсегда):</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:5px 0;">
+            <button class="btn primary" onclick="selectUid('${uids[0]}')" id="uidBtn0" style="flex:1;font-weight:bold;font-size:18px;">${uids[0]}</button>
+            <button class="btn primary" onclick="selectUid('${uids[1]}')" id="uidBtn1" style="flex:1;font-weight:bold;font-size:18px;">${uids[1]}</button>
+            <button class="btn primary" onclick="selectUid('${uids[2]}')" id="uidBtn2" style="flex:1;font-weight:bold;font-size:18px;">${uids[2]}</button>
+        </div>
+        <div id="selectedUidDisplay" style="text-align:center;margin:8px 0;font-size:16px;color:#6bcbff;"></div>
+        <button class="btn primary full" id="regCompleteBtn" onclick="completeRegistration()" disabled>✅ Завершить</button>
+    `);
 }
 
-function getBanReason(uid) {
-    if (window.bannedUsers[uid]) return window.bannedUsers[uid];
-    const user = getUserByUid(uid);
-    return user ? user.banned_reason || 'Нарушение правил' : null;
+let regData = { name: '', gender: '', age: '', uid: '' };
+let genderSelected = false;
+
+window.selectGender = function(g) {
+    genderSelected = true;
+    regData.gender = g;
+    showToast(`✅ Пол: ${g}`);
+    checkRegistrationReady();
+};
+
+window.selectUid = function(uid) {
+    regData.uid = uid;
+    document.getElementById('selectedUidDisplay').textContent = '✅ Выбран ID: ' + uid;
+    document.getElementById('selectedUidDisplay').style.color = '#ffd700';
+    
+    // Подсвечиваем выбранную кнопку
+    document.querySelectorAll('#modalBody .btn.primary').forEach(btn => {
+        btn.style.border = '2px solid transparent';
+        if (btn.textContent.trim() === uid) {
+            btn.style.border = '2px solid #ffd700';
+            btn.style.background = 'linear-gradient(145deg, #ffd700, #f5a623)';
+        }
+    });
+    checkRegistrationReady();
+};
+
+function checkRegistrationReady() {
+    const nameInput = document.getElementById('regName');
+    const ageInput = document.getElementById('regAge');
+    const btn = document.getElementById('regCompleteBtn');
+    if (nameInput && ageInput && btn) {
+        const name = nameInput.value.trim();
+        const age = parseInt(ageInput.value);
+        if (name.length > 0 && age > 0 && age <= 120 && genderSelected && regData.uid) {
+            btn.disabled = false;
+        } else {
+            btn.disabled = true;
+        }
+    }
 }
+
+window.completeRegistration = function() {
+    const nameInput = document.getElementById('regName');
+    const ageInput = document.getElementById('regAge');
+    if (!nameInput || !ageInput) return;
+    
+    regData.name = nameInput.value.trim();
+    regData.age = parseInt(ageInput.value);
+
+    if (!regData.name || regData.name.length === 0) {
+        showToast('❌ Введите имя');
+        return;
+    }
+    if (!regData.age || regData.age < 1 || regData.age > 120) {
+        showToast('❌ Введите возраст от 1 до 120');
+        return;
+    }
+    if (!regData.gender) {
+        showToast('❌ Выберите пол');
+        return;
+    }
+    if (!regData.uid) {
+        showToast('❌ Выберите ID');
+        return;
+    }
+
+    const user = getCurrentUser();
+    user.name = regData.name;
+    user.gender = regData.gender;
+    user.age = regData.age;
+    user.uid = regData.uid;
+    user.registered = true;
+    
+    window.uidMap[regData.uid] = getUserId();
+    
+    closeModal();
+    showToast('✅ Регистрация завершена! Ваш ID: ' + regData.uid);
+    render();
+    saveAllData();
+    saveToServer();
+};
 
 // ============================================================
 //  СЕРВЕР
@@ -223,6 +338,9 @@ async function loadFromServer() {
             const oldUid = user.uid;
             Object.assign(user, data);
             user.uid = oldUid;
+            if (user.uid) {
+                window.uidMap[user.uid] = userId;
+            }
             render();
             saveAllData();
             return true;
@@ -245,6 +363,7 @@ async function loadAllUsersFromServer() {
                         user.bank = item.bank || user.bank;
                         user.attempts = item.attempts || user.attempts;
                         user.registered = item.registered || user.registered;
+                        user.uid = item.uid;
                         window.uidMap[item.uid] = item.user_id || item.uid;
                     }
                 }
@@ -254,6 +373,21 @@ async function loadAllUsersFromServer() {
         }
     } catch(e) {}
     return [];
+}
+
+async function syncBannedToServer() {
+    try {
+        const bannedData = {};
+        for (const uid in window.bannedUsers) {
+            bannedData[uid] = window.bannedUsers[uid];
+        }
+        const response = await fetch(SERVER_URL + '/api/sync_banned', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ banned: bannedData })
+        });
+        return await response.json();
+    } catch(e) { return false; }
 }
 
 async function loadBannedFromServer() {
@@ -272,58 +406,6 @@ async function loadBannedFromServer() {
             saveAllData();
             render();
             return true;
-        }
-    } catch(e) {}
-    return false;
-}
-
-async function syncBannedToServer() {
-    try {
-        const response = await fetch(SERVER_URL + '/api/sync_banned', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ banned: window.bannedUsers })
-        });
-        const result = await response.json();
-        return result.success;
-    } catch(e) { return false; }
-}
-
-async function syncCodesToServer() {
-    try {
-        const response = await fetch(SERVER_URL + '/api/sync_codes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ codes: window.adminCodes })
-        });
-        return await response.json();
-    } catch(e) { return false; }
-}
-
-async function loadCodesFromServer() {
-    try {
-        const response = await fetch(SERVER_URL + '/api/load_codes');
-        if (response.ok) {
-            const data = await response.json();
-            if (data.length > 0) {
-                window.adminCodes = data;
-                // Восстанавливаем коды в хранилища
-                for (const item of data) {
-                    const code = item.code;
-                    if (item.type.includes('Одноразовый')) {
-                        window.oneTimeCodes.add(code);
-                    } else if (item.type.includes('На 5')) {
-                        window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() };
-                    } else if (item.type.includes('Бустер x5')) {
-                        window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() };
-                    } else if (item.type.includes('Бустер')) {
-                        window.boosterCodes.add(code);
-                    }
-                }
-                saveAllData();
-                render();
-                return true;
-            }
         }
     } catch(e) {}
     return false;
@@ -380,7 +462,7 @@ function render() {
         statusEl.textContent = '🚫 ЗАБЛОКИРОВАН: ' + (user.banned_reason || 'Нарушение правил');
         statusEl.style.color = '#ff4757';
     } else if (user.registered) {
-        statusEl.textContent = '✅ Зарегистрирован';
+        statusEl.textContent = '✅ Зарегистрирован (ID: ' + (user.uid || '—') + ')';
         statusEl.style.color = '#4caf50';
     } else {
         statusEl.textContent = '❌ Не зарегистрирован';
@@ -565,7 +647,6 @@ window.deleteCode = function(index) {
     showToast('🗑️ Код удалён');
     render();
     saveAllData();
-    syncCodesToServer();
 };
 
 // ============================================================
@@ -790,7 +871,7 @@ function closeWheel() {
 }
 
 // ============================================================
-//  ОБРАБОТЧИКИ (КРАТКИЕ ВЕРСИИ)
+//  ОБРАБОТЧИКИ (ИГРОВЫЕ)
 // ============================================================
 
 function handlePlay() {
@@ -1104,7 +1185,6 @@ window.applyCode = function() {
             showToast('🚀 Бустер активирован!');
             render();
             saveAllData();
-            syncCodesToServer();
             return;
         }
     }
@@ -1128,7 +1208,6 @@ window.applyCode = function() {
             showToast('🚀 Бустер активирован!');
             render();
             saveAllData();
-            syncCodesToServer();
             return;
         }
     }
@@ -1143,7 +1222,6 @@ window.applyCode = function() {
             showToast('✅ Код принят!');
             render();
             saveAllData();
-            syncCodesToServer();
             return;
         }
     }
@@ -1166,7 +1244,6 @@ window.applyCode = function() {
             showToast('✅ Код принят!');
             render();
             saveAllData();
-            syncCodesToServer();
             return;
         }
     }
@@ -1209,9 +1286,6 @@ function handleRules() {
             <p><strong>🪳 Питомец</strong></p>
             <p>• Растёт от кормления звёздами</p>
             <p>• Приносит пассивный доход</p>
-            <br>
-            <p><strong>🎫 Коды</strong></p>
-            <p>• Вводите коды для бонусов</p>
             <br>
             <p><strong>👑 Администратор всегда прав!</strong></p>
         </div>
@@ -1433,7 +1507,7 @@ function showAdminPanel() {
 }
 
 // ============================================================
-//  АДМИН-ФУНКЦИИ (С СИНХРОНИЗАЦИЕЙ)
+//  АДМИН-ФУНКЦИИ
 // ============================================================
 
 window.adminCodeSingle = function() {
@@ -1443,7 +1517,6 @@ window.adminCodeSingle = function() {
     showToast(`✅ Код: ${code}`);
     render();
     saveAllData();
-    syncCodesToServer();
 };
 
 window.adminCodeMulti = function() {
@@ -1453,7 +1526,6 @@ window.adminCodeMulti = function() {
     showToast(`✅ Код на 5: ${code}`);
     render();
     saveAllData();
-    syncCodesToServer();
 };
 
 window.adminBoostSingle = function() {
@@ -1463,7 +1535,6 @@ window.adminBoostSingle = function() {
     showToast(`✅ Бустер: ${code}`);
     render();
     saveAllData();
-    syncCodesToServer();
 };
 
 window.adminBoostMulti = function() {
@@ -1473,7 +1544,6 @@ window.adminBoostMulti = function() {
     showToast(`✅ Бустер на 5: ${code}`);
     render();
     saveAllData();
-    syncCodesToServer();
 };
 
 window.adminSendCodeToPlayer = function() {
@@ -1499,9 +1569,22 @@ window.sendCodeToPlayerWithType = function(type) {
     
     const user = getUserByUid(uid);
     if (!user) { 
-        showToast('❌ Игрок с таким UID не найден!');
-        return; 
+        loadAllUsersFromServer().then(() => {
+            const user2 = getUserByUid(uid);
+            if (!user2) {
+                showToast('❌ Игрок с таким UID не найден!');
+                return;
+            }
+            sendCodeToPlayerInternal(uid, type);
+        });
+        return;
     }
+    sendCodeToPlayerInternal(uid, type);
+};
+
+function sendCodeToPlayerInternal(uid, type) {
+    const user = getUserByUid(uid);
+    if (!user) { showToast('❌ Игрок не найден'); return; }
 
     let code, typeLabel;
     switch(type) {
@@ -1512,7 +1595,6 @@ window.sendCodeToPlayerWithType = function(type) {
     }
 
     window.adminCodes.push({ code: code, type: typeLabel + ' → ' + uid, target: uid });
-    
     addNotification(uid, `🎫 Вам отправлен код: ${code} (${typeLabel})`);
     if (window.activeChats[uid]) {
         window.activeChats[uid].messages.push({ 
@@ -1527,7 +1609,6 @@ window.sendCodeToPlayerWithType = function(type) {
     showToast(`✅ Код отправлен игроку ${uid}`);
     render();
     saveAllData();
-    syncCodesToServer();
     showAdminPanel();
 };
 
@@ -1575,7 +1656,6 @@ window.sendCodeToAllWithType = function(type) {
     showToast(`✅ Код отправлен всем ${sentCount} игрокам`);
     render();
     saveAllData();
-    syncCodesToServer();
     showAdminPanel();
 };
 
@@ -1753,7 +1833,6 @@ window.doBanUser = function(uid) {
     if (!input) return;
     const reason = input.value.trim() || 'Нарушение правил';
     
-    // Локально
     window.bannedUsers[uid] = reason;
     const user = getUserByUid(uid);
     if (user) {
@@ -1763,15 +1842,12 @@ window.doBanUser = function(uid) {
     saveAllData();
     
     addNotification(uid, `🚫 Вас заблокировали. Причина: ${reason}`);
-    
-    // Синхронизация с сервером
-    syncBannedToServer().then(() => {
-        showToast(`✅ ${uid} заблокирован. Причина: ${reason}`);
-        closeModal();
-        render();
-        saveAllData();
-        showPlayerInfo();
-    });
+    syncBannedToServer();
+    showToast(`✅ ${uid} заблокирован. Причина: ${reason}`);
+    closeModal();
+    render();
+    saveAllData();
+    showPlayerInfo();
 };
 
 window.adminUnbanUserByUid = function(uid) {
@@ -1866,10 +1942,6 @@ window.adminTop = function() {
     });
 };
 
-// ============================================================
-//  РЕГИСТРАЦИЯ
-// ============================================================
-
 function checkRegistration() {
     const user = getCurrentUser();
     if (!user.registered) {
@@ -1877,71 +1949,12 @@ function checkRegistration() {
     }
 }
 
-let regData = { name: '', gender: '', age: '' };
-let genderSelected = false;
-
-function showRegistration() {
-    openModal('📝 Регистрация', `
-        <p>Добро пожаловать! Давайте зарегистрируемся.</p>
-        <p>Введите ваше имя:</p>
-        <input type="text" id="regName" placeholder="Имя" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <p>Выберите пол:</p>
-        <div style="display:flex;gap:8px;margin:5px 0;">
-            <button class="btn" onclick="selectGender('Мужской')" style="flex:1;">👨 Мужской</button>
-            <button class="btn" onclick="selectGender('Женский')" style="flex:1;">👩 Женский</button>
-        </div>
-        <p>Введите возраст:</p>
-        <input type="number" id="regAge" placeholder="Возраст" min="1" max="120" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="completeRegistration()">✅ Завершить</button>
-    `);
-}
-
-window.selectGender = function(g) {
-    genderSelected = true;
-    regData.gender = g;
-    showToast(`✅ Пол: ${g}`);
-};
-
-window.completeRegistration = function() {
-    const nameInput = document.getElementById('regName');
-    const ageInput = document.getElementById('regAge');
-    if (!nameInput || !ageInput) return;
-    
-    regData.name = nameInput.value.trim();
-    regData.age = parseInt(ageInput.value);
-
-    if (!regData.name || regData.name.length === 0) {
-        showToast('❌ Введите имя');
-        return;
-    }
-    if (!regData.age || regData.age < 1 || regData.age > 120) {
-        showToast('❌ Введите возраст от 1 до 120');
-        return;
-    }
-    if (!regData.gender) {
-        showToast('❌ Выберите пол');
-        return;
-    }
-
-    const user = getCurrentUser();
-    user.name = regData.name;
-    user.gender = regData.gender;
-    user.age = regData.age;
-    user.registered = true;
-    closeModal();
-    showToast('✅ Регистрация завершена!');
-    render();
-    saveAllData();
-    saveToServer();
-};
-
 // ============================================================
 //  ИНИЦИАЛИЗАЦИЯ
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ DOM загружен!');
-    console.log('📊 Загружено пользователей локально:', Object.keys(window.users).length);
     
     document.getElementById('btnPlay').addEventListener('click', function() {
         const user = getCurrentUser();
@@ -1982,7 +1995,6 @@ document.addEventListener('DOMContentLoaded', function() {
         await loadFromServer();
         await loadAllUsersFromServer();
         await loadBannedFromServer();
-        await loadCodesFromServer();
         setTimeout(checkRegistration, 500);
         render();
     }, 500);
