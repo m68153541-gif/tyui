@@ -10,6 +10,7 @@ CORS(app)
 DATA_FILE = 'users_data.json'
 GLOBAL_DATA_FILE = 'global_data.json'
 
+# Загрузка данных о пользователях
 def load_users():
     if os.path.exists(DATA_FILE):
         try:
@@ -19,10 +20,12 @@ def load_users():
             return {}
     return {}
 
+# Сохранение данных о пользователях
 def save_users(users):
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(users, f, ensure_ascii=False, indent=2)
 
+# Загрузка глобальных данных
 def load_global_data():
     if os.path.exists(GLOBAL_DATA_FILE):
         try:
@@ -30,6 +33,7 @@ def load_global_data():
                 return json.load(f)
         except:
             return {}
+    # Значения по умолчанию
     return {
         'contest_active': False,
         'contest_end_time': None,
@@ -40,10 +44,12 @@ def load_global_data():
         'banned_users': {}
     }
 
+# Сохранение глобальных данных
 def save_global_data(data):
     with open(GLOBAL_DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+# Основные маршруты
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -56,6 +62,7 @@ def css():
 def js():
     return send_from_directory('.', 'game.js')
 
+# API: сохранить пользователя
 @app.route('/api/save', methods=['POST'])
 def save_user():
     data = request.json
@@ -68,9 +75,9 @@ def save_user():
     users = load_users()
     users[user_id] = user_data
     save_users(users)
-    
     return jsonify({'success': True})
 
+# API: загрузить пользователя по id
 @app.route('/api/load/<user_id>')
 def load_user(user_id):
     users = load_users()
@@ -79,6 +86,7 @@ def load_user(user_id):
         return jsonify(user_data)
     return jsonify({'error': 'Not found'}), 404
 
+# API: все пользователи
 @app.route('/api/all_users')
 def all_users():
     users = load_users()
@@ -97,8 +105,7 @@ def all_users():
         })
     return jsonify(result)
 
-# ===== ГЛОБАЛЬНЫЕ ДАННЫЕ =====
-
+# Глобальные данные
 @app.route('/api/get_global_data')
 def get_global_data():
     data = load_global_data()
@@ -161,13 +168,17 @@ def add_chat_message():
     save_global_data(global_data)
     return jsonify({'success': True})
 
+# API: получить чат по uid
 @app.route('/api/get_chat/<uid>')
 def get_chat(uid):
     global_data = load_global_data()
-    if 'active_chats' in global_data and uid in global_data['active_chats']:
-        return jsonify(global_data['active_chats'][uid])
+    chat = global_data.get('active_chats', {}).get(uid)
+    if chat:
+        return jsonify(chat)
+    # Возвращаем пустой чат, если не найден
     return jsonify({'messages': [], 'admin': False})
 
+# API: закрыть чат
 @app.route('/api/close_chat', methods=['POST'])
 def close_chat():
     data = request.json
@@ -178,6 +189,7 @@ def close_chat():
         save_global_data(global_data)
     return jsonify({'success': True})
 
+# API: добавить код
 @app.route('/api/add_code', methods=['POST'])
 def add_code():
     data = request.json
@@ -192,6 +204,7 @@ def add_code():
     save_global_data(global_data)
     return jsonify({'success': True})
 
+# API: удалить код
 @app.route('/api/delete_code', methods=['POST'])
 def delete_code():
     data = request.json
@@ -202,6 +215,7 @@ def delete_code():
         save_global_data(global_data)
     return jsonify({'success': True})
 
+# API: синхронизация забаненных
 @app.route('/api/sync_banned', methods=['POST'])
 def sync_banned():
     data = request.json
@@ -209,7 +223,7 @@ def sync_banned():
     global_data = load_global_data()
     global_data['banned_users'] = banned_data
     
-    # Обновляем banned статус в users
+    # Обновляем статус бана у пользователей
     users = load_users()
     for user_id, user_data in users.items():
         uid = user_data.get('uid')
@@ -220,10 +234,10 @@ def sync_banned():
             user_data['banned'] = False
             user_data['banned_reason'] = ''
     save_users(users)
-    
     save_global_data(global_data)
     return jsonify({'success': True})
 
+# API: полный сброс данных
 @app.route('/api/reset', methods=['POST'])
 def reset_data():
     if os.path.exists(DATA_FILE):
