@@ -1,7 +1,7 @@
 console.log('🚀 Игра загружается...');
 
 // ============================================================
-//  ПРИВЯЗКА К TELEGRAM ИЛИ localStorage
+//  ПРИВЯЗКА К TELEGRAM ИЛИ localStorage (ФИКСИРОВАННЫЙ ID)
 // ============================================================
 
 function getTelegramUserId() {
@@ -20,11 +20,16 @@ function getTelegramUserId() {
 }
 
 function getUserId() {
+    // Сначала проверяем Telegram ID
     const tgId = getTelegramUserId();
     if (tgId) {
-        return 'tg_' + tgId;
+        const userId = 'tg_' + tgId;
+        // Сохраняем в localStorage для постоянства
+        localStorage.setItem('game_user_id', userId);
+        return userId;
     }
     
+    // Если не в Telegram - используем сохранённый ID
     let userId = localStorage.getItem('game_user_id');
     if (!userId) {
         userId = 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
@@ -222,6 +227,7 @@ function addNotification(uid, message) {
         if (!user.notifications) user.notifications = [];
         user.notifications.push({ text: message, time: new Date().toLocaleString(), read: false });
         saveToServer();
+        render();
     }
 }
 
@@ -959,7 +965,7 @@ window.buyAttempts = function(count, price) {
 };
 
 // ============================================================
-//  КОДЫ
+//  КОДЫ (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ============================================================
 
 function handleCode() {
@@ -1324,7 +1330,7 @@ window.closeChat = function(uid) {
 };
 
 // ============================================================
-//  АДМИН-ПАНЕЛЬ
+//  АДМИН-ПАНЕЛЬ (ИСПРАВЛЕННАЯ)
 // ============================================================
 
 function handleAdmin() {
@@ -1377,8 +1383,8 @@ function showAdminPanel() {
                 <button class="btn small" onclick="adminCodeMulti()">🔑 Код 5</button>
                 <button class="btn small" onclick="adminBoostSingle()">🚀 Бустер</button>
                 <button class="btn small" onclick="adminBoostMulti()">🚀 Бустер x5</button>
-                <button class="btn small" onclick="adminSendCodeToPlayer()">📤 Отправить код</button>
-                <button class="btn small" onclick="adminSendCodeToAll()">📤 Всем игрокам</button>
+                <button class="btn small" onclick="adminSendCodeToPlayer()">📤 Отправить код игроку</button>
+                <button class="btn small" onclick="adminSendCodeToAll()">📤 Отправить код всем</button>
                 <button class="btn small" onclick="adminMassGive()">🎮 Попытки всем</button>
                 <button class="btn small" onclick="adminGiveSelfStars()">⭐ Звёзды себе</button>
                 <button class="btn small" onclick="adminPlayerMenu()">👤 Игроки</button>
@@ -1391,7 +1397,7 @@ function showAdminPanel() {
 }
 
 // ============================================================
-//  АДМИН-ФУНКЦИИ
+//  АДМИН-ФУНКЦИИ (С УВЕДОМЛЕНИЯМИ)
 // ============================================================
 
 window.adminCodeSingle = function() {
@@ -1426,6 +1432,7 @@ window.adminBoostMulti = function() {
     render();
 };
 
+// ===== ОТПРАВКА КОДА ИГРОКУ (С УВЕДОМЛЕНИЕМ) =====
 window.adminSendCodeToPlayer = function() {
     openModal('📤 Отправить код игроку', `
         <p>Введите ID игрока:</p>
@@ -1458,17 +1465,25 @@ window.sendCodeToPlayerWithType = function(type) {
     }
 
     adminCodes.push({ code: code, type: typeLabel + ' → ' + uid, target: uid });
+    
+    // Уведомление игроку
     addNotification(uid, `🎫 Вам отправлен код: ${code} (${typeLabel})`);
     if (activeChats[uid]) {
-        activeChats[uid].messages.push({ from: 'admin', text: `🎫 Вам отправлен код: ${code} (${typeLabel})`, time: new Date().toLocaleString() });
+        activeChats[uid].messages.push({ 
+            from: 'admin', 
+            text: `🎫 Вам отправлен код: ${code} (${typeLabel})`, 
+            time: new Date().toLocaleString() 
+        });
         activeChats[uid].hasNew = true;
     }
+    
     closeModal();
     showToast(`✅ Код отправлен игроку ${uid}`);
     render();
     showAdminPanel();
 };
 
+// ===== ОТПРАВКА КОДА ВСЕМ (С УВЕДОМЛЕНИЕМ) =====
 window.adminSendCodeToAll = function() {
     openModal('📤 Отправить код всем игрокам', `
         <p>Выберите тип кода:</p>
@@ -1494,12 +1509,18 @@ window.sendCodeToAllWithType = function(type) {
     const userKeys = Object.keys(uidMap);
     for (const uid of userKeys) {
         if (bannedUsers[uid]) continue;
+        // Уведомление каждому игроку
         addNotification(uid, `🎫 Всем игрокам: ${code} (${typeLabel})`);
         if (activeChats[uid]) {
-            activeChats[uid].messages.push({ from: 'admin', text: `🎫 Всем игрокам: ${code} (${typeLabel})`, time: new Date().toLocaleString() });
+            activeChats[uid].messages.push({ 
+                from: 'admin', 
+                text: `🎫 Всем игрокам: ${code} (${typeLabel})`, 
+                time: new Date().toLocaleString() 
+            });
             activeChats[uid].hasNew = true;
         }
     }
+    
     adminCodes.push({ code: code, type: typeLabel + ' (всем)', target: 'всем' });
     closeModal();
     showToast(`✅ Код отправлен всем игрокам`);
