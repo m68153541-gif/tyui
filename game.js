@@ -1,5 +1,5 @@
 // ============================================================
-//  ПОЛНАЯ ЛОГИКА ИГРЫ + СЕРВЕР (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+//  ПОЛНАЯ ЛОГИКА ИГРЫ + СЕРВЕР (ИСПРАВЛЕННАЯ)
 // ============================================================
 
 console.log('🚀 Игра загружается...');
@@ -41,7 +41,6 @@ let contestWinner = null;
 
 const PASSIVE_INCOME = { 1: 0, 2: 20, 3: 50, "giant": 300 };
 const SERVER_URL = window.location.origin;
-let userDataLoaded = false;
 
 // ---------- ОСНОВНЫЕ ФУНКЦИИ ----------
 function thresholdForStage(stage) {
@@ -404,10 +403,6 @@ function closeModal() {
     if (overlay) overlay.classList.remove('active');
 }
 
-document.getElementById('modalOverlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeModal();
-});
-
 // ---------- КОПИРОВАНИЕ ----------
 window.copyUid = function() {
     const uid = document.getElementById('userUid');
@@ -424,48 +419,6 @@ window.copyUid = function() {
             showToast('✅ ID скопирован!');
         });
     }
-};
-
-window.copyCode = function(code) {
-    navigator.clipboard.writeText(code).then(() => {
-        showToast('✅ Код скопирован!');
-    }).catch(() => {
-        const textarea = document.createElement('textarea');
-        textarea.value = code;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        showToast('✅ Код скопирован!');
-    });
-};
-
-window.deleteCode = function(index) {
-    const item = adminCodes[index];
-    if (!item) return;
-    const code = item.code;
-    if (oneTimeCodes.has(code)) oneTimeCodes.delete(code);
-    if (multiUseCodes[code]) delete multiUseCodes[code];
-    if (boosterCodes.has(code)) boosterCodes.delete(code);
-    if (boosterMultiCodes[code]) delete boosterMultiCodes[code];
-    adminCodes.splice(index, 1);
-    showToast('🗑️ Код удалён');
-    render();
-    saveToServer();
-};
-
-window.copyText = function(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        showToast('✅ ID скопирован!');
-    }).catch(() => {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        showToast('✅ ID скопирован!');
-    });
 };
 
 // ============================================================
@@ -886,28 +839,76 @@ function handleCode() {
         showToast('❌ Сначала зарегистрируйтесь!');
         return;
     }
-    showToast('🎫 Введите код в консоли: applyCode("КОД")');
+    showToast('🎫 Введите код');
 }
 
 function handleLeaderboard() {
     console.log('🏆 Нажата кнопка Лидеры');
-    showToast('🏆 Таблица лидеров');
+    const user = getCurrentUser();
+    if (bannedUsers[user.uid]) {
+        showToast('🚫 Вы заблокированы. Причина: ' + bannedUsers[user.uid]);
+        return;
+    }
+    fetch(SERVER_URL + '/api/all_users')
+        .then(res => res.json())
+        .then(data => {
+            let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>⭐</th></tr></thead><tbody>';
+            data.sort((a, b) => (b.stars || 0) - (a.stars || 0)).slice(0, 30).forEach((item, i) => {
+                html += `<tr><td>${i+1}</td><td>${item.uid}</td><td>${item.name}</td><td>${item.stars}</td></tr>`;
+            });
+            html += '</tbody></table><button class="btn full small" onclick="closeModal();">🏠 В меню</button>';
+            openModal('🏆 Таблица лидеров', html);
+        })
+        .catch(() => showToast('❌ Ошибка загрузки'));
 }
 
 function handleRules() {
     console.log('📜 Нажата кнопка Правила');
-    showToast('📜 Правила');
+    openModal('📜 Правила', `
+        <div class="scrollable">
+            <p><strong>🎰 Колесо удачи</strong></p>
+            <p>• 1 сектор "Ничего" (60% шанс)</p>
+            <p>• 9 призовых секторов (40% шанс)</p>
+            <p>• Призы: 10⭐, 25⭐, 50⭐, 100⭐, 150⭐, 200⭐, 300⭐, 500⭐, 1000⭐</p>
+            <br>
+            <p><strong>🏦 Банк</strong></p>
+            <p>• 20% в час от первоначальной суммы</p>
+            <br>
+            <p><strong>⭐ Кликер</strong></p>
+            <p>• Кликайте по звезде 400 раз → +20 ⭐</p>
+            <br>
+            <p><strong>🪳 Питомец</strong></p>
+            <p>• Растёт от кормления звёздами</p>
+            <p>• Приносит пассивный доход на высоких стадиях</p>
+            <br>
+            <p><strong>👑 Администратор всегда прав!</strong></p>
+        </div>
+        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+    `);
 }
 
 function handleSupport() {
     console.log('🆘 Нажата кнопка Поддержка');
-    showToast('🆘 Поддержка');
+    showToast('🆘 Поддержка: напишите @admin');
 }
 
 function handleAdmin() {
     console.log('🔧 Нажата кнопка Админ');
-    showToast('🔧 Админ-панель');
+    openModal('🔧 Админ-панель', `
+        <p>Введите пароль:</p>
+        <input type="password" id="adminPassword" placeholder="Пароль" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn primary full" onclick="adminLogin()">🔑 Войти</button>
+        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+    `);
 }
+
+window.adminLogin = function() {
+    const input = document.getElementById('adminPassword');
+    if (!input) return;
+    const pass = input.value.trim();
+    if (pass !== 'Qw12') { showToast('❌ Неверный пароль'); return; }
+    showToast('🔧 Админ-панель открыта');
+};
 
 // ---------- РЕГИСТРАЦИЯ ----------
 function checkRegistration() {
@@ -927,44 +928,26 @@ function showRegistration() {
         <input type="text" id="regName" placeholder="Имя" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
         <p>Выберите пол:</p>
         <div class="flex">
-            <button class="btn" id="genderMale" onclick="selectGender('Мужской')" style="flex:1;">👨 Мужской</button>
-            <button class="btn" id="genderFemale" onclick="selectGender('Женский')" style="flex:1;">👩 Женский</button>
+            <button class="btn" onclick="selectGender('Мужской')">👨 Мужской</button>
+            <button class="btn" onclick="selectGender('Женский')">👩 Женский</button>
         </div>
         <p>Введите возраст:</p>
         <input type="number" id="regAge" placeholder="Возраст" min="1" max="120" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" id="regCompleteBtn" onclick="completeRegistration()" disabled>✅ Завершить</button>
+        <button class="btn primary full" onclick="completeRegistration()">✅ Завершить</button>
     `);
 }
 
 window.selectGender = function(g) {
     genderSelected = true;
     regData.gender = g;
-    document.getElementById('genderMale').classList.toggle('selected', g === 'Мужской');
-    document.getElementById('genderFemale').classList.toggle('selected', g === 'Женский');
-    document.getElementById('genderMale').disabled = true;
-    document.getElementById('genderFemale').disabled = true;
     showToast(`✅ Пол: ${g}`);
-    checkRegistrationReady();
 };
-
-function checkRegistrationReady() {
-    const nameInput = document.getElementById('regName');
-    const ageInput = document.getElementById('regAge');
-    const btn = document.getElementById('regCompleteBtn');
-    if (nameInput && ageInput && btn) {
-        const name = nameInput.value.trim();
-        const age = parseInt(ageInput.value);
-        if (name.length > 0 && age > 0 && age <= 120 && genderSelected) {
-            btn.disabled = false;
-        } else {
-            btn.disabled = true;
-        }
-    }
-}
 
 window.completeRegistration = function() {
     const nameInput = document.getElementById('regName');
     const ageInput = document.getElementById('regAge');
+    if (!nameInput || !ageInput) return;
+    
     regData.name = nameInput.value.trim();
     regData.age = parseInt(ageInput.value);
 
@@ -1017,10 +1000,11 @@ document.addEventListener('DOMContentLoaded', function() {
     render();
     
     // Загружаем данные с сервера
-    setTimeout(loadFromServer, 500);
-    
-    // Проверяем регистрацию
-    setTimeout(checkRegistration, 1000);
+    setTimeout(async function() {
+        await loadFromServer();
+        // Проверяем регистрацию после загрузки
+        setTimeout(checkRegistration, 300);
+    }, 500);
     
     console.log('✅ Все обработчики назначены!');
 });
