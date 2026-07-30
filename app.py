@@ -25,6 +25,15 @@ def save_users(users):
 def index():
     return send_from_directory('.', 'index.html')
 
+# ===== ДОБАВЬТЕ ЭТИ МАРШРУТЫ =====
+@app.route('/style.css')
+def css():
+    return send_from_directory('.', 'style.css')
+
+@app.route('/game.js')
+def js():
+    return send_from_directory('.', 'game.js')
+
 @app.route('/api/save', methods=['POST'])
 def save_user():
     data = request.json
@@ -63,5 +72,5 @@ def all_users():
     return jsonify(result)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
