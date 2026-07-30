@@ -29,7 +29,6 @@ function getUserId() {
 //  ХРАНИЛИЩЕ
 // ============================================================
 
-// Глобальные объекты (доступны всем)
 window.users = window.users || {};
 window.uidMap = window.uidMap || {};
 window.bannedUsers = window.bannedUsers || {};
@@ -97,7 +96,6 @@ function loadAllData() {
     return false;
 }
 
-// Загружаем данные
 loadAllData();
 
 // ============================================================
@@ -114,8 +112,9 @@ function thresholdForStage(stage) {
     return 0;
 }
 
+// ===== ГЛАВНОЕ ИЗМЕНЕНИЕ: ТОЛЬКО ЗАГЛАВНЫЕ БУКВЫ =====
 function generateUid() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; // ТОЛЬКО ЗАГЛАВНЫЕ!
     while (true) {
         let uid = '';
         for (let i = 0; i < 6; i++) uid += chars[Math.floor(Math.random() * chars.length)];
@@ -124,7 +123,7 @@ function generateUid() {
 }
 
 function generateCode(len = 10) {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
     for (let i = 0; i < len; i++) code += chars[Math.floor(Math.random() * chars.length)];
     return code;
@@ -169,11 +168,12 @@ function getCurrentUser() {
 }
 
 function getUserByUid(uid) {
+    // Ищем точно по uidMap
     const userId = window.uidMap[uid];
     if (userId) {
         return getUser(userId);
     }
-    // Если не нашли по uidMap, ищем во всех пользователях
+    // Если не нашли, ищем во всех пользователях (но uidMap должен быть точным)
     for (const id in window.users) {
         if (window.users[id].uid === uid) {
             return window.users[id];
@@ -214,7 +214,6 @@ function addNotification(uid, message) {
         });
         saveAllData();
         render();
-        // Показываем уведомление сразу
         showToast('📩 ' + message, 4000);
     }
 }
@@ -1257,7 +1256,6 @@ function handleLeaderboard() {
             openModal('🏆 Таблица лидеров', html);
         })
         .catch(() => {
-            // Если сервер не отвечает, показываем локальные данные
             const usersList = getAllUsersList();
             let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>⭐</th></tr></thead><tbody>';
             const sorted = usersList.sort((a, b) => (b.stars || 0) - (a.stars || 0)).slice(0, 30);
@@ -1563,8 +1561,8 @@ window.adminBoostMulti = function() {
 
 window.adminSendCodeToPlayer = function() {
     openModal('📤 Отправить код игроку', `
-        <p>Введите ID игрока (UID из профиля):</p>
-        <input type="text" id="sendCodeUid" placeholder="UID игрока (например, aBc123)" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <p>Введите UID игрока (только ЗАГЛАВНЫЕ буквы):</p>
+        <input type="text" id="sendCodeUid" placeholder="UID игрока (например, A1B2C3)" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;text-transform:uppercase;" />
         <p>Выберите тип кода:</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn small" onclick="sendCodeToPlayerWithType('single')">🔑 Одноразовый</button>
@@ -1579,12 +1577,12 @@ window.adminSendCodeToPlayer = function() {
 window.sendCodeToPlayerWithType = function(type) {
     const uidInput = document.getElementById('sendCodeUid');
     if (!uidInput) return;
-    const uid = uidInput.value.trim();
-    if (!uid) { showToast('❌ Введите ID игрока'); return; }
+    const uid = uidInput.value.trim().toUpperCase();
+    if (!uid) { showToast('❌ Введите UID игрока'); return; }
     
     const user = getUserByUid(uid);
     if (!user) { 
-        showToast('❌ Игрок с таким UID не найден!');
+        showToast('❌ Игрок с таким UID не найден! Проверьте регистр букв.');
         return; 
     }
 
@@ -1598,7 +1596,6 @@ window.sendCodeToPlayerWithType = function(type) {
 
     window.adminCodes.push({ code: code, type: typeLabel + ' → ' + uid, target: uid });
     
-    // Уведомление игроку
     addNotification(uid, `🎫 Вам отправлен код: ${code} (${typeLabel})`);
     if (window.activeChats[uid]) {
         window.activeChats[uid].messages.push({ 
@@ -1638,7 +1635,6 @@ window.sendCodeToAllWithType = function(type) {
         case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🚀 Бустер x5'; break;
     }
 
-    // Отправляем код всем игрокам
     for (const userId in window.users) {
         const user = window.users[userId];
         if (user && user.uid && !window.bannedUsers[user.uid]) {
@@ -1699,8 +1695,8 @@ window.doGiveSelfStars = function() {
 
 window.adminPlayerMenu = function() {
     openModal('👤 Управление игроком', `
-        <p>Введите ID игрока (UID из профиля):</p>
-        <input type="text" id="playerUidInput" placeholder="UID игрока (например, aBc123)" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <p>Введите UID игрока (только ЗАГЛАВНЫЕ буквы):</p>
+        <input type="text" id="playerUidInput" placeholder="UID игрока (например, A1B2C3)" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;text-transform:uppercase;" />
         <button class="btn primary full" onclick="showPlayerInfo()">🔍 Найти</button>
         <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
     `);
@@ -1709,12 +1705,12 @@ window.adminPlayerMenu = function() {
 window.showPlayerInfo = function() {
     const input = document.getElementById('playerUidInput');
     if (!input) return;
-    const uid = input.value.trim();
-    if (!uid) { showToast('❌ Введите ID'); return; }
+    const uid = input.value.trim().toUpperCase();
+    if (!uid) { showToast('❌ Введите UID'); return; }
     
     const user = getUserByUid(uid);
     if (!user) { 
-        showToast('❌ Игрок с таким UID не найден!');
+        showToast('❌ Игрок с таким UID не найден! Проверьте регистр букв.');
         return; 
     }
 
