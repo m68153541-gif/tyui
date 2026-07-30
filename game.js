@@ -47,6 +47,7 @@ window.adminCodes = window.adminCodes || [];
 window.contestActive = window.contestActive || false;
 window.contestEndTime = window.contestEndTime || null;
 window.contestWinner = window.contestWinner || null;
+window.notifications = window.notifications || {};
 
 const SERVER_URL = window.location.origin;
 
@@ -65,7 +66,8 @@ function saveAllData() {
             reports: window.reports,
             contestActive: window.contestActive,
             contestEndTime: window.contestEndTime,
-            contestWinner: window.contestWinner
+            contestWinner: window.contestWinner,
+            notifications: window.notifications
         };
         localStorage.setItem('zabava_game_full_data', JSON.stringify(data));
         return true;
@@ -90,6 +92,7 @@ function loadAllData() {
             window.contestActive = parsed.contestActive || false;
             window.contestEndTime = parsed.contestEndTime || null;
             window.contestWinner = parsed.contestWinner || null;
+            window.notifications = parsed.notifications || {};
             return true;
         }
     } catch(e) {}
@@ -99,7 +102,7 @@ function loadAllData() {
 loadAllData();
 
 // ============================================================
-//  ГЕНЕРАЦИЯ UID
+//  ОСНОВНЫЕ ФУНКЦИИ
 // ============================================================
 
 function generateUid() {
@@ -165,11 +168,8 @@ function getCurrentUser() {
 }
 
 function getUserByUid(uid) {
-    // 1. Ищем в uidMap
     const userId = window.uidMap[uid];
     if (userId) return getUser(userId);
-    
-    // 2. Ищем во всех пользователях
     for (const id in window.users) {
         if (window.users[id].uid === uid) {
             return window.users[id];
@@ -199,7 +199,75 @@ function getAllUsersList() {
 }
 
 // ============================================================
-//  РЕГИСТРАЦИЯ С ВЫБОРОМ UID
+//  УВЕДОМЛЕНИЯ (С СИНХРОНИЗАЦИЕЙ)
+// ============================================================
+
+async function addNotification(uid, message) {
+    // 1. Сохраняем локально
+    const user = getUserByUid(uid);
+    if (user) {
+        if (!user.notifications) user.notifications = [];
+        user.notifications.push({ 
+            text: message, 
+            time: new Date().toLocaleString(), 
+            read: false 
+        });
+        saveAllData();
+    }
+    
+    // 2. Отправляем на сервер
+    try {
+        await fetch(SERVER_URL + '/api/send_notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                uid: uid, 
+                message: message,
+                time: new Date().toLocaleString()
+            })
+        });
+        console.log('📩 Уведомление отправлено на сервер:', uid, message);
+    } catch(e) {
+        console.error('❌ Ошибка отправки уведомления:', e);
+    }
+    
+    // 3. Показываем тост
+    showToast('📩 ' + message, 4000);
+    render();
+}
+
+async function loadNotificationsFromServer(uid) {
+    try {
+        const response = await fetch(SERVER_URL + `/api/get_notifications/${uid}`);
+        if (response.ok) {
+            const data = await response.json();
+            const user = getUserByUid(uid);
+            if (user) {
+                user.notifications = data;
+                saveAllData();
+                render();
+            }
+            return data;
+        }
+    } catch(e) {
+        console.error('❌ Ошибка загрузки уведомлений:', e);
+    }
+    return [];
+}
+
+function getNotifications(uid) {
+    const user = getUserByUid(uid);
+    if (user && user.notifications) {
+        const unread = user.notifications.filter(n => !n.read);
+        user.notifications.forEach(n => n.read = true);
+        saveAllData();
+        return unread;
+    }
+    return [];
+}
+
+// ============================================================
+//  РЕГИСТРАЦИЯ
 // ============================================================
 
 function showRegistration() {
@@ -241,8 +309,6 @@ window.selectUid = function(uid) {
     regData.uid = uid;
     document.getElementById('selectedUidDisplay').textContent = '✅ Выбран ID: ' + uid;
     document.getElementById('selectedUidDisplay').style.color = '#ffd700';
-    
-    // Подсвечиваем выбранную кнопку
     document.querySelectorAll('#modalBody .btn.primary').forEach(btn => {
         btn.style.border = '2px solid transparent';
         if (btn.textContent.trim() === uid) {
@@ -355,7 +421,7 @@ async function loadAllUsersFromServer() {
         if (response.ok) {
             const data = await response.json();
             for (const item of data) {
-                if (item.uid && !window.uidMap[item.uid]) {
+                if (item.uid) {
                     const user = getUser(item.user_id || item.uid);
                     if (user) {
                         user.name = item.name || user.name;
@@ -364,6 +430,8 @@ async function loadAllUsersFromServer() {
                         user.attempts = item.attempts || user.attempts;
                         user.registered = item.registered || user.registered;
                         user.uid = item.uid;
+                        user.banned = item.banned || false;
+                        user.banned_reason = item.banned_reason || '';
                         window.uidMap[item.uid] = item.user_id || item.uid;
                     }
                 }
@@ -381,64 +449,13 @@ async function syncBannedToServer() {
         for (const uid in window.bannedUsers) {
             bannedData[uid] = window.bannedUsers[uid];
         }
-        const response = await fetch(SERVER_URL + '/api/sync_banned', {
+        await fetch(SERVER_URL + '/api/sync_banned', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ banned: bannedData })
         });
-        return await response.json();
+        return true;
     } catch(e) { return false; }
-}
-
-async function loadBannedFromServer() {
-    try {
-        const response = await fetch(SERVER_URL + '/api/banned_users');
-        if (response.ok) {
-            const data = await response.json();
-            for (const uid in data) {
-                window.bannedUsers[uid] = data[uid].reason;
-                const user = getUserByUid(uid);
-                if (user) {
-                    user.banned = true;
-                    user.banned_reason = data[uid].reason;
-                }
-            }
-            saveAllData();
-            render();
-            return true;
-        }
-    } catch(e) {}
-    return false;
-}
-
-// ============================================================
-//  УВЕДОМЛЕНИЯ
-// ============================================================
-
-function addNotification(uid, message) {
-    const user = getUserByUid(uid);
-    if (user) {
-        if (!user.notifications) user.notifications = [];
-        user.notifications.push({ 
-            text: message, 
-            time: new Date().toLocaleString(), 
-            read: false 
-        });
-        saveAllData();
-        render();
-        showToast('📩 ' + message, 4000);
-    }
-}
-
-function getNotifications(uid) {
-    const user = getUserByUid(uid);
-    if (user && user.notifications) {
-        const unread = user.notifications.filter(n => !n.read);
-        user.notifications.forEach(n => n.read = true);
-        saveAllData();
-        return unread;
-    }
-    return [];
 }
 
 // ============================================================
@@ -478,9 +495,18 @@ function render() {
     
     renderAdminCodes();
     renderContest();
+    renderNotificationsDisplay();
     
     const wheelAttempts = document.getElementById('wheelAttemptsCount');
     if (wheelAttempts) wheelAttempts.textContent = user.attempts || 0;
+}
+
+function renderNotificationsDisplay() {
+    const user = getCurrentUser();
+    if (!user || !user.uid) return;
+    
+    // Проверяем уведомления на сервере
+    loadNotificationsFromServer(user.uid);
 }
 
 function renderAdminCodes() {
@@ -1293,6 +1319,10 @@ function handleRules() {
     `);
 }
 
+// ============================================================
+//  ПОДДЕРЖКА И ЧАТ
+// ============================================================
+
 function handleSupport() {
     const user = getCurrentUser();
     const userId = user.uid;
@@ -1994,7 +2024,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(async function() {
         await loadFromServer();
         await loadAllUsersFromServer();
-        await loadBannedFromServer();
         setTimeout(checkRegistration, 500);
         render();
     }, 500);
