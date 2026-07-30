@@ -25,7 +25,6 @@ def save_users(users):
 def index():
     return send_from_directory('.', 'index.html')
 
-# ===== ЭТИ МАРШРУТЫ ОБЯЗАТЕЛЬНЫ! =====
 @app.route('/style.css')
 def css():
     return send_from_directory('.', 'style.css')
