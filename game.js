@@ -41,13 +41,6 @@ window.oneTimeCodes = window.oneTimeCodes || new Set();
 window.multiUseCodes = window.multiUseCodes || {};
 window.boosterCodes = window.boosterCodes || new Set();
 window.boosterMultiCodes = window.boosterMultiCodes || {};
-window.reports = window.reports || [];
-window.activeChats = window.activeChats || {};
-window.adminCodes = window.adminCodes || [];
-window.contestActive = window.contestActive || false;
-window.contestEndTime = window.contestEndTime || null;
-window.contestWinner = window.contestWinner || null;
-window.notifications = window.notifications || {};
 
 const SERVER_URL = window.location.origin;
 
@@ -56,18 +49,10 @@ function saveAllData() {
         const data = {
             users: window.users,
             uidMap: window.uidMap,
-            bannedUsers: window.bannedUsers,
             oneTimeCodes: Array.from(window.oneTimeCodes || []),
             multiUseCodes: window.multiUseCodes,
             boosterCodes: Array.from(window.boosterCodes || []),
-            boosterMultiCodes: window.boosterMultiCodes,
-            adminCodes: window.adminCodes,
-            activeChats: window.activeChats,
-            reports: window.reports,
-            contestActive: window.contestActive,
-            contestEndTime: window.contestEndTime,
-            contestWinner: window.contestWinner,
-            notifications: window.notifications
+            boosterMultiCodes: window.boosterMultiCodes
         };
         localStorage.setItem('zabava_game_full_data', JSON.stringify(data));
         return true;
@@ -81,18 +66,10 @@ function loadAllData() {
             const parsed = JSON.parse(data);
             window.users = parsed.users || {};
             window.uidMap = parsed.uidMap || {};
-            window.bannedUsers = parsed.bannedUsers || {};
             window.oneTimeCodes = new Set(parsed.oneTimeCodes || []);
             window.multiUseCodes = parsed.multiUseCodes || {};
             window.boosterCodes = new Set(parsed.boosterCodes || []);
             window.boosterMultiCodes = parsed.boosterMultiCodes || {};
-            window.adminCodes = parsed.adminCodes || [];
-            window.activeChats = parsed.activeChats || {};
-            window.reports = parsed.reports || [];
-            window.contestActive = parsed.contestActive || false;
-            window.contestEndTime = parsed.contestEndTime || null;
-            window.contestWinner = parsed.contestWinner || null;
-            window.notifications = parsed.notifications || {};
             return true;
         }
     } catch(e) {}
@@ -199,373 +176,73 @@ function getAllUsersList() {
 }
 
 // ============================================================
-//  УВЕДОМЛЕНИЯ (С СИНХРОНИЗАЦИЕЙ)
+//  ГЛОБАЛЬНАЯ СИНХРОНИЗАЦИЯ
 // ============================================================
 
-async function addNotification(uid, message) {
-    // 1. Сохраняем локально
-    const user = getUserByUid(uid);
-    if (user) {
-        if (!user.notifications) user.notifications = [];
-        user.notifications.push({ 
-            text: message, 
-            time: new Date().toLocaleString(), 
-            read: false 
-        });
-        saveAllData();
-    }
-    
-    // 2. Отправляем на сервер
-    try {
-        await fetch(SERVER_URL + '/api/send_notification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                uid: uid, 
-                message: message,
-                time: new Date().toLocaleString()
-            })
-        });
-        console.log('📩 Уведомление отправлено на сервер:', uid, message);
-    } catch(e) {
-        console.error('❌ Ошибка отправки уведомления:', e);
-    }
-    
-    // 3. Показываем тост
-    showToast('📩 ' + message, 4000);
-    render();
-}
+let globalData = {
+    contest_active: false,
+    contest_end_time: null,
+    contest_winner: null,
+    admin_codes: [],
+    reports: [],
+    active_chats: {},
+    banned_users: {}
+};
 
-async function loadNotificationsFromServer(uid) {
+async function loadGlobalData() {
     try {
-        const response = await fetch(SERVER_URL + `/api/get_notifications/${uid}`);
+        const response = await fetch(SERVER_URL + '/api/get_global_data');
         if (response.ok) {
-            const data = await response.json();
-            const user = getUserByUid(uid);
-            if (user) {
-                user.notifications = data;
-                saveAllData();
-                render();
-            }
-            return data;
-        }
-    } catch(e) {
-        console.error('❌ Ошибка загрузки уведомлений:', e);
-    }
-    return [];
-}
-
-function getNotifications(uid) {
-    const user = getUserByUid(uid);
-    if (user && user.notifications) {
-        const unread = user.notifications.filter(n => !n.read);
-        user.notifications.forEach(n => n.read = true);
-        saveAllData();
-        return unread;
-    }
-    return [];
-}
-
-// ============================================================
-//  РЕГИСТРАЦИЯ
-// ============================================================
-
-function showRegistration() {
-    const uids = generateThreeUids();
-    
-    openModal('📝 Регистрация', `
-        <p>Добро пожаловать! Давайте зарегистрируемся.</p>
-        <p>Введите ваше имя:</p>
-        <input type="text" id="regName" placeholder="Имя" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <p>Выберите пол:</p>
-        <div style="display:flex;gap:8px;margin:5px 0;">
-            <button class="btn" onclick="selectGender('Мужской')" style="flex:1;">👨 Мужской</button>
-            <button class="btn" onclick="selectGender('Женский')" style="flex:1;">👩 Женский</button>
-        </div>
-        <p>Введите возраст:</p>
-        <input type="number" id="regAge" placeholder="Возраст" min="1" max="120" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <p style="color:#ffd700;font-weight:bold;">Выберите ваш уникальный ID (навсегда):</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:5px 0;">
-            <button class="btn primary" onclick="selectUid('${uids[0]}')" id="uidBtn0" style="flex:1;font-weight:bold;font-size:18px;">${uids[0]}</button>
-            <button class="btn primary" onclick="selectUid('${uids[1]}')" id="uidBtn1" style="flex:1;font-weight:bold;font-size:18px;">${uids[1]}</button>
-            <button class="btn primary" onclick="selectUid('${uids[2]}')" id="uidBtn2" style="flex:1;font-weight:bold;font-size:18px;">${uids[2]}</button>
-        </div>
-        <div id="selectedUidDisplay" style="text-align:center;margin:8px 0;font-size:16px;color:#6bcbff;"></div>
-        <button class="btn primary full" id="regCompleteBtn" onclick="completeRegistration()" disabled>✅ Завершить</button>
-    `);
-}
-
-let regData = { name: '', gender: '', age: '', uid: '' };
-let genderSelected = false;
-
-window.selectGender = function(g) {
-    genderSelected = true;
-    regData.gender = g;
-    showToast(`✅ Пол: ${g}`);
-    checkRegistrationReady();
-};
-
-window.selectUid = function(uid) {
-    regData.uid = uid;
-    document.getElementById('selectedUidDisplay').textContent = '✅ Выбран ID: ' + uid;
-    document.getElementById('selectedUidDisplay').style.color = '#ffd700';
-    document.querySelectorAll('#modalBody .btn.primary').forEach(btn => {
-        btn.style.border = '2px solid transparent';
-        if (btn.textContent.trim() === uid) {
-            btn.style.border = '2px solid #ffd700';
-            btn.style.background = 'linear-gradient(145deg, #ffd700, #f5a623)';
-        }
-    });
-    checkRegistrationReady();
-};
-
-function checkRegistrationReady() {
-    const nameInput = document.getElementById('regName');
-    const ageInput = document.getElementById('regAge');
-    const btn = document.getElementById('regCompleteBtn');
-    if (nameInput && ageInput && btn) {
-        const name = nameInput.value.trim();
-        const age = parseInt(ageInput.value);
-        if (name.length > 0 && age > 0 && age <= 120 && genderSelected && regData.uid) {
-            btn.disabled = false;
-        } else {
-            btn.disabled = true;
-        }
-    }
-}
-
-window.completeRegistration = function() {
-    const nameInput = document.getElementById('regName');
-    const ageInput = document.getElementById('regAge');
-    if (!nameInput || !ageInput) return;
-    
-    regData.name = nameInput.value.trim();
-    regData.age = parseInt(ageInput.value);
-
-    if (!regData.name || regData.name.length === 0) {
-        showToast('❌ Введите имя');
-        return;
-    }
-    if (!regData.age || regData.age < 1 || regData.age > 120) {
-        showToast('❌ Введите возраст от 1 до 120');
-        return;
-    }
-    if (!regData.gender) {
-        showToast('❌ Выберите пол');
-        return;
-    }
-    if (!regData.uid) {
-        showToast('❌ Выберите ID');
-        return;
-    }
-
-    const user = getCurrentUser();
-    user.name = regData.name;
-    user.gender = regData.gender;
-    user.age = regData.age;
-    user.uid = regData.uid;
-    user.registered = true;
-    
-    window.uidMap[regData.uid] = getUserId();
-    
-    closeModal();
-    showToast('✅ Регистрация завершена! Ваш ID: ' + regData.uid);
-    render();
-    saveAllData();
-    saveToServer();
-};
-
-// ============================================================
-//  СЕРВЕР
-// ============================================================
-
-async function saveToServer() {
-    try {
-        const user = getCurrentUser();
-        const userId = getUserId();
-        if (!user || !user.uid || !user.registered) return false;
-        
-        await fetch(SERVER_URL + '/api/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, user_data: user })
-        });
-        return true;
-    } catch(e) { return false; }
-}
-
-async function loadFromServer() {
-    try {
-        const userId = getUserId();
-        const response = await fetch(SERVER_URL + `/api/load/${userId}`);
-        if (response.ok) {
-            const data = await response.json();
-            const user = getCurrentUser();
-            const oldUid = user.uid;
-            Object.assign(user, data);
-            user.uid = oldUid;
-            if (user.uid) {
-                window.uidMap[user.uid] = userId;
+            globalData = await response.json();
+            // Обновляем bannedUsers
+            if (globalData.banned_users) {
+                window.bannedUsers = globalData.banned_users;
             }
             render();
-            saveAllData();
             return true;
         }
-    } catch(e) {}
+    } catch(e) {
+        console.error('❌ Ошибка загрузки глобальных данных:', e);
+    }
     return false;
 }
 
-async function loadAllUsersFromServer() {
+async function syncGlobalData() {
     try {
-        const response = await fetch(SERVER_URL + '/api/all_users');
-        if (response.ok) {
-            const data = await response.json();
-            for (const item of data) {
-                if (item.uid) {
-                    const user = getUser(item.user_id || item.uid);
-                    if (user) {
-                        user.name = item.name || user.name;
-                        user.stars = item.stars || user.stars;
-                        user.bank = item.bank || user.bank;
-                        user.attempts = item.attempts || user.attempts;
-                        user.registered = item.registered || user.registered;
-                        user.uid = item.uid;
-                        user.banned = item.banned || false;
-                        user.banned_reason = item.banned_reason || '';
-                        window.uidMap[item.uid] = item.user_id || item.uid;
-                    }
-                }
-            }
-            saveAllData();
-            return data;
-        }
-    } catch(e) {}
-    return [];
-}
-
-async function syncBannedToServer() {
-    try {
-        const bannedData = {};
-        for (const uid in window.bannedUsers) {
-            bannedData[uid] = window.bannedUsers[uid];
-        }
+        // Синхронизируем баны
         await fetch(SERVER_URL + '/api/sync_banned', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ banned: bannedData })
+            body: JSON.stringify({ banned: window.bannedUsers })
         });
         return true;
     } catch(e) { return false; }
 }
 
 // ============================================================
-//  ОТРИСОВКА
+//  КОНКУРС (ГЛОБАЛЬНЫЙ)
 // ============================================================
 
-function render() {
-    const user = getCurrentUser();
-    if (!user) return;
-    
-    document.getElementById('userName').textContent = user.name || '—';
-    document.getElementById('userGender').textContent = user.gender || '—';
-    document.getElementById('userAge').textContent = user.age || '—';
-    document.getElementById('userUid').textContent = user.uid || '—';
-    document.getElementById('userAttempts').textContent = user.attempts || 0;
-    document.getElementById('starsBalance').textContent = user.stars || 0;
-    document.getElementById('bankBalance').textContent = user.bank || 0;
-    
-    const statusEl = document.getElementById('userRegStatus');
-    if (user.banned) {
-        statusEl.textContent = '🚫 ЗАБЛОКИРОВАН: ' + (user.banned_reason || 'Нарушение правил');
-        statusEl.style.color = '#ff4757';
-    } else if (user.registered) {
-        statusEl.textContent = '✅ Зарегистрирован (ID: ' + (user.uid || '—') + ')';
-        statusEl.style.color = '#4caf50';
-    } else {
-        statusEl.textContent = '❌ Не зарегистрирован';
-        statusEl.style.color = '#ff4757';
-    }
-    
-    const stage = user.petStage || 1;
-    const progress = user.petProgress || 0;
-    const threshold = stage === 1 ? 100 : stage === 2 ? 500 : stage === 3 ? 1500 : 0;
-    const stageText = stage === 1 ? 'Малыш' : stage === 2 ? 'Подросток' : stage === 3 ? 'Взрослый' : 'Гигант 👑';
-    document.getElementById('petStage').textContent = '🪳 ' + stageText;
-    document.getElementById('petProgress').textContent = `${progress} / ${threshold} ⭐`;
-    
-    renderAdminCodes();
-    renderContest();
-    renderNotificationsDisplay();
-    
-    const wheelAttempts = document.getElementById('wheelAttemptsCount');
-    if (wheelAttempts) wheelAttempts.textContent = user.attempts || 0;
-}
-
-function renderNotificationsDisplay() {
-    const user = getCurrentUser();
-    if (!user || !user.uid) return;
-    
-    // Проверяем уведомления на сервере
-    loadNotificationsFromServer(user.uid);
-}
-
-function renderAdminCodes() {
-    const panel = document.getElementById('codesPanel');
-    const list = document.getElementById('codesList');
-    if (!panel || !list) return;
-    if (!window.adminCodes || window.adminCodes.length === 0) {
-        panel.style.display = 'none';
-        return;
-    }
-    panel.style.display = 'block';
-    list.innerHTML = window.adminCodes.map((item, index) => `
-        <div class="code-item">
-            <span class="code-text" onclick="copyCode('${item.code}')">${item.code}</span>
-            <span class="code-type">${item.type} ${item.target ? '→ ' + item.target : ''}</span>
-            <span class="code-delete" onclick="deleteCode(${index})">✕</span>
-        </div>
-    `).join('');
-}
-
-function renderContest() {
-    const banner = document.getElementById('contestBanner');
-    if (!banner) return;
-    if (!window.contestActive) {
-        banner.style.display = 'none';
-        return;
-    }
-    banner.style.display = 'block';
-    const now = Date.now();
-    const remaining = window.contestEndTime - now;
-    if (remaining <= 0) { endContest(); return; }
-    const hours = Math.floor(remaining / 3600000);
-    const minutes = Math.floor((remaining % 3600000) / 60000);
-    const seconds = Math.floor((remaining % 60000) / 1000);
-    let winnerText = '';
-    if (window.contestWinner) {
-        winnerText = `<div class="winner">🏆 Победитель: <strong>${window.contestWinner}</strong></div>`;
-    }
-    banner.innerHTML = `
-        <div class="title">🏆 КОНКУРС</div>
-        <div class="timer">⏱ ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}</div>
-        <div style="font-size:12px;color:#aaa;">Победит тот, у кого больше звёзд (баланс + банк)</div>
-        ${winnerText}
-    `;
-}
-
 function startContest() {
-    if (window.contestActive) { showToast('❌ Конкурс уже запущен'); return; }
-    window.contestActive = true;
-    window.contestEndTime = Date.now() + 6 * 60 * 60 * 1000;
-    window.contestWinner = null;
-    showToast('🏆 Конкурс запущен на 6 часов!');
-    saveAllData();
-    render();
+    if (globalData.contest_active) { showToast('❌ Конкурс уже запущен'); return; }
+    
+    fetch(SERVER_URL + '/api/set_contest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            active: true, 
+            end_time: Date.now() + 6 * 60 * 60 * 1000,
+            winner: null
+        })
+    }).then(() => {
+        loadGlobalData();
+        showToast('🏆 Конкурс запущен на 6 часов!');
+    });
 }
 
 function endContest() {
-    if (!window.contestActive) return;
-    window.contestActive = false;
+    if (!globalData.contest_active) return;
+    
     let maxStars = -1;
     let winnerUid = null;
     for (const userId in window.users) {
@@ -578,105 +255,758 @@ function endContest() {
             }
         }
     }
-    if (winnerUid) {
-        window.contestWinner = winnerUid;
-        const winner = getUserByUid(winnerUid);
-        if (winner) {
-            winner.stars += 500;
-            winner.attempts += 3;
-            addNotification(winnerUid, '🏆 Вы победили в конкурсе! +500 ⭐ и +3 попытки!');
-            showToast(`🏆 Победитель: ${winnerUid}! +500 ⭐ и +3 попытки!`);
+    
+    fetch(SERVER_URL + '/api/set_contest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            active: false, 
+            end_time: null,
+            winner: winnerUid
+        })
+    }).then(() => {
+        if (winnerUid) {
+            const winner = getUserByUid(winnerUid);
+            if (winner) {
+                winner.stars += 500;
+                winner.attempts += 3;
+                addNotification(winnerUid, '🏆 Вы победили в конкурсе! +500 ⭐ и +3 попытки!');
+                showToast(`🏆 Победитель: ${winnerUid}! +500 ⭐ и +3 попытки!`);
+                saveToServer();
+            }
         }
-    }
-    saveAllData();
-    render();
+        loadGlobalData();
+    });
 }
 
 function forceEndContest() {
-    if (!window.contestActive) { showToast('❌ Конкурс не запущен'); return; }
+    if (!globalData.contest_active) { showToast('❌ Конкурс не запущен'); return; }
     endContest();
 }
 
 // ============================================================
-//  TOAST И МОДАЛКА
+//  УВЕДОМЛЕНИЯ
 // ============================================================
 
-let toastTimeout;
-
-function showToast(text, duration = 2500) {
-    const el = document.getElementById('toast');
-    if (!el) return;
-    el.textContent = text;
-    el.classList.add('show');
-    clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => el.classList.remove('show'), duration);
+function addNotification(uid, message) {
+    // Отправляем на сервер
+    fetch(SERVER_URL + '/api/send_notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            uid: uid, 
+            message: message,
+            time: new Date().toLocaleString()
+        })
+    });
+    showToast('📩 ' + message, 4000);
 }
-
-function openModal(title, html) {
-    document.getElementById('modalTitle').textContent = title;
-    document.getElementById('modalBody').innerHTML = html;
-    document.getElementById('modalOverlay').classList.add('active');
-}
-
-function closeModal() {
-    document.getElementById('modalOverlay').classList.remove('active');
-}
-
-document.getElementById('modalOverlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeModal();
-});
 
 // ============================================================
-//  КОПИРОВАНИЕ
+//  ПОДДЕРЖКА (ГЛОБАЛЬНАЯ)
 // ============================================================
 
-window.copyUid = function() {
-    const uid = document.getElementById('userUid');
-    if (uid && uid.textContent && uid.textContent !== '—') {
-        navigator.clipboard.writeText(uid.textContent).then(() => {
-            showToast('✅ ID скопирован!');
-        }).catch(() => {
-            const textarea = document.createElement('textarea');
-            textarea.value = uid.textContent;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            showToast('✅ ID скопирован!');
-        });
+function handleSupport() {
+    const user = getCurrentUser();
+    const userId = user.uid;
+
+    // Проверяем есть ли активный чат
+    if (globalData.active_chats && globalData.active_chats[userId]) {
+        showChatWindow(userId);
+        return;
     }
+
+    openModal('🆘 Поддержка', `
+        <p>Опишите вашу проблему:</p>
+        <input type="text" id="supportInput" placeholder="Ваше сообщение..." style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn primary full" onclick="sendSupport()">📤 Отправить</button>
+        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+    `);
+}
+
+window.sendSupport = function() {
+    const input = document.getElementById('supportInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) { showToast('❌ Введите сообщение'); return; }
+    const user = getCurrentUser();
+    const userId = user.uid;
+
+    // Отправляем на сервер
+    fetch(SERVER_URL + '/api/add_report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            uid: userId,
+            username: user.name || 'No name',
+            text: text,
+            time: new Date().toLocaleString()
+        })
+    });
+
+    // Создаём чат
+    fetch(SERVER_URL + '/api/add_chat_message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            uid: userId,
+            message: text,
+            sender: 'user',
+            time: new Date().toLocaleString()
+        })
+    });
+
+    closeModal();
+    showToast('✅ Сообщение отправлено администратору!');
+    loadGlobalData();
+    setTimeout(() => showChatWindow(userId), 500);
 };
 
-window.copyCode = function(code) {
-    navigator.clipboard.writeText(code).then(() => {
-        showToast('✅ Код скопирован!');
-    }).catch(() => {
-        const textarea = document.createElement('textarea');
-        textarea.value = code;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        showToast('✅ Код скопирован!');
+function showChatWindow(userId) {
+    // Загружаем чат с сервера
+    fetch(SERVER_URL + `/api/get_chat/${userId}`)
+        .then(res => res.json())
+        .then(chat => {
+            if (!chat || !chat.messages) {
+                showToast('❌ Чат не найден');
+                return;
+            }
+
+            let messagesHtml = '';
+            chat.messages.forEach(msg => {
+                const cls = msg.from === 'user' ? 'user' : 'admin';
+                const label = msg.from === 'user' ? 'Вы' : 'Админ';
+                messagesHtml += `<div class="msg ${cls}"><strong>${label}:</strong> ${msg.text}<span class="time">${msg.time}</span></div>`;
+            });
+
+            const isAdmin = chat.admin || false;
+            const adminControls = isAdmin ? 
+                `<button class="btn danger full" onclick="closeChat('${userId}')">🔒 Завершить чат</button>` :
+                `<p style="font-size:12px;color:#888;">✉️ Ожидайте ответа администратора</p>`;
+
+            const user = getUserByUid(userId);
+            const name = user ? user.name || userId : userId;
+
+            openModal(`💬 Чат с поддержкой (${name})`, `
+                <div class="chat-container" id="chatContainer">${messagesHtml || '<p style="color:#888;text-align:center;">Нет сообщений</p>'}</div>
+                <div style="display:flex;gap:8px;">
+                    <input type="text" id="chatInput" placeholder="Введите сообщение..." style="flex:1;" />
+                    <button class="btn primary" onclick="sendChatMessage('${userId}')">📤</button>
+                </div>
+                ${adminControls}
+                <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+            `);
+
+            setTimeout(() => {
+                const container = document.getElementById('chatContainer');
+                if (container) container.scrollTop = container.scrollHeight;
+            }, 100);
+        });
+}
+
+window.sendChatMessage = function(userId) {
+    const input = document.getElementById('chatInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) { showToast('❌ Введите сообщение'); return; }
+
+    fetch(SERVER_URL + '/api/add_chat_message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            uid: userId,
+            message: text,
+            sender: 'user',
+            time: new Date().toLocaleString()
+        })
+    });
+
+    showToast('✅ Сообщение отправлено');
+    closeModal();
+    loadGlobalData();
+    setTimeout(() => showChatWindow(userId), 500);
+};
+
+window.closeChat = function(uid) {
+    fetch(SERVER_URL + '/api/close_chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: uid })
+    }).then(() => {
+        closeModal();
+        showToast('✅ Чат завершён');
+        loadGlobalData();
     });
 };
 
-window.deleteCode = function(index) {
-    const item = window.adminCodes[index];
-    if (!item) return;
-    const code = item.code;
-    if (window.oneTimeCodes.has(code)) window.oneTimeCodes.delete(code);
-    if (window.multiUseCodes[code]) delete window.multiUseCodes[code];
-    if (window.boosterCodes.has(code)) window.boosterCodes.delete(code);
-    if (window.boosterMultiCodes[code]) delete window.boosterMultiCodes[code];
-    window.adminCodes.splice(index, 1);
-    showToast('🗑️ Код удалён');
-    render();
-    saveAllData();
+// ============================================================
+//  АДМИН-ФУНКЦИИ (ГЛОБАЛЬНЫЕ)
+// ============================================================
+
+window.adminOpenChat = function(uid) {
+    // Отмечаем чат как активный для админа
+    fetch(SERVER_URL + '/api/add_chat_message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            uid: uid,
+            message: 'Администратор подключился к чату',
+            sender: 'admin',
+            time: new Date().toLocaleString()
+        })
+    }).then(() => {
+        loadGlobalData();
+        showAdminChat(uid);
+    });
+};
+
+window.adminSendMessage = function(uid) {
+    const input = document.getElementById('adminChatInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) { showToast('❌ Введите сообщение'); return; }
+
+    fetch(SERVER_URL + '/api/add_chat_message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            uid: uid,
+            message: text,
+            sender: 'admin',
+            time: new Date().toLocaleString()
+        })
+    }).then(() => {
+        showToast('✅ Сообщение отправлено игроку');
+        closeModal();
+        loadGlobalData();
+        showAdminChat(uid);
+    });
+};
+
+function showAdminChat(uid) {
+    fetch(SERVER_URL + `/api/get_chat/${uid}`)
+        .then(res => res.json())
+        .then(chat => {
+            if (!chat || !chat.messages) {
+                showToast('❌ Чат не найден');
+                return;
+            }
+
+            let messagesHtml = '';
+            chat.messages.forEach(msg => {
+                const cls = msg.from === 'user' ? 'user' : 'admin';
+                const label = msg.from === 'user' ? 'Игрок' : 'Админ';
+                messagesHtml += `<div class="msg ${cls}"><strong>${label}:</strong> ${msg.text}<span class="time">${msg.time}</span></div>`;
+            });
+
+            const user = getUserByUid(uid);
+            const name = user ? user.name || uid : uid;
+
+            openModal(`💬 Чат с игроком (${name} | ID: ${uid})`, `
+                <div class="chat-container" id="adminChatContainer">${messagesHtml || '<p style="color:#888;text-align:center;">Нет сообщений</p>'}</div>
+                <div style="display:flex;gap:8px;">
+                    <input type="text" id="adminChatInput" placeholder="Введите сообщение..." style="flex:1;" />
+                    <button class="btn primary" onclick="adminSendMessage('${uid}')">📤</button>
+                </div>
+                <button class="btn danger full" onclick="closeChat('${uid}')">🔒 Завершить чат</button>
+                <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+            `);
+
+            setTimeout(() => {
+                const container = document.getElementById('adminChatContainer');
+                if (container) container.scrollTop = container.scrollHeight;
+            }, 100);
+        });
+}
+
+// ============================================================
+//  КОДЫ (ГЛОБАЛЬНЫЕ)
+// ============================================================
+
+window.adminCodeSingle = function() {
+    const code = generateCode(10);
+    window.oneTimeCodes.add(code);
+    fetch(SERVER_URL + '/api/add_code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code, type: '🔑 Одноразовый', target: null })
+    });
+    showToast(`✅ Код: ${code}`);
+    loadGlobalData();
+};
+
+window.adminCodeMulti = function() {
+    const code = generateCode(10);
+    window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() };
+    fetch(SERVER_URL + '/api/add_code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code, type: '🔑 На 5', target: null })
+    });
+    showToast(`✅ Код на 5: ${code}`);
+    loadGlobalData();
+};
+
+window.adminBoostSingle = function() {
+    const code = generateCode(16);
+    window.boosterCodes.add(code);
+    fetch(SERVER_URL + '/api/add_code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code, type: '🚀 Бустер', target: null })
+    });
+    showToast(`✅ Бустер: ${code}`);
+    loadGlobalData();
+};
+
+window.adminBoostMulti = function() {
+    const code = generateCode(16);
+    window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() };
+    fetch(SERVER_URL + '/api/add_code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code, type: '🚀 Бустер x5', target: null })
+    });
+    showToast(`✅ Бустер на 5: ${code}`);
+    loadGlobalData();
+};
+
+window.adminSendCodeToPlayer = function() {
+    openModal('📤 Отправить код игроку', `
+        <p>Введите UID игрока:</p>
+        <input type="text" id="sendCodeUid" placeholder="UID игрока" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;text-transform:uppercase;" />
+        <p>Выберите тип кода:</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn small" onclick="sendCodeToPlayerWithType('single')">🔑 Одноразовый</button>
+            <button class="btn small" onclick="sendCodeToPlayerWithType('multi')">🔑 На 5</button>
+            <button class="btn small" onclick="sendCodeToPlayerWithType('boost')">🚀 Бустер</button>
+            <button class="btn small" onclick="sendCodeToPlayerWithType('boostmulti')">🚀 Бустер x5</button>
+        </div>
+        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
+    `);
+};
+
+window.sendCodeToPlayerWithType = function(type) {
+    const uidInput = document.getElementById('sendCodeUid');
+    if (!uidInput) return;
+    const uid = uidInput.value.trim().toUpperCase();
+    if (!uid) { showToast('❌ Введите UID'); return; }
+    
+    const user = getUserByUid(uid);
+    if (!user) { 
+        showToast('❌ Игрок с таким UID не найден!');
+        return;
+    }
+
+    let code, typeLabel;
+    switch(type) {
+        case 'single': code = generateCode(10); window.oneTimeCodes.add(code); typeLabel = '🔑 Одноразовый'; break;
+        case 'multi': code = generateCode(10); window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🔑 На 5'; break;
+        case 'boost': code = generateCode(16); window.boosterCodes.add(code); typeLabel = '🚀 Бустер'; break;
+        case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🚀 Бустер x5'; break;
+    }
+
+    // Сохраняем на сервер
+    fetch(SERVER_URL + '/api/add_code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code, type: typeLabel + ' → ' + uid, target: uid })
+    });
+
+    addNotification(uid, `🎫 Вам отправлен код: ${code} (${typeLabel})`);
+    showToast(`✅ Код отправлен игроку ${uid}`);
+    closeModal();
+    loadGlobalData();
+    showAdminPanel();
+};
+
+window.adminSendCodeToAll = function() {
+    openModal('📤 Отправить код всем игрокам', `
+        <p>Выберите тип кода:</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn small" onclick="sendCodeToAllWithType('single')">🔑 Одноразовый</button>
+            <button class="btn small" onclick="sendCodeToAllWithType('multi')">🔑 На 5</button>
+            <button class="btn small" onclick="sendCodeToAllWithType('boost')">🚀 Бустер</button>
+            <button class="btn small" onclick="sendCodeToAllWithType('boostmulti')">🚀 Бустер x5</button>
+        </div>
+        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
+    `);
+};
+
+window.sendCodeToAllWithType = function(type) {
+    let code, typeLabel;
+    switch(type) {
+        case 'single': code = generateCode(10); window.oneTimeCodes.add(code); typeLabel = '🔑 Одноразовый'; break;
+        case 'multi': code = generateCode(10); window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🔑 На 5'; break;
+        case 'boost': code = generateCode(16); window.boosterCodes.add(code); typeLabel = '🚀 Бустер'; break;
+        case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🚀 Бустер x5'; break;
+    }
+
+    // Сохраняем на сервер
+    fetch(SERVER_URL + '/api/add_code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code, type: typeLabel + ' (всем)', target: 'всем' })
+    });
+
+    // Уведомляем всех
+    for (const userId in window.users) {
+        const user = window.users[userId];
+        if (user && user.uid && !user.banned) {
+            addNotification(user.uid, `🎫 Всем игрокам: ${code} (${typeLabel})`);
+        }
+    }
+
+    showToast(`✅ Код отправлен всем игрокам`);
+    closeModal();
+    loadGlobalData();
+    showAdminPanel();
 };
 
 // ============================================================
-//  КОЛЕСО УДАЧИ
+//  АДМИН-ПАНЕЛЬ
+// ============================================================
+
+function handleAdmin() {
+    openModal('🔧 Админ-панель', `
+        <p>Введите пароль:</p>
+        <input type="password" id="adminPassword" placeholder="Пароль" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn primary full" onclick="adminLogin()">🔑 Войти</button>
+        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+    `);
+}
+
+window.adminLogin = function() {
+    const input = document.getElementById('adminPassword');
+    if (!input) return;
+    const pass = input.value.trim();
+    if (pass !== 'Qw12') { showToast('❌ Неверный пароль'); return; }
+    showAdminPanel();
+};
+
+function showAdminPanel() {
+    // Проверяем активные чаты
+    let chatList = '';
+    if (globalData.active_chats) {
+        const chatKeys = Object.keys(globalData.active_chats);
+        if (chatKeys.length > 0) {
+            chatList = '<p><strong>Активные чаты:</strong></p><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">';
+            chatKeys.forEach(uid => {
+                const user = getUserByUid(uid);
+                const name = user ? user.name || uid : uid;
+                chatList += `<button class="btn small" onclick="adminOpenChat('${uid}')" style="margin:2px;">💬 ${name}</button>`;
+            });
+            chatList += '</div>';
+        }
+    }
+
+    const contestStatus = globalData.contest_active ? 
+        `<span style="color:#ffd700;">🟢 Активен (${Math.floor((globalData.contest_end_time - Date.now()) / 60000)} мин)</span>` : 
+        `<span style="color:#888;">🔴 Не активен</span>`;
+
+    openModal('🔧 Панель управления', `
+        <div class="admin-panel">
+            <p><strong>🏆 Конкурс:</strong> ${contestStatus}</p>
+            <div style="display:flex;gap:8px;">
+                <button class="btn primary small" onclick="startContest()">🏆 Запустить</button>
+                <button class="btn danger small" onclick="forceEndContest()">⏹ Завершить</button>
+            </div>
+            <hr style="border-color:rgba(255,255,255,0.1);margin:12px 0;" />
+            ${chatList}
+            <hr style="border-color:rgba(255,255,255,0.1);margin:12px 0;" />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <button class="btn small" onclick="adminCodeSingle()">🔑 Код 1</button>
+                <button class="btn small" onclick="adminCodeMulti()">🔑 Код 5</button>
+                <button class="btn small" onclick="adminBoostSingle()">🚀 Бустер</button>
+                <button class="btn small" onclick="adminBoostMulti()">🚀 Бустер x5</button>
+                <button class="btn small" onclick="adminSendCodeToPlayer()">📤 Отправить код игроку</button>
+                <button class="btn small" onclick="adminSendCodeToAll()">📤 Отправить код всем</button>
+                <button class="btn small" onclick="adminMassGive()">🎮 Попытки всем</button>
+                <button class="btn small" onclick="adminGiveSelfStars()">⭐ Звёзды себе</button>
+                <button class="btn small" onclick="adminPlayerMenu()">👤 Игроки</button>
+                <button class="btn small danger" onclick="adminReports()">📩 Жалобы</button>
+                <button class="btn small" onclick="adminTop()">🏆 Топ-30</button>
+            </div>
+            <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+        </div>
+    `);
+}
+
+// ============================================================
+//  АДМИН-ОСТАЛЬНОЕ
+// ============================================================
+
+window.adminReports = function() {
+    if (!globalData.reports || globalData.reports.length === 0) {
+        showToast('📭 Жалоб пока нет');
+        return;
+    }
+
+    let text = '📩 Жалобы:\n\n';
+    const last = globalData.reports.slice(-10);
+    for (const r of last) {
+        text += `От ${r.username} (ID: ${r.uid}) [${r.time}]:\n${r.text}\n\n`;
+    }
+
+    let chatButtons = '';
+    if (globalData.active_chats) {
+        const chatKeys = Object.keys(globalData.active_chats);
+        if (chatKeys.length > 0) {
+            chatButtons = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0;">';
+            chatKeys.forEach(uid => {
+                const user = getUserByUid(uid);
+                const name = user ? user.name || uid : uid;
+                chatButtons += `<button class="btn small" onclick="adminOpenChat('${uid}')">💬 ${name}</button>`;
+            });
+            chatButtons += '</div>';
+        }
+    }
+
+    openModal('📩 Жалобы и чаты', `
+        <div class="scrollable"><pre style="color:#c0c0e0;font-family:inherit;white-space:pre-wrap;font-size:14px;">${text}</pre></div>
+        ${chatButtons}
+        <button class="btn danger full" onclick="fetch('${SERVER_URL}/api/clear_reports', {method:'POST'}); globalData.reports=[]; closeModal(); showToast('✅ Жалобы очищены'); showAdminPanel();">🗑️ Очистить жалобы</button>
+        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
+    `);
+};
+
+window.adminPlayerMenu = function() {
+    openModal('👤 Управление игроком', `
+        <p>Введите UID игрока:</p>
+        <input type="text" id="playerUidInput" placeholder="UID игрока" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;text-transform:uppercase;" />
+        <button class="btn primary full" onclick="showPlayerInfo()">🔍 Найти</button>
+        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
+    `);
+};
+
+window.showPlayerInfo = function() {
+    const input = document.getElementById('playerUidInput');
+    if (!input) return;
+    const uid = input.value.trim().toUpperCase();
+    if (!uid) { showToast('❌ Введите UID'); return; }
+    
+    const user = getUserByUid(uid);
+    if (!user) { 
+        showToast('❌ Игрок с таким UID не найден!');
+        return;
+    }
+
+    const isBanned = user.banned || window.bannedUsers[uid] !== undefined;
+    const banReason = user.banned_reason || window.bannedUsers[uid] || '—';
+    const name = user.name || '—';
+    const gender = user.gender || '—';
+    const age = user.age || '—';
+    const stars = user.stars || 0;
+    const bank = user.bank || 0;
+    const attempts = user.attempts || 0;
+    const coeff = user.coefficientRate || 0;
+    const clickerProgress = user.clickerProgress || 0;
+
+    openModal(`👤 Игрок: ${name} (${uid})`, `
+        <p><strong>📊 Статистика:</strong></p>
+        <p>👤 Имя: ${name}</p>
+        <p>⚧ Пол: ${gender}</p>
+        <p>🎂 Возраст: ${age}</p>
+        <p>⭐ Звёзды: ${stars}</p>
+        <p>🏦 Банк: ${bank}</p>
+        <p>🎮 Попытки: ${attempts}</p>
+        <p>🔥 Коэффициент: +${coeff}</p>
+        <p>⭐ Кликер: ${clickerProgress}/400</p>
+        <p>🚫 Статус: ${isBanned ? '❌ ЗАБЛОКИРОВАН' : '✅ Активен'}</p>
+        ${isBanned ? `<p style="color:#ff4757;">📝 Причина: ${banReason}</p>` : ''}
+        <hr />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button class="btn small" onclick="adminAddStars('${uid}')">⭐ + Звёзды</button>
+            <button class="btn small danger" onclick="adminRemoveStars('${uid}')">⭐ - Звёзды</button>
+            ${isBanned ? 
+                `<button class="btn small" onclick="adminUnbanUserByUid('${uid}')">✅ Разбан</button>` :
+                `<button class="btn small danger" onclick="adminBanUserByUid('${uid}')">🚫 Бан</button>`
+            }
+            <button class="btn small" onclick="adminOpenChat('${uid}')">💬 Чат</button>
+            <button class="btn small" onclick="adminResetPlayer('${uid}')">🔄 Сброс</button>
+        </div>
+        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
+    `);
+};
+
+window.adminBanUserByUid = function(uid) {
+    openModal(`🚫 Блокировка игрока ${uid}`, `
+        <p>Введите причину блокировки:</p>
+        <input type="text" id="banReasonInput" placeholder="Причина блокировки..." style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn danger full" onclick="doBanUser('${uid}')">🚫 Заблокировать</button>
+        <button class="btn full small" onclick="closeModal(); showPlayerInfo();">⬅️ Назад</button>
+    `);
+};
+
+window.doBanUser = function(uid) {
+    const input = document.getElementById('banReasonInput');
+    if (!input) return;
+    const reason = input.value.trim() || 'Нарушение правил';
+    
+    window.bannedUsers[uid] = reason;
+    const user = getUserByUid(uid);
+    if (user) {
+        user.banned = true;
+        user.banned_reason = reason;
+    }
+    saveAllData();
+    syncGlobalData();
+    addNotification(uid, `🚫 Вас заблокировали. Причина: ${reason}`);
+    showToast(`✅ ${uid} заблокирован. Причина: ${reason}`);
+    closeModal();
+    render();
+    saveAllData();
+    showPlayerInfo();
+};
+
+window.adminUnbanUserByUid = function(uid) {
+    if (window.bannedUsers[uid]) {
+        delete window.bannedUsers[uid];
+        const user = getUserByUid(uid);
+        if (user) {
+            user.banned = false;
+            user.banned_reason = '';
+        }
+        saveAllData();
+        syncGlobalData();
+        addNotification(uid, '✅ Вас разблокировали!');
+        showToast(`✅ ${uid} разблокирован`);
+        closeModal();
+        render();
+        saveAllData();
+        showPlayerInfo();
+    }
+};
+
+window.adminAddStars = function(uid) {
+    openModal(`⭐ Добавить звёзды игроку ${uid}`, `
+        <input type="number" id="addStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn primary full" onclick="doAddStars('${uid}')">✅ Добавить</button>
+        <button class="btn full small" onclick="closeModal(); showPlayerInfo();">⬅️ Назад</button>
+    `);
+};
+
+window.doAddStars = function(uid) {
+    const input = document.getElementById('addStarsInput');
+    if (!input) return;
+    const amount = parseInt(input.value);
+    if (!amount || amount <= 0) { showToast('❌ Введите сумму'); return; }
+    const user = getUserByUid(uid);
+    if (user) {
+        user.stars += amount;
+        addNotification(uid, `⭐ Администратор начислил вам ${amount} ⭐`);
+        showToast(`✅ +${amount} ⭐ игроку ${uid}`);
+        closeModal();
+        render();
+        saveAllData();
+        saveToServer();
+    }
+};
+
+window.adminRemoveStars = function(uid) {
+    openModal(`⭐ Забрать звёзды у игрока ${uid}`, `
+        <input type="number" id="removeStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn danger full" onclick="doRemoveStars('${uid}')">✅ Забрать</button>
+        <button class="btn full small" onclick="closeModal(); showPlayerInfo();">⬅️ Назад</button>
+    `);
+};
+
+window.doRemoveStars = function(uid) {
+    const input = document.getElementById('removeStarsInput');
+    if (!input) return;
+    const amount = parseInt(input.value);
+    if (!amount || amount <= 0) { showToast('❌ Введите сумму'); return; }
+    const user = getUserByUid(uid);
+    if (user) {
+        if (user.stars < amount) { showToast('❌ Недостаточно звёзд у игрока'); return; }
+        user.stars -= amount;
+        addNotification(uid, `⭐ Администратор забрал у вас ${amount} ⭐`);
+        showToast(`✅ Изъято ${amount} ⭐ у игрока ${uid}`);
+        closeModal();
+        render();
+        saveAllData();
+        saveToServer();
+    }
+};
+
+window.adminResetPlayer = function(uid) {
+    if (!confirm(`Вы уверены, что хотите сбросить игрока ${uid}?`)) return;
+    const user = getUserByUid(uid);
+    if (user) {
+        user.stars = 300;
+        user.bank = 0;
+        user.bankDeposit = 0;
+        user.attempts = 1;
+        user.coefficientRate = 0;
+        user.petProgress = 0;
+        user.petStage = 1;
+        user.wins = [];
+        user.clickerProgress = 0;
+        addNotification(uid, '🔄 Ваш прогресс был сброшен администратором');
+        showToast(`✅ Игрок ${uid} сброшен`);
+        closeModal();
+        render();
+        saveAllData();
+        saveToServer();
+    }
+};
+
+window.adminMassGive = function() {
+    let count = 0;
+    for (const userId in window.users) {
+        const user = window.users[userId];
+        if (user && !user.banned) {
+            user.attempts += 1;
+            count++;
+        }
+    }
+    showToast(`✅ +1 попытка выдана ${count} игрокам`);
+    saveAllData();
+    saveToServer();
+};
+
+window.adminGiveSelfStars = function() {
+    openModal('⭐ Начислить звёзды себе', `
+        <input type="number" id="selfStarsInput" placeholder="Сумма" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn primary full" onclick="doGiveSelfStars()">✅ Начислить</button>
+        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
+    `);
+};
+
+window.doGiveSelfStars = function() {
+    const input = document.getElementById('selfStarsInput');
+    if (!input) return;
+    const amount = parseInt(input.value);
+    if (!amount || amount <= 0) { showToast('❌ Введите сумму'); return; }
+    const user = getCurrentUser();
+    user.stars += amount;
+    closeModal();
+    showToast(`✅ +${amount} ⭐`);
+    render();
+    saveAllData();
+    saveToServer();
+    showAdminPanel();
+};
+
+window.adminTop = function() {
+    const usersList = getAllUsersList();
+    let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>⭐</th></tr></thead><tbody>';
+    const sorted = usersList
+        .filter(u => !u.banned)
+        .sort((a, b) => (b.stars || 0) - (a.stars || 0))
+        .slice(0, 30);
+    if (sorted.length === 0) {
+        html += '<tr><td colspan="4" style="text-align:center;color:#888;">Нет игроков</td></tr>';
+    }
+    sorted.forEach((item, i) => {
+        html += `<tr><td>${i+1}</td><td>${item.uid}</td><td>${item.name}</td><td>${item.stars}</td></tr>`;
+    });
+    html += '</tbody></table><button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>';
+    openModal('🏆 Топ-30', html);
+};
+
+// ============================================================
+//  КОЛЕСО УДАЧИ И ОСТАЛЬНЫЕ ИГРОВЫЕ ФУНКЦИИ
 // ============================================================
 
 const SEGMENTS = [
@@ -897,7 +1227,308 @@ function closeWheel() {
 }
 
 // ============================================================
-//  ОБРАБОТЧИКИ (ИГРОВЫЕ)
+//  РЕГИСТРАЦИЯ
+// ============================================================
+
+function showRegistration() {
+    const uids = generateThreeUids();
+    
+    openModal('📝 Регистрация', `
+        <p>Добро пожаловать! Давайте зарегистрируемся.</p>
+        <p>Введите ваше имя:</p>
+        <input type="text" id="regName" placeholder="Имя" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <p>Выберите пол:</p>
+        <div style="display:flex;gap:8px;margin:5px 0;">
+            <button class="btn" onclick="selectGender('Мужской')" style="flex:1;">👨 Мужской</button>
+            <button class="btn" onclick="selectGender('Женский')" style="flex:1;">👩 Женский</button>
+        </div>
+        <p>Введите возраст:</p>
+        <input type="number" id="regAge" placeholder="Возраст" min="1" max="120" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <p style="color:#ffd700;font-weight:bold;">Выберите ваш уникальный ID (навсегда):</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:5px 0;">
+            <button class="btn primary" onclick="selectUid('${uids[0]}')" id="uidBtn0" style="flex:1;font-weight:bold;font-size:18px;">${uids[0]}</button>
+            <button class="btn primary" onclick="selectUid('${uids[1]}')" id="uidBtn1" style="flex:1;font-weight:bold;font-size:18px;">${uids[1]}</button>
+            <button class="btn primary" onclick="selectUid('${uids[2]}')" id="uidBtn2" style="flex:1;font-weight:bold;font-size:18px;">${uids[2]}</button>
+        </div>
+        <div id="selectedUidDisplay" style="text-align:center;margin:8px 0;font-size:16px;color:#6bcbff;"></div>
+        <button class="btn primary full" id="regCompleteBtn" onclick="completeRegistration()" disabled>✅ Завершить</button>
+    `);
+}
+
+let regData = { name: '', gender: '', age: '', uid: '' };
+let genderSelected = false;
+
+window.selectGender = function(g) {
+    genderSelected = true;
+    regData.gender = g;
+    showToast(`✅ Пол: ${g}`);
+    checkRegistrationReady();
+};
+
+window.selectUid = function(uid) {
+    regData.uid = uid;
+    document.getElementById('selectedUidDisplay').textContent = '✅ Выбран ID: ' + uid;
+    document.getElementById('selectedUidDisplay').style.color = '#ffd700';
+    document.querySelectorAll('#modalBody .btn.primary').forEach(btn => {
+        btn.style.border = '2px solid transparent';
+        if (btn.textContent.trim() === uid) {
+            btn.style.border = '2px solid #ffd700';
+            btn.style.background = 'linear-gradient(145deg, #ffd700, #f5a623)';
+        }
+    });
+    checkRegistrationReady();
+};
+
+function checkRegistrationReady() {
+    const nameInput = document.getElementById('regName');
+    const ageInput = document.getElementById('regAge');
+    const btn = document.getElementById('regCompleteBtn');
+    if (nameInput && ageInput && btn) {
+        const name = nameInput.value.trim();
+        const age = parseInt(ageInput.value);
+        if (name.length > 0 && age > 0 && age <= 120 && genderSelected && regData.uid) {
+            btn.disabled = false;
+        } else {
+            btn.disabled = true;
+        }
+    }
+}
+
+window.completeRegistration = function() {
+    const nameInput = document.getElementById('regName');
+    const ageInput = document.getElementById('regAge');
+    if (!nameInput || !ageInput) return;
+    
+    regData.name = nameInput.value.trim();
+    regData.age = parseInt(ageInput.value);
+
+    if (!regData.name || regData.name.length === 0) {
+        showToast('❌ Введите имя');
+        return;
+    }
+    if (!regData.age || regData.age < 1 || regData.age > 120) {
+        showToast('❌ Введите возраст от 1 до 120');
+        return;
+    }
+    if (!regData.gender) {
+        showToast('❌ Выберите пол');
+        return;
+    }
+    if (!regData.uid) {
+        showToast('❌ Выберите ID');
+        return;
+    }
+
+    const user = getCurrentUser();
+    user.name = regData.name;
+    user.gender = regData.gender;
+    user.age = regData.age;
+    user.uid = regData.uid;
+    user.registered = true;
+    
+    window.uidMap[regData.uid] = getUserId();
+    
+    closeModal();
+    showToast('✅ Регистрация завершена! Ваш ID: ' + regData.uid);
+    render();
+    saveAllData();
+    saveToServer();
+};
+
+function checkRegistration() {
+    const user = getCurrentUser();
+    if (!user.registered) {
+        showRegistration();
+    }
+}
+
+// ============================================================
+//  ОСТАЛЬНЫЕ ИГРОВЫЕ ФУНКЦИИ
+// ============================================================
+
+async function saveToServer() {
+    try {
+        const user = getCurrentUser();
+        const userId = getUserId();
+        if (!user || !user.uid || !user.registered) return false;
+        
+        await fetch(SERVER_URL + '/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, user_data: user })
+        });
+        return true;
+    } catch(e) { return false; }
+}
+
+async function loadFromServer() {
+    try {
+        const userId = getUserId();
+        const response = await fetch(SERVER_URL + `/api/load/${userId}`);
+        if (response.ok) {
+            const data = await response.json();
+            const user = getCurrentUser();
+            const oldUid = user.uid;
+            Object.assign(user, data);
+            user.uid = oldUid;
+            if (user.uid) {
+                window.uidMap[user.uid] = userId;
+            }
+            render();
+            saveAllData();
+            return true;
+        }
+    } catch(e) {}
+    return false;
+}
+
+async function loadAllUsersFromServer() {
+    try {
+        const response = await fetch(SERVER_URL + '/api/all_users');
+        if (response.ok) {
+            const data = await response.json();
+            for (const item of data) {
+                if (item.uid) {
+                    const user = getUser(item.user_id || item.uid);
+                    if (user) {
+                        user.name = item.name || user.name;
+                        user.stars = item.stars || user.stars;
+                        user.bank = item.bank || user.bank;
+                        user.attempts = item.attempts || user.attempts;
+                        user.registered = item.registered || user.registered;
+                        user.uid = item.uid;
+                        user.banned = item.banned || false;
+                        user.banned_reason = item.banned_reason || '';
+                        window.uidMap[item.uid] = item.user_id || item.uid;
+                    }
+                }
+            }
+            saveAllData();
+            return data;
+        }
+    } catch(e) {}
+    return [];
+}
+
+// ============================================================
+//  ОТРИСОВКА
+// ============================================================
+
+function render() {
+    const user = getCurrentUser();
+    if (!user) return;
+    
+    document.getElementById('userName').textContent = user.name || '—';
+    document.getElementById('userGender').textContent = user.gender || '—';
+    document.getElementById('userAge').textContent = user.age || '—';
+    document.getElementById('userUid').textContent = user.uid || '—';
+    document.getElementById('userAttempts').textContent = user.attempts || 0;
+    document.getElementById('starsBalance').textContent = user.stars || 0;
+    document.getElementById('bankBalance').textContent = user.bank || 0;
+    
+    const statusEl = document.getElementById('userRegStatus');
+    if (user.banned) {
+        statusEl.textContent = '🚫 ЗАБЛОКИРОВАН: ' + (user.banned_reason || 'Нарушение правил');
+        statusEl.style.color = '#ff4757';
+    } else if (user.registered) {
+        statusEl.textContent = '✅ Зарегистрирован (ID: ' + (user.uid || '—') + ')';
+        statusEl.style.color = '#4caf50';
+    } else {
+        statusEl.textContent = '❌ Не зарегистрирован';
+        statusEl.style.color = '#ff4757';
+    }
+    
+    const stage = user.petStage || 1;
+    const progress = user.petProgress || 0;
+    const threshold = stage === 1 ? 100 : stage === 2 ? 500 : stage === 3 ? 1500 : 0;
+    const stageText = stage === 1 ? 'Малыш' : stage === 2 ? 'Подросток' : stage === 3 ? 'Взрослый' : 'Гигант 👑';
+    document.getElementById('petStage').textContent = '🪳 ' + stageText;
+    document.getElementById('petProgress').textContent = `${progress} / ${threshold} ⭐`;
+    
+    renderAdminCodes();
+    renderContest();
+    
+    const wheelAttempts = document.getElementById('wheelAttemptsCount');
+    if (wheelAttempts) wheelAttempts.textContent = user.attempts || 0;
+}
+
+function renderAdminCodes() {
+    const panel = document.getElementById('codesPanel');
+    const list = document.getElementById('codesList');
+    if (!panel || !list) return;
+    
+    // Загружаем коды из глобальных данных
+    const codes = globalData.admin_codes || [];
+    if (codes.length === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+    panel.style.display = 'block';
+    list.innerHTML = codes.map((item, index) => `
+        <div class="code-item">
+            <span class="code-text" onclick="copyCode('${item.code}')">${item.code}</span>
+            <span class="code-type">${item.type} ${item.target ? '→ ' + item.target : ''}</span>
+            <span class="code-delete" onclick="deleteCodeGlobal('${item.code}')">✕</span>
+        </div>
+    `).join('');
+}
+
+window.deleteCodeGlobal = function(code) {
+    fetch(SERVER_URL + '/api/delete_code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code })
+    }).then(() => {
+        loadGlobalData();
+        showToast('🗑️ Код удалён');
+    });
+};
+
+window.copyCode = function(code) {
+    navigator.clipboard.writeText(code).then(() => {
+        showToast('✅ Код скопирован!');
+    }).catch(() => {
+        const textarea = document.createElement('textarea');
+        textarea.value = code;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast('✅ Код скопирован!');
+    });
+};
+
+function renderContest() {
+    const banner = document.getElementById('contestBanner');
+    if (!banner) return;
+    if (!globalData.contest_active) {
+        banner.style.display = 'none';
+        return;
+    }
+    banner.style.display = 'block';
+    const now = Date.now();
+    const remaining = globalData.contest_end_time - now;
+    if (remaining <= 0) { 
+        endContest(); 
+        return; 
+    }
+    const hours = Math.floor(remaining / 3600000);
+    const minutes = Math.floor((remaining % 3600000) / 60000);
+    const seconds = Math.floor((remaining % 60000) / 1000);
+    let winnerText = '';
+    if (globalData.contest_winner) {
+        winnerText = `<div class="winner">🏆 Победитель: <strong>${globalData.contest_winner}</strong></div>`;
+    }
+    banner.innerHTML = `
+        <div class="title">🏆 КОНКУРС</div>
+        <div class="timer">⏱ ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}</div>
+        <div style="font-size:12px;color:#aaa;">Победит тот, у кого больше звёзд (баланс + банк)</div>
+        ${winnerText}
+    `;
+}
+
+// ============================================================
+//  ОБРАБОТЧИКИ
 // ============================================================
 
 function handlePlay() {
@@ -1204,8 +1835,6 @@ window.applyCode = function() {
             window.boosterCodes.delete(code);
             user.attempts += 1;
             user.boosted = true;
-            const idx = window.adminCodes.findIndex(item => item.code === text);
-            if (idx !== -1) window.adminCodes.splice(idx, 1);
             found = true;
             closeModal();
             showToast('🚀 Бустер активирован!');
@@ -1225,8 +1854,6 @@ window.applyCode = function() {
             window.boosterMultiCodes[code].usedUsers.add(user.uid);
             window.boosterMultiCodes[code].remaining--;
             if (window.boosterMultiCodes[code].remaining <= 0) {
-                const idx = window.adminCodes.findIndex(item => item.code === text);
-                if (idx !== -1) window.adminCodes.splice(idx, 1);
                 delete window.boosterMultiCodes[code];
             }
             found = true;
@@ -1241,8 +1868,6 @@ window.applyCode = function() {
         if (code === text) {
             window.oneTimeCodes.delete(code);
             user.attempts += 1;
-            const idx = window.adminCodes.findIndex(item => item.code === text);
-            if (idx !== -1) window.adminCodes.splice(idx, 1);
             found = true;
             closeModal();
             showToast('✅ Код принят!');
@@ -1261,8 +1886,6 @@ window.applyCode = function() {
             window.multiUseCodes[code].usedUsers.add(user.uid);
             window.multiUseCodes[code].remaining--;
             if (window.multiUseCodes[code].remaining <= 0) {
-                const idx = window.adminCodes.findIndex(item => item.code === text);
-                if (idx !== -1) window.adminCodes.splice(idx, 1);
                 delete window.multiUseCodes[code];
             }
             found = true;
@@ -1313,6 +1936,9 @@ function handleRules() {
             <p>• Растёт от кормления звёздами</p>
             <p>• Приносит пассивный доход</p>
             <br>
+            <p><strong>🎫 Коды</strong></p>
+            <p>• Вводите коды для бонусов</p>
+            <br>
             <p><strong>👑 Администратор всегда прав!</strong></p>
         </div>
         <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
@@ -1320,664 +1946,33 @@ function handleRules() {
 }
 
 // ============================================================
-//  ПОДДЕРЖКА И ЧАТ
+//  TOAST И МОДАЛКА
 // ============================================================
 
-function handleSupport() {
-    const user = getCurrentUser();
-    const userId = user.uid;
+let toastTimeout;
 
-    if (window.activeChats[userId]) {
-        window.activeChats[userId].hasNew = false;
-        render();
-        showChatWindow(userId);
-        return;
-    }
-
-    openModal('🆘 Поддержка', `
-        <p>Опишите вашу проблему:</p>
-        <input type="text" id="supportInput" placeholder="Ваше сообщение..." style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="sendSupport()">📤 Отправить</button>
-        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
-    `);
+function showToast(text, duration = 2500) {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => el.classList.remove('show'), duration);
 }
 
-window.sendSupport = function() {
-    const input = document.getElementById('supportInput');
-    if (!input) return;
-    const text = input.value.trim();
-    if (!text) { showToast('❌ Введите сообщение'); return; }
-    const user = getCurrentUser();
-    const userId = user.uid;
-
-    window.reports.push({ uid: userId, username: user.name || 'No name', text: text, time: new Date().toLocaleString() });
-
-    if (!window.activeChats[userId]) {
-        window.activeChats[userId] = { messages: [], admin: false, hasNew: false };
-    }
-    window.activeChats[userId].messages.push({ from: 'user', text: text, time: new Date().toLocaleString() });
-
-    closeModal();
-    showToast('✅ Сообщение отправлено администратору!');
-    render();
-    saveAllData();
-
-    setTimeout(() => showChatWindow(userId), 500);
-};
-
-function showChatWindow(userId) {
-    const chat = window.activeChats[userId];
-    if (!chat) { showToast('❌ Чат не найден'); return; }
-    chat.hasNew = false;
-    render();
-
-    let messagesHtml = '';
-    chat.messages.forEach(msg => {
-        const cls = msg.from === 'user' ? 'user' : 'admin';
-        const label = msg.from === 'user' ? 'Вы' : 'Админ';
-        messagesHtml += `<div class="msg ${cls}"><strong>${label}:</strong> ${msg.text}<span class="time">${msg.time}</span></div>`;
-    });
-
-    const isAdmin = chat.admin || false;
-    const adminControls = isAdmin ? 
-        `<button class="btn danger full" onclick="closeChat('${userId}')">🔒 Завершить чат</button>` :
-        `<p style="font-size:12px;color:#888;">✉️ Ожидайте ответа администратора</p>`;
-
-    const user = getUserByUid(userId);
-    const name = user ? user.name || userId : userId;
-
-    openModal(`💬 Чат с поддержкой (${name})`, `
-        <div class="chat-container" id="chatContainer">${messagesHtml || '<p style="color:#888;text-align:center;">Нет сообщений</p>'}</div>
-        <div style="display:flex;gap:8px;">
-            <input type="text" id="chatInput" placeholder="Введите сообщение..." style="flex:1;" />
-            <button class="btn primary" onclick="sendChatMessage('${userId}')">📤</button>
-        </div>
-        ${adminControls}
-        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
-    `);
+function openModal(title, html) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalBody').innerHTML = html;
+    document.getElementById('modalOverlay').classList.add('active');
 }
 
-window.sendChatMessage = function(userId) {
-    const input = document.getElementById('chatInput');
-    if (!input) return;
-    const text = input.value.trim();
-    if (!text) { showToast('❌ Введите сообщение'); return; }
-    const chat = window.activeChats[userId];
-    if (!chat) { showToast('❌ Чат не найден'); return; }
-    chat.messages.push({ from: 'user', text: text, time: new Date().toLocaleString() });
-    if (!chat.admin) showToast('✅ Сообщение отправлено. Ожидайте ответа.');
-    closeModal();
-    showChatWindow(userId);
-    render();
-    saveAllData();
-};
-
-window.adminOpenChat = function(uid) {
-    if (!window.activeChats[uid]) window.activeChats[uid] = { messages: [], admin: false, hasNew: false };
-    window.activeChats[uid].admin = true;
-    showAdminChat(uid);
-    render();
-    saveAllData();
-};
-
-window.adminSendMessage = function(uid) {
-    const input = document.getElementById('adminChatInput');
-    if (!input) return;
-    const text = input.value.trim();
-    if (!text) { showToast('❌ Введите сообщение'); return; }
-    if (!window.activeChats[uid]) window.activeChats[uid] = { messages: [], admin: false, hasNew: false };
-    window.activeChats[uid].admin = true;
-    window.activeChats[uid].messages.push({ from: 'admin', text: text, time: new Date().toLocaleString() });
-    window.activeChats[uid].hasNew = true;
-    render();
-    showToast('✅ Сообщение отправлено игроку');
-    closeModal();
-    showAdminChat(uid);
-    render();
-    saveAllData();
-};
-
-function showAdminChat(uid) {
-    const chat = window.activeChats[uid];
-    if (!chat) { showToast('❌ Чат не найден'); return; }
-    let messagesHtml = '';
-    chat.messages.forEach(msg => {
-        const cls = msg.from === 'user' ? 'user' : 'admin';
-        const label = msg.from === 'user' ? 'Игрок' : 'Админ';
-        messagesHtml += `<div class="msg ${cls}"><strong>${label}:</strong> ${msg.text}<span class="time">${msg.time}</span></div>`;
-    });
-    const user = getUserByUid(uid);
-    const name = user ? user.name || uid : uid;
-    openModal(`💬 Чат с игроком (${name} | ID: ${uid})`, `
-        <div class="chat-container" id="adminChatContainer">${messagesHtml || '<p style="color:#888;text-align:center;">Нет сообщений</p>'}</div>
-        <div style="display:flex;gap:8px;">
-            <input type="text" id="adminChatInput" placeholder="Введите сообщение..." style="flex:1;" />
-            <button class="btn primary" onclick="adminSendMessage('${uid}')">📤</button>
-        </div>
-        <button class="btn danger full" onclick="closeChat('${uid}')">🔒 Завершить чат</button>
-        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
-    `);
+function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('active');
 }
 
-window.closeChat = function(uid) {
-    if (window.activeChats[uid]) {
-        delete window.activeChats[uid];
-        closeModal();
-        showToast('✅ Чат завершён');
-        render();
-        saveAllData();
-    }
-};
-
-// ============================================================
-//  АДМИН-ПАНЕЛЬ
-// ============================================================
-
-function handleAdmin() {
-    openModal('🔧 Админ-панель', `
-        <p>Введите пароль:</p>
-        <input type="password" id="adminPassword" placeholder="Пароль" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="adminLogin()">🔑 Войти</button>
-        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
-    `);
-}
-
-window.adminLogin = function() {
-    const input = document.getElementById('adminPassword');
-    if (!input) return;
-    const pass = input.value.trim();
-    if (pass !== 'Qw12') { showToast('❌ Неверный пароль'); return; }
-    showAdminPanel();
-};
-
-function showAdminPanel() {
-    let chatList = '';
-    const chatKeys = Object.keys(window.activeChats);
-    if (chatKeys.length > 0) {
-        chatList = '<p><strong>Активные чаты:</strong></p><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">';
-        chatKeys.forEach(uid => {
-            const user = getUserByUid(uid);
-            const name = user ? user.name || uid : uid;
-            const hasNew = window.activeChats[uid].hasNew ? ' 🔔' : '';
-            chatList += `<button class="btn small" onclick="adminOpenChat('${uid}')" style="margin:2px;">💬 ${name}${hasNew}</button>`;
-        });
-        chatList += '</div>';
-    }
-
-    const contestStatus = window.contestActive ? 
-        `<span style="color:#ffd700;">🟢 Активен (${Math.floor((window.contestEndTime - Date.now()) / 60000)} мин)</span>` : 
-        `<span style="color:#888;">🔴 Не активен</span>`;
-
-    openModal('🔧 Панель управления', `
-        <div class="admin-panel">
-            <p><strong>🏆 Конкурс:</strong> ${contestStatus}</p>
-            <div style="display:flex;gap:8px;">
-                <button class="btn primary small" onclick="startContest()">🏆 Запустить</button>
-                <button class="btn danger small" onclick="forceEndContest()">⏹ Завершить</button>
-            </div>
-            <hr style="border-color:rgba(255,255,255,0.1);margin:12px 0;" />
-            ${chatList}
-            <hr style="border-color:rgba(255,255,255,0.1);margin:12px 0;" />
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <button class="btn small" onclick="adminCodeSingle()">🔑 Код 1</button>
-                <button class="btn small" onclick="adminCodeMulti()">🔑 Код 5</button>
-                <button class="btn small" onclick="adminBoostSingle()">🚀 Бустер</button>
-                <button class="btn small" onclick="adminBoostMulti()">🚀 Бустер x5</button>
-                <button class="btn small" onclick="adminSendCodeToPlayer()">📤 Отправить код игроку</button>
-                <button class="btn small" onclick="adminSendCodeToAll()">📤 Отправить код всем</button>
-                <button class="btn small" onclick="adminMassGive()">🎮 Попытки всем</button>
-                <button class="btn small" onclick="adminGiveSelfStars()">⭐ Звёзды себе</button>
-                <button class="btn small" onclick="adminPlayerMenu()">👤 Игроки</button>
-                <button class="btn small danger" onclick="adminReports()">📩 Жалобы</button>
-                <button class="btn small" onclick="adminTop()">🏆 Топ-30</button>
-            </div>
-            <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
-        </div>
-    `);
-}
-
-// ============================================================
-//  АДМИН-ФУНКЦИИ
-// ============================================================
-
-window.adminCodeSingle = function() {
-    const code = generateCode(10);
-    window.oneTimeCodes.add(code);
-    window.adminCodes.push({ code: code, type: '🔑 Одноразовый' });
-    showToast(`✅ Код: ${code}`);
-    render();
-    saveAllData();
-};
-
-window.adminCodeMulti = function() {
-    const code = generateCode(10);
-    window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() };
-    window.adminCodes.push({ code: code, type: '🔑 На 5' });
-    showToast(`✅ Код на 5: ${code}`);
-    render();
-    saveAllData();
-};
-
-window.adminBoostSingle = function() {
-    const code = generateCode(16);
-    window.boosterCodes.add(code);
-    window.adminCodes.push({ code: code, type: '🚀 Бустер' });
-    showToast(`✅ Бустер: ${code}`);
-    render();
-    saveAllData();
-};
-
-window.adminBoostMulti = function() {
-    const code = generateCode(16);
-    window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() };
-    window.adminCodes.push({ code: code, type: '🚀 Бустер x5' });
-    showToast(`✅ Бустер на 5: ${code}`);
-    render();
-    saveAllData();
-};
-
-window.adminSendCodeToPlayer = function() {
-    openModal('📤 Отправить код игроку', `
-        <p>Введите UID игрока:</p>
-        <input type="text" id="sendCodeUid" placeholder="UID игрока" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;text-transform:uppercase;" />
-        <p>Выберите тип кода:</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn small" onclick="sendCodeToPlayerWithType('single')">🔑 Одноразовый</button>
-            <button class="btn small" onclick="sendCodeToPlayerWithType('multi')">🔑 На 5</button>
-            <button class="btn small" onclick="sendCodeToPlayerWithType('boost')">🚀 Бустер</button>
-            <button class="btn small" onclick="sendCodeToPlayerWithType('boostmulti')">🚀 Бустер x5</button>
-        </div>
-        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
-    `);
-};
-
-window.sendCodeToPlayerWithType = function(type) {
-    const uidInput = document.getElementById('sendCodeUid');
-    if (!uidInput) return;
-    const uid = uidInput.value.trim().toUpperCase();
-    if (!uid) { showToast('❌ Введите UID'); return; }
-    
-    const user = getUserByUid(uid);
-    if (!user) { 
-        loadAllUsersFromServer().then(() => {
-            const user2 = getUserByUid(uid);
-            if (!user2) {
-                showToast('❌ Игрок с таким UID не найден!');
-                return;
-            }
-            sendCodeToPlayerInternal(uid, type);
-        });
-        return;
-    }
-    sendCodeToPlayerInternal(uid, type);
-};
-
-function sendCodeToPlayerInternal(uid, type) {
-    const user = getUserByUid(uid);
-    if (!user) { showToast('❌ Игрок не найден'); return; }
-
-    let code, typeLabel;
-    switch(type) {
-        case 'single': code = generateCode(10); window.oneTimeCodes.add(code); typeLabel = '🔑 Одноразовый'; break;
-        case 'multi': code = generateCode(10); window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🔑 На 5'; break;
-        case 'boost': code = generateCode(16); window.boosterCodes.add(code); typeLabel = '🚀 Бустер'; break;
-        case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🚀 Бустер x5'; break;
-    }
-
-    window.adminCodes.push({ code: code, type: typeLabel + ' → ' + uid, target: uid });
-    addNotification(uid, `🎫 Вам отправлен код: ${code} (${typeLabel})`);
-    if (window.activeChats[uid]) {
-        window.activeChats[uid].messages.push({ 
-            from: 'admin', 
-            text: `🎫 Вам отправлен код: ${code} (${typeLabel})`, 
-            time: new Date().toLocaleString() 
-        });
-        window.activeChats[uid].hasNew = true;
-    }
-    
-    closeModal();
-    showToast(`✅ Код отправлен игроку ${uid}`);
-    render();
-    saveAllData();
-    showAdminPanel();
-};
-
-window.adminSendCodeToAll = function() {
-    openModal('📤 Отправить код всем игрокам', `
-        <p>Выберите тип кода:</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn small" onclick="sendCodeToAllWithType('single')">🔑 Одноразовый</button>
-            <button class="btn small" onclick="sendCodeToAllWithType('multi')">🔑 На 5</button>
-            <button class="btn small" onclick="sendCodeToAllWithType('boost')">🚀 Бустер</button>
-            <button class="btn small" onclick="sendCodeToAllWithType('boostmulti')">🚀 Бустер x5</button>
-        </div>
-        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
-    `);
-};
-
-window.sendCodeToAllWithType = function(type) {
-    let code, typeLabel;
-    switch(type) {
-        case 'single': code = generateCode(10); window.oneTimeCodes.add(code); typeLabel = '🔑 Одноразовый'; break;
-        case 'multi': code = generateCode(10); window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🔑 На 5'; break;
-        case 'boost': code = generateCode(16); window.boosterCodes.add(code); typeLabel = '🚀 Бустер'; break;
-        case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🚀 Бустер x5'; break;
-    }
-
-    let sentCount = 0;
-    for (const userId in window.users) {
-        const user = window.users[userId];
-        if (user && user.uid && !user.banned) {
-            addNotification(user.uid, `🎫 Всем игрокам: ${code} (${typeLabel})`);
-            if (window.activeChats[user.uid]) {
-                window.activeChats[user.uid].messages.push({ 
-                    from: 'admin', 
-                    text: `🎫 Всем игрокам: ${code} (${typeLabel})`, 
-                    time: new Date().toLocaleString() 
-                });
-                window.activeChats[user.uid].hasNew = true;
-            }
-            sentCount++;
-        }
-    }
-    
-    window.adminCodes.push({ code: code, type: typeLabel + ' (всем)', target: 'всем' });
-    closeModal();
-    showToast(`✅ Код отправлен всем ${sentCount} игрокам`);
-    render();
-    saveAllData();
-    showAdminPanel();
-};
-
-window.adminMassGive = function() {
-    let count = 0;
-    for (const userId in window.users) {
-        const user = window.users[userId];
-        if (user && !user.banned) {
-            user.attempts += 1;
-            count++;
-        }
-    }
-    showToast(`✅ +1 попытка выдана ${count} игрокам`);
-    saveAllData();
-    saveToServer();
-};
-
-window.adminGiveSelfStars = function() {
-    openModal('⭐ Начислить звёзды себе', `
-        <input type="number" id="selfStarsInput" placeholder="Сумма" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="doGiveSelfStars()">✅ Начислить</button>
-        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
-    `);
-};
-
-window.doGiveSelfStars = function() {
-    const input = document.getElementById('selfStarsInput');
-    if (!input) return;
-    const amount = parseInt(input.value);
-    if (!amount || amount <= 0) { showToast('❌ Введите сумму'); return; }
-    const user = getCurrentUser();
-    user.stars += amount;
-    closeModal();
-    showToast(`✅ +${amount} ⭐`);
-    render();
-    saveAllData();
-    saveToServer();
-    showAdminPanel();
-};
-
-window.adminPlayerMenu = function() {
-    openModal('👤 Управление игроком', `
-        <p>Введите UID игрока:</p>
-        <input type="text" id="playerUidInput" placeholder="UID игрока" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;text-transform:uppercase;" />
-        <button class="btn primary full" onclick="showPlayerInfo()">🔍 Найти</button>
-        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
-    `);
-};
-
-window.showPlayerInfo = function() {
-    const input = document.getElementById('playerUidInput');
-    if (!input) return;
-    const uid = input.value.trim().toUpperCase();
-    if (!uid) { showToast('❌ Введите UID'); return; }
-    
-    const user = getUserByUid(uid);
-    if (!user) { 
-        loadAllUsersFromServer().then(() => {
-            const user2 = getUserByUid(uid);
-            if (!user2) {
-                showToast('❌ Игрок с таким UID не найден!');
-                return;
-            }
-            showPlayerInfoInternal(uid);
-        });
-        return;
-    }
-    showPlayerInfoInternal(uid);
-};
-
-function showPlayerInfoInternal(uid) {
-    const user = getUserByUid(uid);
-    if (!user) { showToast('❌ Игрок не найден'); return; }
-
-    const isBanned = user.banned || window.bannedUsers[uid] !== undefined;
-    const banReason = user.banned_reason || window.bannedUsers[uid] || '—';
-    const name = user.name || '—';
-    const gender = user.gender || '—';
-    const age = user.age || '—';
-    const stars = user.stars || 0;
-    const bank = user.bank || 0;
-    const attempts = user.attempts || 0;
-    const coeff = user.coefficientRate || 0;
-    const clickerProgress = user.clickerProgress || 0;
-
-    openModal(`👤 Игрок: ${name} (${uid})`, `
-        <p><strong>📊 Статистика:</strong></p>
-        <p>👤 Имя: ${name}</p>
-        <p>⚧ Пол: ${gender}</p>
-        <p>🎂 Возраст: ${age}</p>
-        <p>⭐ Звёзды: ${stars}</p>
-        <p>🏦 Банк: ${bank}</p>
-        <p>🎮 Попытки: ${attempts}</p>
-        <p>🔥 Коэффициент: +${coeff}</p>
-        <p>⭐ Кликер: ${clickerProgress}/400</p>
-        <p>🚫 Статус: ${isBanned ? '❌ ЗАБЛОКИРОВАН' : '✅ Активен'}</p>
-        ${isBanned ? `<p style="color:#ff4757;">📝 Причина: ${banReason}</p>` : ''}
-        <hr />
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <button class="btn small" onclick="adminAddStars('${uid}')">⭐ + Звёзды</button>
-            <button class="btn small danger" onclick="adminRemoveStars('${uid}')">⭐ - Звёзды</button>
-            ${isBanned ? 
-                `<button class="btn small" onclick="adminUnbanUserByUid('${uid}')">✅ Разбан</button>` :
-                `<button class="btn small danger" onclick="adminBanUserByUid('${uid}')">🚫 Бан</button>`
-            }
-            <button class="btn small" onclick="adminOpenChat('${uid}')">💬 Чат</button>
-            <button class="btn small" onclick="adminResetPlayer('${uid}')">🔄 Сброс</button>
-        </div>
-        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
-    `);
-};
-
-window.adminAddStars = function(uid) {
-    openModal(`⭐ Добавить звёзды игроку ${uid}`, `
-        <input type="number" id="addStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="doAddStars('${uid}')">✅ Добавить</button>
-        <button class="btn full small" onclick="closeModal(); showPlayerInfo();">⬅️ Назад</button>
-    `);
-};
-
-window.doAddStars = function(uid) {
-    const input = document.getElementById('addStarsInput');
-    if (!input) return;
-    const amount = parseInt(input.value);
-    if (!amount || amount <= 0) { showToast('❌ Введите сумму'); return; }
-    const user = getUserByUid(uid);
-    if (user) {
-        user.stars += amount;
-        addNotification(uid, `⭐ Администратор начислил вам ${amount} ⭐`);
-        showToast(`✅ +${amount} ⭐ игроку ${uid}`);
-        closeModal();
-        render();
-        saveAllData();
-        saveToServer();
-    }
-};
-
-window.adminRemoveStars = function(uid) {
-    openModal(`⭐ Забрать звёзды у игрока ${uid}`, `
-        <input type="number" id="removeStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn danger full" onclick="doRemoveStars('${uid}')">✅ Забрать</button>
-        <button class="btn full small" onclick="closeModal(); showPlayerInfo();">⬅️ Назад</button>
-    `);
-};
-
-window.doRemoveStars = function(uid) {
-    const input = document.getElementById('removeStarsInput');
-    if (!input) return;
-    const amount = parseInt(input.value);
-    if (!amount || amount <= 0) { showToast('❌ Введите сумму'); return; }
-    const user = getUserByUid(uid);
-    if (user) {
-        if (user.stars < amount) { showToast('❌ Недостаточно звёзд у игрока'); return; }
-        user.stars -= amount;
-        addNotification(uid, `⭐ Администратор забрал у вас ${amount} ⭐`);
-        showToast(`✅ Изъято ${amount} ⭐ у игрока ${uid}`);
-        closeModal();
-        render();
-        saveAllData();
-        saveToServer();
-    }
-};
-
-window.adminBanUserByUid = function(uid) {
-    openModal(`🚫 Блокировка игрока ${uid}`, `
-        <p>Введите причину блокировки:</p>
-        <input type="text" id="banReasonInput" placeholder="Причина блокировки..." style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn danger full" onclick="doBanUser('${uid}')">🚫 Заблокировать</button>
-        <button class="btn full small" onclick="closeModal(); showPlayerInfo();">⬅️ Назад</button>
-    `);
-};
-
-window.doBanUser = function(uid) {
-    const input = document.getElementById('banReasonInput');
-    if (!input) return;
-    const reason = input.value.trim() || 'Нарушение правил';
-    
-    window.bannedUsers[uid] = reason;
-    const user = getUserByUid(uid);
-    if (user) {
-        user.banned = true;
-        user.banned_reason = reason;
-    }
-    saveAllData();
-    
-    addNotification(uid, `🚫 Вас заблокировали. Причина: ${reason}`);
-    syncBannedToServer();
-    showToast(`✅ ${uid} заблокирован. Причина: ${reason}`);
-    closeModal();
-    render();
-    saveAllData();
-    showPlayerInfo();
-};
-
-window.adminUnbanUserByUid = function(uid) {
-    if (window.bannedUsers[uid]) {
-        delete window.bannedUsers[uid];
-        const user = getUserByUid(uid);
-        if (user) {
-            user.banned = false;
-            user.banned_reason = '';
-        }
-        saveAllData();
-        addNotification(uid, '✅ Вас разблокировали!');
-        showToast(`✅ ${uid} разблокирован`);
-        syncBannedToServer();
-        closeModal();
-        render();
-        saveAllData();
-        showPlayerInfo();
-    }
-};
-
-window.adminResetPlayer = function(uid) {
-    if (!confirm(`Вы уверены, что хотите сбросить игрока ${uid}?`)) return;
-    const user = getUserByUid(uid);
-    if (user) {
-        user.stars = 300;
-        user.bank = 0;
-        user.bankDeposit = 0;
-        user.attempts = 1;
-        user.coefficientRate = 0;
-        user.petProgress = 0;
-        user.petStage = 1;
-        user.wins = [];
-        user.clickerProgress = 0;
-        addNotification(uid, '🔄 Ваш прогресс был сброшен администратором');
-        showToast(`✅ Игрок ${uid} сброшен`);
-        closeModal();
-        render();
-        saveAllData();
-        saveToServer();
-    }
-};
-
-window.adminReports = function() {
-    if (window.reports.length === 0 && Object.keys(window.activeChats).length === 0) {
-        showToast('📭 Жалоб и чатов нет');
-        return;
-    }
-
-    let text = '📩 Жалобы:\n\n';
-    const last = window.reports.slice(-10);
-    for (const r of last) {
-        text += `От ${r.username} (ID: ${r.uid}) [${r.time}]:\n${r.text}\n\n`;
-    }
-
-    let chatButtons = '';
-    const chatKeys = Object.keys(window.activeChats);
-    if (chatKeys.length > 0) {
-        chatButtons = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0;">';
-        chatKeys.forEach(uid => {
-            const user = getUserByUid(uid);
-            const name = user ? user.name || uid : uid;
-            chatButtons += `<button class="btn small" onclick="adminOpenChat('${uid}')">💬 ${name}</button>`;
-        });
-        chatButtons += '</div>';
-    }
-
-    openModal('📩 Жалобы и чаты', `
-        <div class="scrollable"><pre style="color:#c0c0e0;font-family:inherit;white-space:pre-wrap;font-size:14px;">${text}</pre></div>
-        ${chatButtons}
-        <button class="btn danger full" onclick="window.reports=[]; closeModal(); showToast('✅ Жалобы очищены'); showAdminPanel(); saveAllData();">🗑️ Очистить жалобы</button>
-        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
-    `);
-};
-
-window.adminTop = function() {
-    loadAllUsersFromServer().then(() => {
-        const usersList = getAllUsersList();
-        let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>⭐</th></tr></thead><tbody>';
-        const sorted = usersList
-            .filter(u => !u.banned)
-            .sort((a, b) => (b.stars || 0) - (a.stars || 0))
-            .slice(0, 30);
-        if (sorted.length === 0) {
-            html += '<tr><td colspan="4" style="text-align:center;color:#888;">Нет игроков</td></tr>';
-        }
-        sorted.forEach((item, i) => {
-            html += `<tr><td>${i+1}</td><td>${item.uid}</td><td>${item.name}</td><td>${item.stars}</td></tr>`;
-        });
-        html += '</tbody></table><button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>';
-        openModal('🏆 Топ-30', html);
-    });
-};
-
-function checkRegistration() {
-    const user = getCurrentUser();
-    if (!user.registered) {
-        showRegistration();
-    }
-}
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+});
 
 // ============================================================
 //  ИНИЦИАЛИЗАЦИЯ
@@ -2021,7 +2016,9 @@ document.addEventListener('DOMContentLoaded', function() {
     render();
     initWheel();
     
+    // Загружаем глобальные данные
     setTimeout(async function() {
+        await loadGlobalData();
         await loadFromServer();
         await loadAllUsersFromServer();
         setTimeout(checkRegistration, 500);
@@ -2039,4 +2036,7 @@ setInterval(() => {
 }, 15000);
 
 setInterval(saveAllData, 30000);
-setInterval(renderContest, 1000);
+setInterval(() => {
+    loadGlobalData();
+    render();
+}, 5000);
