@@ -133,11 +133,12 @@ function getUser(userId) {
             gender: null,
             age: null,
             clickerProgress: 0,
-            notifications: []
+            notifications: [],
+            banned: false,
+            banned_reason: ''
         };
         window.uidMap[uid] = userId;
         saveAllData();
-        // Сохраняем на сервер
         saveToServer();
     }
     return window.users[userId];
@@ -148,7 +149,7 @@ function getCurrentUser() {
 }
 
 function getUserByUid(uid) {
-    // 1. Сначала ищем в uidMap
+    // 1. Ищем в uidMap
     const userId = window.uidMap[uid];
     if (userId) return getUser(userId);
     
@@ -158,8 +159,6 @@ function getUserByUid(uid) {
             return window.users[id];
         }
     }
-    
-    // 3. Если не нашли, пробуем загрузить с сервера
     return null;
 }
 
@@ -175,11 +174,24 @@ function getAllUsersList() {
                 stars: user.stars || 0,
                 bank: user.bank || 0,
                 attempts: user.attempts || 0,
-                registered: user.registered || false
+                registered: user.registered || false,
+                banned: user.banned || false
             });
         }
     }
     return result;
+}
+
+function isUserBanned(uid) {
+    if (window.bannedUsers[uid]) return true;
+    const user = getUserByUid(uid);
+    return user && user.banned;
+}
+
+function getBanReason(uid) {
+    if (window.bannedUsers[uid]) return window.bannedUsers[uid];
+    const user = getUserByUid(uid);
+    return user ? user.banned_reason || 'Нарушение правил' : null;
 }
 
 // ============================================================
@@ -232,6 +244,7 @@ async function loadAllUsersFromServer() {
                         user.stars = item.stars || user.stars;
                         user.bank = item.bank || user.bank;
                         user.attempts = item.attempts || user.attempts;
+                        user.registered = item.registered || user.registered;
                         window.uidMap[item.uid] = item.user_id || item.uid;
                     }
                 }
@@ -243,6 +256,79 @@ async function loadAllUsersFromServer() {
     return [];
 }
 
+async function loadBannedFromServer() {
+    try {
+        const response = await fetch(SERVER_URL + '/api/banned_users');
+        if (response.ok) {
+            const data = await response.json();
+            for (const uid in data) {
+                window.bannedUsers[uid] = data[uid].reason;
+                const user = getUserByUid(uid);
+                if (user) {
+                    user.banned = true;
+                    user.banned_reason = data[uid].reason;
+                }
+            }
+            saveAllData();
+            render();
+            return true;
+        }
+    } catch(e) {}
+    return false;
+}
+
+async function syncBannedToServer() {
+    try {
+        const response = await fetch(SERVER_URL + '/api/sync_banned', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ banned: window.bannedUsers })
+        });
+        const result = await response.json();
+        return result.success;
+    } catch(e) { return false; }
+}
+
+async function syncCodesToServer() {
+    try {
+        const response = await fetch(SERVER_URL + '/api/sync_codes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codes: window.adminCodes })
+        });
+        return await response.json();
+    } catch(e) { return false; }
+}
+
+async function loadCodesFromServer() {
+    try {
+        const response = await fetch(SERVER_URL + '/api/load_codes');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.length > 0) {
+                window.adminCodes = data;
+                // Восстанавливаем коды в хранилища
+                for (const item of data) {
+                    const code = item.code;
+                    if (item.type.includes('Одноразовый')) {
+                        window.oneTimeCodes.add(code);
+                    } else if (item.type.includes('На 5')) {
+                        window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() };
+                    } else if (item.type.includes('Бустер x5')) {
+                        window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() };
+                    } else if (item.type.includes('Бустер')) {
+                        window.boosterCodes.add(code);
+                    }
+                }
+                saveAllData();
+                render();
+                return true;
+            }
+        }
+    } catch(e) {}
+    return false;
+}
+
 // ============================================================
 //  УВЕДОМЛЕНИЯ
 // ============================================================
@@ -251,11 +337,26 @@ function addNotification(uid, message) {
     const user = getUserByUid(uid);
     if (user) {
         if (!user.notifications) user.notifications = [];
-        user.notifications.push({ text: message, time: new Date().toLocaleString(), read: false });
+        user.notifications.push({ 
+            text: message, 
+            time: new Date().toLocaleString(), 
+            read: false 
+        });
         saveAllData();
         render();
         showToast('📩 ' + message, 4000);
     }
+}
+
+function getNotifications(uid) {
+    const user = getUserByUid(uid);
+    if (user && user.notifications) {
+        const unread = user.notifications.filter(n => !n.read);
+        user.notifications.forEach(n => n.read = true);
+        saveAllData();
+        return unread;
+    }
+    return [];
 }
 
 // ============================================================
@@ -275,12 +376,15 @@ function render() {
     document.getElementById('bankBalance').textContent = user.bank || 0;
     
     const statusEl = document.getElementById('userRegStatus');
-    if (window.bannedUsers[user.uid]) {
-        statusEl.textContent = '🚫 ЗАБЛОКИРОВАН: ' + window.bannedUsers[user.uid];
+    if (user.banned) {
+        statusEl.textContent = '🚫 ЗАБЛОКИРОВАН: ' + (user.banned_reason || 'Нарушение правил');
         statusEl.style.color = '#ff4757';
+    } else if (user.registered) {
+        statusEl.textContent = '✅ Зарегистрирован';
+        statusEl.style.color = '#4caf50';
     } else {
-        statusEl.textContent = user.registered ? '✅ Зарегистрирован' : '❌ Не зарегистрирован';
-        statusEl.style.color = '#c8c8ff';
+        statusEl.textContent = '❌ Не зарегистрирован';
+        statusEl.style.color = '#ff4757';
     }
     
     const stage = user.petStage || 1;
@@ -358,7 +462,7 @@ function endContest() {
     let winnerUid = null;
     for (const userId in window.users) {
         const user = window.users[userId];
-        if (user && user.uid && !window.bannedUsers[user.uid]) {
+        if (user && user.uid && !user.banned) {
             const total = (user.stars || 0) + (user.bank || 0);
             if (total > maxStars) {
                 maxStars = total;
@@ -461,6 +565,7 @@ window.deleteCode = function(index) {
     showToast('🗑️ Код удалён');
     render();
     saveAllData();
+    syncCodesToServer();
 };
 
 // ============================================================
@@ -590,6 +695,10 @@ function spinWheel() {
         showToast('❌ Сначала зарегистрируйтесь!');
         return;
     }
+    if (user.banned) {
+        showToast('🚫 Вы заблокированы. Причина: ' + (user.banned_reason || 'Нарушение правил'));
+        return;
+    }
     if (user.attempts <= 0) {
         showToast('❌ Попыток нет! Купите в меню.');
         return;
@@ -640,6 +749,7 @@ function spinWheel() {
             document.getElementById('wheelSpinBtn').disabled = false;
             render();
             saveAllData();
+            saveToServer();
         }
     }, 30);
 }
@@ -662,6 +772,7 @@ function showWheelResult(result, user) {
     showToast(`🎉 +${finalValue} ⭐`);
     render();
     saveAllData();
+    saveToServer();
 }
 
 function openWheel() {
@@ -679,13 +790,17 @@ function closeWheel() {
 }
 
 // ============================================================
-//  ОБРАБОТЧИКИ
+//  ОБРАБОТЧИКИ (КРАТКИЕ ВЕРСИИ)
 // ============================================================
 
 function handlePlay() {
     const user = getCurrentUser();
     if (!user.registered) {
         showToast('❌ Сначала зарегистрируйтесь!');
+        return;
+    }
+    if (user.banned) {
+        showToast('🚫 Вы заблокированы. Причина: ' + (user.banned_reason || 'Нарушение правил'));
         return;
     }
     if (user.attempts <= 0) {
@@ -699,6 +814,10 @@ function handleBank() {
     const user = getCurrentUser();
     if (!user.registered) {
         showToast('❌ Сначала зарегистрируйтесь!');
+        return;
+    }
+    if (user.banned) {
+        showToast('🚫 Вы заблокированы');
         return;
     }
     const bank = user.bank || 0;
@@ -733,6 +852,7 @@ window.withdrawBank = function() {
     showToast(`✅ Забрано ${amount} ⭐ из банка`);
     render();
     saveAllData();
+    saveToServer();
 };
 
 window.depositBank = function() {
@@ -749,12 +869,17 @@ window.depositBank = function() {
     showToast(`✅ ${amount} ⭐ положены в банк под 20% в час`);
     render();
     saveAllData();
+    saveToServer();
 };
 
 function handleClicker() {
     const user = getCurrentUser();
     if (!user.registered) {
         showToast('❌ Сначала зарегистрируйтесь!');
+        return;
+    }
+    if (user.banned) {
+        showToast('🚫 Вы заблокированы');
         return;
     }
     const progress = user.clickerProgress || 0;
@@ -782,36 +907,28 @@ function handleClicker() {
 
 window.clickStar = function() {
     const user = getCurrentUser();
-    if (!user.registered) {
-        showToast('❌ Сначала зарегистрируйтесь!');
-        return;
-    }
+    if (!user.registered || user.banned) return;
     if (user.clickerProgress >= 400) {
         showToast('🎉 Вы уже накликали 400 раз! Заберите награду!');
         return;
     }
-
     user.clickerProgress = (user.clickerProgress || 0) + 1;
     const progress = user.clickerProgress;
-
     const star = document.getElementById('clickerStar');
     if (star) {
         star.classList.remove('pop');
         void star.offsetWidth;
         star.classList.add('pop');
     }
-
     const progressEl = document.getElementById('clickerProgress');
     const fillEl = document.getElementById('clickerFill');
     if (progressEl) progressEl.textContent = progress;
     if (fillEl) fillEl.style.width = (progress/400)*100 + '%';
-
     const remaining = 400 - progress;
     const infoP = document.querySelector('.clicker-stats + p');
     if (infoP) {
         infoP.textContent = remaining > 0 ? `Осталось кликов: ${remaining}` : '🎉 Готово! Заберите награду!';
     }
-
     if (progress >= 400) {
         const btn = document.querySelector('button[onclick="claimClickerReward()"]');
         if (!btn) {
@@ -822,36 +939,30 @@ window.clickStar = function() {
         }
         showToast('🎉 400 кликов! Заберите награду!');
     }
-
     render();
     saveAllData();
+    saveToServer();
 };
 
 window.claimClickerReward = function() {
     const user = getCurrentUser();
-    if (!user.registered) {
-        showToast('❌ Сначала зарегистрируйтесь!');
-        return;
-    }
+    if (!user.registered || user.banned) return;
     if (user.clickerProgress < 400) {
         showToast('❌ Нужно накликать 400 раз!');
         return;
     }
-
     user.stars += 20;
     user.clickerProgress = 0;
     closeModal();
     showToast('✅ +20 ⭐ за клики!');
     render();
     saveAllData();
+    saveToServer();
 };
 
 function handleCoeff() {
     const user = getCurrentUser();
-    if (!user.registered) {
-        showToast('❌ Сначала зарегистрируйтесь!');
-        return;
-    }
+    if (!user.registered || user.banned) { showToast('❌ Сначала зарегистрируйтесь!'); return; }
     openModal('🔥 Коэффициент', `
         <p>Введите сумму (10% станут коэффициентом):</p>
         <input type="number" id="coeffInput" placeholder="Сумма" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -873,14 +984,12 @@ window.setCoeff = function() {
     showToast(`✅ Коэффициент: +${user.coefficientRate} ⭐`);
     render();
     saveAllData();
+    saveToServer();
 };
 
 function handlePet() {
     const user = getCurrentUser();
-    if (!user.registered) {
-        showToast('❌ Сначала зарегистрируйтесь!');
-        return;
-    }
+    if (!user.registered || user.banned) { showToast('❌ Сначала зарегистрируйтесь!'); return; }
     const stage = user.petStage || 1;
     const progress = user.petProgress || 0;
     const threshold = stage === 1 ? 100 : stage === 2 ? 500 : stage === 3 ? 1500 : 0;
@@ -935,14 +1044,12 @@ window.feedPet = function() {
     closeModal();
     render();
     saveAllData();
+    saveToServer();
 };
 
 function handleBuy() {
     const user = getCurrentUser();
-    if (!user.registered) {
-        showToast('❌ Сначала зарегистрируйтесь!');
-        return;
-    }
+    if (!user.registered || user.banned) { showToast('❌ Сначала зарегистрируйтесь!'); return; }
     openModal('🛒 Покупка попыток', `
         <p>Ваш баланс: <strong>${user.stars}</strong> ⭐</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -963,14 +1070,12 @@ window.buyAttempts = function(count, price) {
     showToast(`✅ Куплено ${count} попыток`);
     render();
     saveAllData();
+    saveToServer();
 };
 
 function handleCode() {
     const user = getCurrentUser();
-    if (!user.registered) {
-        showToast('❌ Сначала зарегистрируйтесь!');
-        return;
-    }
+    if (!user.registered || user.banned) { showToast('❌ Сначала зарегистрируйтесь!'); return; }
     openModal('🎫 Ввести код', `
         <p>Введите код для активации бонуса:</p>
         <input type="text" id="codeInput" placeholder="Код" style="text-transform:uppercase;width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -999,6 +1104,7 @@ window.applyCode = function() {
             showToast('🚀 Бустер активирован!');
             render();
             saveAllData();
+            syncCodesToServer();
             return;
         }
     }
@@ -1022,6 +1128,7 @@ window.applyCode = function() {
             showToast('🚀 Бустер активирован!');
             render();
             saveAllData();
+            syncCodesToServer();
             return;
         }
     }
@@ -1036,6 +1143,7 @@ window.applyCode = function() {
             showToast('✅ Код принят!');
             render();
             saveAllData();
+            syncCodesToServer();
             return;
         }
     }
@@ -1058,6 +1166,7 @@ window.applyCode = function() {
             showToast('✅ Код принят!');
             render();
             saveAllData();
+            syncCodesToServer();
             return;
         }
     }
@@ -1069,7 +1178,7 @@ function handleLeaderboard() {
         const usersList = getAllUsersList();
         let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>⭐</th></tr></thead><tbody>';
         const sorted = usersList
-            .filter(u => !window.bannedUsers[u.uid])
+            .filter(u => !u.banned)
             .sort((a, b) => (b.stars || 0) - (a.stars || 0))
             .slice(0, 30);
         if (sorted.length === 0) {
@@ -1324,7 +1433,7 @@ function showAdminPanel() {
 }
 
 // ============================================================
-//  АДМИН-ФУНКЦИИ
+//  АДМИН-ФУНКЦИИ (С СИНХРОНИЗАЦИЕЙ)
 // ============================================================
 
 window.adminCodeSingle = function() {
@@ -1334,6 +1443,7 @@ window.adminCodeSingle = function() {
     showToast(`✅ Код: ${code}`);
     render();
     saveAllData();
+    syncCodesToServer();
 };
 
 window.adminCodeMulti = function() {
@@ -1343,6 +1453,7 @@ window.adminCodeMulti = function() {
     showToast(`✅ Код на 5: ${code}`);
     render();
     saveAllData();
+    syncCodesToServer();
 };
 
 window.adminBoostSingle = function() {
@@ -1352,6 +1463,7 @@ window.adminBoostSingle = function() {
     showToast(`✅ Бустер: ${code}`);
     render();
     saveAllData();
+    syncCodesToServer();
 };
 
 window.adminBoostMulti = function() {
@@ -1361,6 +1473,7 @@ window.adminBoostMulti = function() {
     showToast(`✅ Бустер на 5: ${code}`);
     render();
     saveAllData();
+    syncCodesToServer();
 };
 
 window.adminSendCodeToPlayer = function() {
@@ -1386,23 +1499,9 @@ window.sendCodeToPlayerWithType = function(type) {
     
     const user = getUserByUid(uid);
     if (!user) { 
-        // Пробуем загрузить с сервера
-        loadAllUsersFromServer().then(() => {
-            const user2 = getUserByUid(uid);
-            if (!user2) {
-                showToast('❌ Игрок с таким UID не найден!');
-                return;
-            }
-            sendCodeToPlayerInternal(uid, type);
-        });
-        return;
+        showToast('❌ Игрок с таким UID не найден!');
+        return; 
     }
-    sendCodeToPlayerInternal(uid, type);
-};
-
-function sendCodeToPlayerInternal(uid, type) {
-    const user = getUserByUid(uid);
-    if (!user) { showToast('❌ Игрок не найден'); return; }
 
     let code, typeLabel;
     switch(type) {
@@ -1413,9 +1512,14 @@ function sendCodeToPlayerInternal(uid, type) {
     }
 
     window.adminCodes.push({ code: code, type: typeLabel + ' → ' + uid, target: uid });
+    
     addNotification(uid, `🎫 Вам отправлен код: ${code} (${typeLabel})`);
     if (window.activeChats[uid]) {
-        window.activeChats[uid].messages.push({ from: 'admin', text: `🎫 Вам отправлен код: ${code} (${typeLabel})`, time: new Date().toLocaleString() });
+        window.activeChats[uid].messages.push({ 
+            from: 'admin', 
+            text: `🎫 Вам отправлен код: ${code} (${typeLabel})`, 
+            time: new Date().toLocaleString() 
+        });
         window.activeChats[uid].hasNew = true;
     }
     
@@ -1423,6 +1527,7 @@ function sendCodeToPlayerInternal(uid, type) {
     showToast(`✅ Код отправлен игроку ${uid}`);
     render();
     saveAllData();
+    syncCodesToServer();
     showAdminPanel();
 };
 
@@ -1448,23 +1553,29 @@ window.sendCodeToAllWithType = function(type) {
         case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🚀 Бустер x5'; break;
     }
 
-    // Отправляем всем
+    let sentCount = 0;
     for (const userId in window.users) {
         const user = window.users[userId];
-        if (user && user.uid && !window.bannedUsers[user.uid]) {
+        if (user && user.uid && !user.banned) {
             addNotification(user.uid, `🎫 Всем игрокам: ${code} (${typeLabel})`);
             if (window.activeChats[user.uid]) {
-                window.activeChats[user.uid].messages.push({ from: 'admin', text: `🎫 Всем игрокам: ${code} (${typeLabel})`, time: new Date().toLocaleString() });
+                window.activeChats[user.uid].messages.push({ 
+                    from: 'admin', 
+                    text: `🎫 Всем игрокам: ${code} (${typeLabel})`, 
+                    time: new Date().toLocaleString() 
+                });
                 window.activeChats[user.uid].hasNew = true;
             }
+            sentCount++;
         }
     }
     
     window.adminCodes.push({ code: code, type: typeLabel + ' (всем)', target: 'всем' });
     closeModal();
-    showToast(`✅ Код отправлен всем игрокам`);
+    showToast(`✅ Код отправлен всем ${sentCount} игрокам`);
     render();
     saveAllData();
+    syncCodesToServer();
     showAdminPanel();
 };
 
@@ -1472,13 +1583,14 @@ window.adminMassGive = function() {
     let count = 0;
     for (const userId in window.users) {
         const user = window.users[userId];
-        if (user && !window.bannedUsers[user.uid]) {
+        if (user && !user.banned) {
             user.attempts += 1;
             count++;
         }
     }
     showToast(`✅ +1 попытка выдана ${count} игрокам`);
     saveAllData();
+    saveToServer();
 };
 
 window.adminGiveSelfStars = function() {
@@ -1500,6 +1612,7 @@ window.doGiveSelfStars = function() {
     showToast(`✅ +${amount} ⭐`);
     render();
     saveAllData();
+    saveToServer();
     showAdminPanel();
 };
 
@@ -1518,9 +1631,8 @@ window.showPlayerInfo = function() {
     const uid = input.value.trim().toUpperCase();
     if (!uid) { showToast('❌ Введите UID'); return; }
     
-    let user = getUserByUid(uid);
-    if (!user) {
-        // Пробуем загрузить с сервера
+    const user = getUserByUid(uid);
+    if (!user) { 
         loadAllUsersFromServer().then(() => {
             const user2 = getUserByUid(uid);
             if (!user2) {
@@ -1538,8 +1650,8 @@ function showPlayerInfoInternal(uid) {
     const user = getUserByUid(uid);
     if (!user) { showToast('❌ Игрок не найден'); return; }
 
-    const isBanned = window.bannedUsers[uid] !== undefined;
-    const banReason = window.bannedUsers[uid] || '—';
+    const isBanned = user.banned || window.bannedUsers[uid] !== undefined;
+    const banReason = user.banned_reason || window.bannedUsers[uid] || '—';
     const name = user.name || '—';
     const gender = user.gender || '—';
     const age = user.age || '—';
@@ -1597,6 +1709,7 @@ window.doAddStars = function(uid) {
         closeModal();
         render();
         saveAllData();
+        saveToServer();
     }
 };
 
@@ -1622,6 +1735,7 @@ window.doRemoveStars = function(uid) {
         closeModal();
         render();
         saveAllData();
+        saveToServer();
     }
 };
 
@@ -1638,22 +1752,44 @@ window.doBanUser = function(uid) {
     const input = document.getElementById('banReasonInput');
     if (!input) return;
     const reason = input.value.trim() || 'Нарушение правил';
+    
+    // Локально
     window.bannedUsers[uid] = reason;
-    addNotification(uid, `🚫 Вас заблокировали. Причина: ${reason}`);
-    showToast(`✅ ${uid} заблокирован. Причина: ${reason}`);
-    closeModal();
-    render();
+    const user = getUserByUid(uid);
+    if (user) {
+        user.banned = true;
+        user.banned_reason = reason;
+    }
     saveAllData();
+    
+    addNotification(uid, `🚫 Вас заблокировали. Причина: ${reason}`);
+    
+    // Синхронизация с сервером
+    syncBannedToServer().then(() => {
+        showToast(`✅ ${uid} заблокирован. Причина: ${reason}`);
+        closeModal();
+        render();
+        saveAllData();
+        showPlayerInfo();
+    });
 };
 
 window.adminUnbanUserByUid = function(uid) {
     if (window.bannedUsers[uid]) {
         delete window.bannedUsers[uid];
+        const user = getUserByUid(uid);
+        if (user) {
+            user.banned = false;
+            user.banned_reason = '';
+        }
+        saveAllData();
         addNotification(uid, '✅ Вас разблокировали!');
         showToast(`✅ ${uid} разблокирован`);
+        syncBannedToServer();
         closeModal();
         render();
         saveAllData();
+        showPlayerInfo();
     }
 };
 
@@ -1675,6 +1811,7 @@ window.adminResetPlayer = function(uid) {
         closeModal();
         render();
         saveAllData();
+        saveToServer();
     }
 };
 
@@ -1715,7 +1852,7 @@ window.adminTop = function() {
         const usersList = getAllUsersList();
         let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>⭐</th></tr></thead><tbody>';
         const sorted = usersList
-            .filter(u => !window.bannedUsers[u.uid])
+            .filter(u => !u.banned)
             .sort((a, b) => (b.stars || 0) - (a.stars || 0))
             .slice(0, 30);
         if (sorted.length === 0) {
@@ -1812,6 +1949,10 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('❌ Сначала зарегистрируйтесь!');
             return;
         }
+        if (user.banned) {
+            showToast('🚫 Вы заблокированы. Причина: ' + (user.banned_reason || 'Нарушение правил'));
+            return;
+        }
         if (user.attempts <= 0) {
             showToast('❌ Попыток нет! Купите в меню.');
             return;
@@ -1837,10 +1978,11 @@ document.addEventListener('DOMContentLoaded', function() {
     render();
     initWheel();
     
-    // Загружаем данные с сервера
     setTimeout(async function() {
         await loadFromServer();
         await loadAllUsersFromServer();
+        await loadBannedFromServer();
+        await loadCodesFromServer();
         setTimeout(checkRegistration, 500);
         render();
     }, 500);
