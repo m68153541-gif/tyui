@@ -36,22 +36,22 @@ def js():
 @app.route('/api/save', methods=['POST'])
 def save_user():
     data = request.json
-    telegram_id = data.get('telegram_id')  # Используем Telegram ID
+    user_id = data.get('user_id')
     user_data = data.get('user_data')
     
-    if not telegram_id or not user_data:
+    if not user_id or not user_data:
         return jsonify({'error': 'Missing data'}), 400
     
     users = load_users()
-    users[telegram_id] = user_data  # Ключ = Telegram ID
+    users[user_id] = user_data
     save_users(users)
     
     return jsonify({'success': True})
 
-@app.route('/api/load/<telegram_id>')
-def load_user(telegram_id):
+@app.route('/api/load/<user_id>')
+def load_user(user_id):
     users = load_users()
-    user_data = users.get(telegram_id)  # Ищем по Telegram ID
+    user_data = users.get(user_id)
     if user_data:
         return jsonify(user_data)
     return jsonify({'error': 'Not found'}), 404
@@ -60,9 +60,9 @@ def load_user(telegram_id):
 def all_users():
     users = load_users()
     result = []
-    for telegram_id, data in users.items():
+    for user_id, data in users.items():
         result.append({
-            'telegram_id': telegram_id,
+            'user_id': user_id,
             'uid': data.get('uid', '—'),
             'name': data.get('name', '—'),
             'stars': data.get('stars', 0),
