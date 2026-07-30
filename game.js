@@ -1,5 +1,5 @@
 // ============================================================
-//  ПОЛНАЯ ЛОГИКА ИГРЫ + СЕРВЕР (РАБОЧАЯ ВЕРСИЯ)
+//  ПОЛНАЯ ЛОГИКА ИГРЫ + СЕРВЕР (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ============================================================
 
 console.log('🚀 Игра загружается...');
@@ -114,9 +114,6 @@ function getUserByUid(uid) {
 async function saveToServer() {
     try {
         const user = getCurrentUser();
-        const telegramId = getTelegramUserId();
-        console.log('📤 Сохраняем данные:', { telegramId, uid: user.uid, stars: user.stars });
-        
         const response = await fetch(SERVER_URL + '/api/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -137,9 +134,6 @@ async function saveToServer() {
 async function loadFromServer() {
     try {
         const user = getCurrentUser();
-        const telegramId = getTelegramUserId();
-        console.log('📥 Загружаем данные для:', telegramId);
-        
         const response = await fetch(SERVER_URL + `/api/load/${user.uid}`);
         if (response.ok) {
             const data = await response.json();
@@ -149,8 +143,6 @@ async function loadFromServer() {
             console.log('✅ Загружено с сервера:', data);
             render();
             return true;
-        } else {
-            console.log('ℹ️ Пользователь не найден на сервере');
         }
     } catch(e) {
         console.error('❌ Ошибка загрузки:', e);
@@ -805,10 +797,119 @@ window.depositBank = function() {
     saveToServer();
 };
 
-// ============================================================
-//  РЕГИСТРАЦИЯ
-// ============================================================
+function handleClicker() {
+    console.log('⭐ Нажата кнопка Кликер');
+    const user = getCurrentUser();
+    if (bannedUsers[user.uid]) {
+        showToast('🚫 Вы заблокированы. Причина: ' + bannedUsers[user.uid]);
+        return;
+    }
+    if (!user.registered) {
+        showToast('❌ Сначала зарегистрируйтесь!');
+        return;
+    }
+    user.clickerProgress = (user.clickerProgress || 0) + 1;
+    saveToServer();
+    render();
+    if (user.clickerProgress >= 400) {
+        user.stars += 20;
+        user.clickerProgress = 0;
+        saveToServer();
+        render();
+        showToast('🎉 +20 ⭐ за клики!');
+    } else {
+        showToast('⭐ Клик ' + user.clickerProgress + '/400');
+    }
+}
 
+function handleCoeff() {
+    console.log('🔥 Нажата кнопка Коэфф.');
+    const user = getCurrentUser();
+    if (bannedUsers[user.uid]) {
+        showToast('🚫 Вы заблокированы. Причина: ' + bannedUsers[user.uid]);
+        return;
+    }
+    if (!user.registered) {
+        showToast('❌ Сначала зарегистрируйтесь!');
+        return;
+    }
+    showToast('🔥 Коэффициент: +' + user.coefficientRate);
+}
+
+function handlePet() {
+    console.log('🪳 Нажата кнопка Питомец');
+    const user = getCurrentUser();
+    if (bannedUsers[user.uid]) {
+        showToast('🚫 Вы заблокированы. Причина: ' + bannedUsers[user.uid]);
+        return;
+    }
+    if (!user.registered) {
+        showToast('❌ Сначала зарегистрируйтесь!');
+        return;
+    }
+    const stage = user.petStage || 1;
+    const progress = user.petProgress || 0;
+    const threshold = thresholdForStage(stage);
+    showToast(`🪳 Прогресс: ${progress}/${threshold}`);
+}
+
+function handleBuy() {
+    console.log('🛒 Нажата кнопка Попытки');
+    const user = getCurrentUser();
+    if (bannedUsers[user.uid]) {
+        showToast('🚫 Вы заблокированы. Причина: ' + bannedUsers[user.uid]);
+        return;
+    }
+    if (!user.registered) {
+        showToast('❌ Сначала зарегистрируйтесь!');
+        return;
+    }
+    if (user.stars < 100) {
+        showToast('❌ Нужно 100 ⭐!');
+        return;
+    }
+    user.stars -= 100;
+    user.attempts += 1;
+    saveToServer();
+    render();
+    showToast('✅ +1 попытка!');
+}
+
+function handleCode() {
+    console.log('🎫 Нажата кнопка Код');
+    const user = getCurrentUser();
+    if (bannedUsers[user.uid]) {
+        showToast('🚫 Вы заблокированы. Причина: ' + bannedUsers[user.uid]);
+        return;
+    }
+    if (!user.registered) {
+        showToast('❌ Сначала зарегистрируйтесь!');
+        return;
+    }
+    showToast('🎫 Введите код в консоли: applyCode("КОД")');
+}
+
+function handleLeaderboard() {
+    console.log('🏆 Нажата кнопка Лидеры');
+    showToast('🏆 Таблица лидеров');
+}
+
+function handleRules() {
+    console.log('📜 Нажата кнопка Правила');
+    showToast('📜 Правила');
+}
+
+function handleSupport() {
+    console.log('🆘 Нажата кнопка Поддержка');
+    showToast('🆘 Поддержка');
+}
+
+function handleAdmin() {
+    console.log('🔧 Нажата кнопка Админ');
+    showToast('🔧 Админ-панель');
+}
+
+// ---------- РЕГИСТРАЦИЯ ----------
 function checkRegistration() {
     const user = getCurrentUser();
     if (!user.registered) {
@@ -849,4 +950,85 @@ window.selectGender = function(g) {
 function checkRegistrationReady() {
     const nameInput = document.getElementById('regName');
     const ageInput = document.getElementById('regAge');
-    const btn = document.getElementById('regCompleteBtn
+    const btn = document.getElementById('regCompleteBtn');
+    if (nameInput && ageInput && btn) {
+        const name = nameInput.value.trim();
+        const age = parseInt(ageInput.value);
+        if (name.length > 0 && age > 0 && age <= 120 && genderSelected) {
+            btn.disabled = false;
+        } else {
+            btn.disabled = true;
+        }
+    }
+}
+
+window.completeRegistration = function() {
+    const nameInput = document.getElementById('regName');
+    const ageInput = document.getElementById('regAge');
+    regData.name = nameInput.value.trim();
+    regData.age = parseInt(ageInput.value);
+
+    if (!regData.name || regData.name.length === 0) {
+        showToast('❌ Введите имя');
+        return;
+    }
+    if (!regData.age || regData.age < 1 || regData.age > 120) {
+        showToast('❌ Введите возраст от 1 до 120');
+        return;
+    }
+    if (!regData.gender) {
+        showToast('❌ Выберите пол');
+        return;
+    }
+
+    const user = getCurrentUser();
+    user.name = regData.name;
+    user.gender = regData.gender;
+    user.age = regData.age;
+    user.registered = true;
+    closeModal();
+    showToast('✅ Регистрация завершена!');
+    render();
+    saveToServer();
+};
+
+// ---------- ИНИЦИАЛИЗАЦИЯ ----------
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ DOM загружен!');
+    
+    // Назначаем обработчики
+    document.getElementById('btnPlay').addEventListener('click', handlePlay);
+    document.getElementById('btnBank').addEventListener('click', handleBank);
+    document.getElementById('btnClicker').addEventListener('click', handleClicker);
+    document.getElementById('btnCoeff').addEventListener('click', handleCoeff);
+    document.getElementById('btnPet').addEventListener('click', handlePet);
+    document.getElementById('btnBuy').addEventListener('click', handleBuy);
+    document.getElementById('btnCode').addEventListener('click', handleCode);
+    document.getElementById('btnLeaderboard').addEventListener('click', handleLeaderboard);
+    document.getElementById('btnRules').addEventListener('click', handleRules);
+    document.getElementById('btnSupport').addEventListener('click', handleSupport);
+    document.getElementById('btnAdmin').addEventListener('click', handleAdmin);
+    
+    // Колесо
+    document.getElementById('wheelSpinBtn').addEventListener('click', spinWheel);
+    document.getElementById('wheelCloseBtn').addEventListener('click', closeWheel);
+    document.getElementById('wheelCanvas').addEventListener('click', spinWheel);
+    
+    render();
+    
+    // Загружаем данные с сервера
+    setTimeout(loadFromServer, 500);
+    
+    // Проверяем регистрацию
+    setTimeout(checkRegistration, 1000);
+    
+    console.log('✅ Все обработчики назначены!');
+});
+
+// Автосохранение каждые 15 секунд
+setInterval(() => {
+    const user = getCurrentUser();
+    if (user.registered) {
+        saveToServer();
+    }
+}, 15000);
