@@ -89,6 +89,7 @@ function getUser(userId) {
             notifications: []
         };
         uidMap[uid] = userId;
+        saveToServer();
     }
     return users[userId];
 }
@@ -109,6 +110,7 @@ async function saveToServer() {
     try {
         const user = getCurrentUser();
         if (!user || !user.uid) return false;
+        if (!user.registered) return false;
         
         const response = await fetch(SERVER_URL + '/api/save', {
             method: 'POST',
@@ -259,6 +261,11 @@ function render() {
     
     const wheelAttempts = document.getElementById('wheelAttemptsCount');
     if (wheelAttempts) wheelAttempts.textContent = user.attempts || 0;
+
+    // ===== АВТОСОХРАНЕНИЕ ПРИ КАЖДОМ РЕНДЕРИНГЕ =====
+    if (user.registered && user.uid) {
+        saveToServer();
+    }
 }
 
 function renderNotifications() {
@@ -322,7 +329,6 @@ function startContest() {
     contestWinner = null;
     showToast('🏆 Конкурс запущен на 6 часов!');
     render();
-    saveToServer();
 }
 
 function endContest() {
@@ -349,13 +355,11 @@ function endContest() {
             winner.attempts += 3;
             addNotification(winnerUid, '🏆 Вы победили в конкурсе! +500 ⭐ и +3 попытки!');
             showToast(`🏆 Победитель: ${winnerUid}! +500 ⭐ и +3 попытки!`);
-            saveToServer();
         }
     } else {
         showToast('❌ Нет участников для конкурса');
     }
     render();
-    saveToServer();
 }
 
 function forceEndContest() {
@@ -437,7 +441,6 @@ window.deleteCode = function(index) {
     adminCodes.splice(index, 1);
     showToast('🗑️ Код удалён');
     render();
-    saveToServer();
 };
 
 window.copyText = function(text) {
@@ -630,7 +633,6 @@ function spinWheel() {
             isSpinning = false;
             document.getElementById('wheelSpinBtn').disabled = false;
             render();
-            saveToServer();
         }
     }, 30);
 }
@@ -652,7 +654,6 @@ function showWheelResult(result, user) {
     resultDiv.innerHTML = `🎉 +${finalValue} ⭐ (${result.label})`;
     showToast(`🎉 +${finalValue} ⭐`);
     render();
-    saveToServer();
 }
 
 function openWheel() {
@@ -751,7 +752,6 @@ window.clickStar = function() {
     }
 
     render();
-    saveToServer();
 };
 
 window.claimClickerReward = function() {
@@ -770,7 +770,6 @@ window.claimClickerReward = function() {
     closeModal();
     showToast('✅ +20 ⭐ за клики!');
     render();
-    saveToServer();
 };
 
 // ============================================================
@@ -807,7 +806,6 @@ window.setCoeff = function() {
     closeModal();
     showToast(`✅ Коэффициент: +${user.coefficientRate} ⭐`);
     render();
-    saveToServer();
 };
 
 // ============================================================
@@ -882,7 +880,6 @@ window.feedPet = function() {
     }
     closeModal();
     render();
-    saveToServer();
 };
 
 // ============================================================
@@ -918,7 +915,6 @@ window.buyAttempts = function(count, price) {
     closeModal();
     showToast(`✅ Куплено ${count} попыток`);
     render();
-    saveToServer();
 };
 
 // ============================================================
@@ -962,7 +958,6 @@ window.applyCode = function() {
             closeModal();
             showToast('🚀 Бустер активирован!');
             render();
-            saveToServer();
             return;
         }
     }
@@ -985,7 +980,6 @@ window.applyCode = function() {
             closeModal();
             showToast('🚀 Бустер активирован!');
             render();
-            saveToServer();
             return;
         }
     }
@@ -999,7 +993,6 @@ window.applyCode = function() {
             closeModal();
             showToast('✅ Код принят!');
             render();
-            saveToServer();
             return;
         }
     }
@@ -1021,7 +1014,6 @@ window.applyCode = function() {
             closeModal();
             showToast('✅ Код принят!');
             render();
-            saveToServer();
             return;
         }
     }
@@ -1074,7 +1066,6 @@ window.withdrawBank = function() {
     closeModal();
     showToast(`✅ Забрано ${amount} ⭐ из банка`);
     render();
-    saveToServer();
 };
 
 window.depositBank = function() {
@@ -1090,7 +1081,6 @@ window.depositBank = function() {
     closeModal();
     showToast(`✅ ${amount} ⭐ положены в банк под 20% в час`);
     render();
-    saveToServer();
 };
 
 // ============================================================
@@ -1188,7 +1178,6 @@ window.sendSupport = function() {
     closeModal();
     showToast('✅ Сообщение отправлено администратору!');
     render();
-    saveToServer();
 
     setTimeout(() => showChatWindow(userId), 500);
 };
@@ -1237,7 +1226,6 @@ window.sendChatMessage = function(userId) {
     closeModal();
     showChatWindow(userId);
     render();
-    saveToServer();
 };
 
 window.adminOpenChat = function(uid) {
@@ -1245,7 +1233,6 @@ window.adminOpenChat = function(uid) {
     activeChats[uid].admin = true;
     showAdminChat(uid);
     render();
-    saveToServer();
 };
 
 window.adminSendMessage = function(uid) {
@@ -1262,7 +1249,6 @@ window.adminSendMessage = function(uid) {
     closeModal();
     showAdminChat(uid);
     render();
-    saveToServer();
 };
 
 function showAdminChat(uid) {
@@ -1293,7 +1279,6 @@ window.closeChat = function(uid) {
         closeModal();
         showToast('✅ Чат завершён');
         render();
-        saveToServer();
     }
 };
 
@@ -1374,7 +1359,6 @@ window.adminCodeSingle = function() {
     adminCodes.push({ code: code, type: '🔑 Одноразовый' });
     showToast(`✅ Код: ${code}`);
     render();
-    saveToServer();
 };
 
 window.adminCodeMulti = function() {
@@ -1383,7 +1367,6 @@ window.adminCodeMulti = function() {
     adminCodes.push({ code: code, type: '🔑 На 5' });
     showToast(`✅ Код на 5: ${code}`);
     render();
-    saveToServer();
 };
 
 window.adminBoostSingle = function() {
@@ -1392,7 +1375,6 @@ window.adminBoostSingle = function() {
     adminCodes.push({ code: code, type: '🚀 Бустер' });
     showToast(`✅ Бустер: ${code}`);
     render();
-    saveToServer();
 };
 
 window.adminBoostMulti = function() {
@@ -1401,7 +1383,6 @@ window.adminBoostMulti = function() {
     adminCodes.push({ code: code, type: '🚀 Бустер x5' });
     showToast(`✅ Бустер на 5: ${code}`);
     render();
-    saveToServer();
 };
 
 window.adminSendCodeToPlayer = function() {
@@ -1444,7 +1425,6 @@ window.sendCodeToPlayerWithType = function(type) {
     closeModal();
     showToast(`✅ Код отправлен игроку ${uid}`);
     render();
-    saveToServer();
     showAdminPanel();
 };
 
@@ -1483,7 +1463,6 @@ window.sendCodeToAllWithType = function(type) {
     closeModal();
     showToast(`✅ Код отправлен всем игрокам`);
     render();
-    saveToServer();
     showAdminPanel();
 };
 
@@ -1494,7 +1473,6 @@ window.adminMassGive = function() {
         if (user) user.attempts = 1;
     }
     showToast('✅ Попытки выданы всем активным игрокам');
-    saveToServer();
 };
 
 window.adminGiveSelfStars = function() {
@@ -1515,7 +1493,6 @@ window.doGiveSelfStars = function() {
     closeModal();
     showToast(`✅ +${amount} ⭐`);
     render();
-    saveToServer();
     showAdminPanel();
 };
 
@@ -1595,7 +1572,6 @@ window.doAddStars = function(uid) {
         closeModal();
         showPlayerInfo();
         render();
-        saveToServer();
     }
 };
 
@@ -1621,7 +1597,6 @@ window.doRemoveStars = function(uid) {
         closeModal();
         showPlayerInfo();
         render();
-        saveToServer();
     }
 };
 
@@ -1644,7 +1619,6 @@ window.doBanUser = function(uid) {
     closeModal();
     showPlayerInfo();
     render();
-    saveToServer();
 };
 
 window.adminUnbanUserByUid = function(uid) {
@@ -1655,7 +1629,6 @@ window.adminUnbanUserByUid = function(uid) {
         closeModal();
         showPlayerInfo();
         render();
-        saveToServer();
     }
 };
 
@@ -1676,7 +1649,6 @@ window.adminResetPlayer = function(uid) {
         showToast(`✅ Игрок ${uid} сброшен`);
         closeModal();
         render();
-        saveToServer();
         showAdminPanel();
     }
 };
@@ -1792,7 +1764,6 @@ window.completeRegistration = function() {
     closeModal();
     showToast('✅ Регистрация завершена!');
     render();
-    saveToServer();
 };
 
 // ============================================================
