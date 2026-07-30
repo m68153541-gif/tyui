@@ -1,6 +1,9 @@
 console.log('🚀 Игра загружается...');
 
-// ---------- ПРИВЯЗКА К TELEGRAM ----------
+// ============================================================
+//  ПРИВЯЗКА К TELEGRAM ИЛИ localStorage
+// ============================================================
+
 function getTelegramUserId() {
     try {
         if (window.Telegram && window.Telegram.WebApp) {
@@ -10,17 +13,32 @@ function getTelegramUserId() {
                 return String(tg.initDataUnsafe.user.id);
             }
         }
-    } catch(e) {}
+    } catch(e) {
+        console.log('Telegram WebApp не доступен');
+    }
+    return null;
+}
+
+function getUserId() {
+    // Пытаемся получить Telegram ID
+    const tgId = getTelegramUserId();
+    if (tgId) {
+        return 'tg_' + tgId;  // Префикс для Telegram
+    }
     
-    let userId = localStorage.getItem('telegram_user_id');
+    // Если не в Telegram - используем localStorage
+    let userId = localStorage.getItem('game_user_id');
     if (!userId) {
-        userId = 'user_' + Date.now();
-        localStorage.setItem('telegram_user_id', userId);
+        userId = 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        localStorage.setItem('game_user_id', userId);
     }
     return userId;
 }
 
-// ---------- ХРАНИЛИЩЕ ----------
+// ============================================================
+//  ХРАНИЛИЩЕ
+// ============================================================
+
 let users = {};
 let uidMap = {};
 let bannedUsers = {};
@@ -38,7 +56,10 @@ let contestWinner = null;
 const PASSIVE_INCOME = { 1: 0, 2: 20, 3: 50, "giant": 300 };
 const SERVER_URL = window.location.origin;
 
-// ---------- ОСНОВНЫЕ ФУНКЦИИ ----------
+// ============================================================
+//  ОСНОВНЫЕ ФУНКЦИИ
+// ============================================================
+
 function thresholdForStage(stage) {
     if (stage === 1) return 100;
     if (stage === 2) return 500;
@@ -63,12 +84,9 @@ function generateCode(len = 10) {
 }
 
 function getUser(userId) {
-    const telegramId = getTelegramUserId();
-    let user = users[telegramId];
-    
-    if (!user) {
+    if (!users[userId]) {
         const uid = generateUid();
-        user = {
+        users[userId] = {
             username: null,
             attempts: 1,
             chatId: null,
@@ -91,16 +109,15 @@ function getUser(userId) {
             clickerProgress: 0,
             notifications: []
         };
-        users[telegramId] = user;
-        uidMap[uid] = telegramId;
-        saveToServer();
-        console.log('🆕 Создан новый пользователь с Telegram ID:', telegramId);
+        uidMap[uid] = userId;
+        // Сохраняем нового пользователя
+        setTimeout(() => saveToServer(), 500);
     }
-    return user;
+    return users[userId];
 }
 
 function getCurrentUser() {
-    const userId = getTelegramUserId();
+    const userId = getUserId();
     return getUser(userId);
 }
 
@@ -110,21 +127,22 @@ function getUserByUid(uid) {
     return null;
 }
 
-// ---------- СОХРАНЕНИЕ ----------
+// ============================================================
+//  СОХРАНЕНИЕ НА СЕРВЕР
+// ============================================================
+
 async function saveToServer() {
     try {
         const user = getCurrentUser();
-        const telegramId = getTelegramUserId();
+        const userId = getUserId();
         if (!user || !user.uid) return false;
         if (!user.registered) return false;
-        
-        console.log('📤 Сохраняем на сервер:', { telegramId, uid: user.uid, stars: user.stars });
         
         const response = await fetch(SERVER_URL + '/api/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                user_id: user.uid, 
+                user_id: userId,  // Используем полный ID
                 user_data: user 
             })
         });
@@ -139,23 +157,28 @@ async function saveToServer() {
 
 async function loadFromServer() {
     try {
-        const user = getCurrentUser();
-        const telegramId = getTelegramUserId();
-        if (!user || !user.uid) return false;
+        const userId = getUserId();
+        if (!userId) return false;
         
-        console.log('📥 Загружаем с сервера uid:', user.uid);
-        
-        const response = await fetch(SERVER_URL + `/api/load/${user.uid}`);
+        const response = await fetch(SERVER_URL + `/api/load/${userId}`);
         if (response.ok) {
             const data = await response.json();
+            const user = getCurrentUser();
             const oldUid = user.uid;
+            // Сохраняем старые данные, если они есть
             const oldRegistered = user.registered;
+            const oldStars = user.stars;
+            const oldAttempts = user.attempts;
+            
+            // Загружаем с сервера
             Object.assign(user, data);
             user.uid = oldUid;
-            // Если данные загружены, но registered = false, оставляем как есть
-            if (data.registered) {
+            
+            // Если на сервере registered = false, но локально true - оставляем локальное
+            if (oldRegistered && !data.registered) {
                 user.registered = true;
             }
+            
             console.log('✅ Загружено с сервера:', data);
             render();
             return true;
@@ -168,7 +191,10 @@ async function loadFromServer() {
     return false;
 }
 
-// ---------- ОБНОВЛЕНИЯ ----------
+// ============================================================
+//  ОБНОВЛЕНИЯ
+// ============================================================
+
 function updatePassiveIncome(userData) {
     const now = Date.now();
     const lastTime = userData.lastPassiveTime || now;
@@ -217,7 +243,10 @@ function getNotifications(uid) {
     return [];
 }
 
-// ---------- ОТРИСОВКА ----------
+// ============================================================
+//  ОТРИСОВКА
+// ============================================================
+
 function render() {
     const user = getCurrentUser();
     updatePassiveIncome(user);
@@ -383,7 +412,10 @@ function forceEndContest() {
     endContest();
 }
 
-// ---------- TOAST ----------
+// ============================================================
+//  TOAST
+// ============================================================
+
 let toastTimeout;
 
 function showToast(text, duration = 2500) {
@@ -395,7 +427,10 @@ function showToast(text, duration = 2500) {
     toastTimeout = setTimeout(() => el.classList.remove('show'), duration);
 }
 
-// ---------- МОДАЛКА ----------
+// ============================================================
+//  МОДАЛКА
+// ============================================================
+
 function openModal(title, html) {
     const titleEl = document.getElementById('modalTitle');
     const bodyEl = document.getElementById('modalBody');
@@ -414,7 +449,10 @@ document.getElementById('modalOverlay').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeModal();
 });
 
-// ---------- КОПИРОВАНИЕ ----------
+// ============================================================
+//  КОПИРОВАНИЕ
+// ============================================================
+
 window.copyUid = function() {
     const uid = document.getElementById('userUid');
     if (uid && uid.textContent && uid.textContent !== '—') {
@@ -451,7 +489,7 @@ window.deleteCode = function(index) {
     if (!item) return;
     const code = item.code;
     if (oneTimeCodes.has(code)) oneTimeCodes.delete(code);
-    if (multiUseCodes[code]) delete multiUseCodes[code];
+    if (multiUseCodes[code]) delete multiUseCodes[code);
     if (boosterCodes.has(code)) boosterCodes.delete(code);
     if (boosterMultiCodes[code]) delete boosterMultiCodes[code];
     adminCodes.splice(index, 1);
