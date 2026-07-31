@@ -188,7 +188,6 @@ function processBank() {
     const bankDeposit = user.bankDeposit || 0;
     
     if (bankDeposit > 0) {
-        // Каждую минуту +1 звезда (проверяем сколько минут прошло)
         const minutesPassed = Math.floor((now - bankTime) / 60000);
         
         if (minutesPassed > 0) {
@@ -198,7 +197,6 @@ function processBank() {
             saveAllData();
             saveToServer();
             
-            // Показываем уведомление раз в минуту
             if (earned > 0) {
                 showToast('🏦 Банк: +' + earned + ' ⭐ (пассивный доход)');
             }
@@ -1492,57 +1490,62 @@ const SEGMENTS = [
     { label: '1000 ⭐', icon: '👑', value: 1000 }
 ];
 
-let wheelCanvas, ctx;
+// Переименовал, чтобы избежать конфликта с canvas ctx
+let wheelCtx = null;
 let wheelSegments = [];
 let currentAngle = 0;
 let isSpinning = false;
 let winIndex = 0;
 
 function initWheel() {
-    wheelCanvas = document.getElementById('wheelCanvas');
-    if (!wheelCanvas) return;
-    ctx = wheelCanvas.getContext('2d');
+    const canvas = document.getElementById('wheelCanvas');
+    if (!canvas) {
+        console.log('wheelCanvas не найден');
+        return;
+    }
+    wheelCtx = canvas.getContext('2d');
     wheelSegments = SEGMENTS.map(s => ({ ...s }));
     drawWheel();
 }
 
 function drawWheel(highlightIndex = -1) {
-    if (!ctx || !wheelCanvas) return;
-    const w = wheelCanvas.width;
-    const h = wheelCanvas.height;
+    if (!wheelCtx || !document.getElementById('wheelCanvas')) return;
+    const canvas = document.getElementById('wheelCanvas');
+    const w = canvas.width;
+    const h = canvas.height;
     const centerX = w / 2;
     const centerY = h / 2;
     const radius = Math.min(w, h) / 2 - 10;
     const segCount = wheelSegments.length;
     const angleStep = (2 * Math.PI) / segCount;
 
-    ctx.clearRect(0, 0, w, h);
+    wheelCtx.clearRect(0, 0, w, h);
 
     for (let i = 0; i < segCount; i++) {
         const startAngle = currentAngle + i * angleStep;
         const endAngle = startAngle + angleStep;
 
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
-        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-        ctx.closePath();
+        wheelCtx.beginPath();
+        wheelCtx.moveTo(centerX, centerY);
+        wheelCtx.arc(centerX, centerY, radius, startAngle, endAngle);
+        wheelCtx.closePath();
 
         const isHighlight = (i === highlightIndex);
         if (isHighlight) {
-            ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
-            ctx.shadowBlur = 30;
-            ctx.fillStyle = '#ffd700';
-            ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.strokeStyle = 'rgba(255, 215, 0, 0.6)';
-            ctx.lineWidth = 4;
-            ctx.stroke();
+            wheelCtx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+            wheelCtx.shadowBlur = 30;
+            wheelCtx.fillStyle = '#ffd700';
+            wheelCtx.fill();
+            wheelCtx.shadowBlur = 0;
+            wheelCtx.strokeStyle = 'rgba(255, 215, 0, 0.6)';
+            wheelCtx.lineWidth = 4;
+            wheelCtx.stroke();
         } else {
-            ctx.fillStyle = '#3d3d5c';
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
+            wheelCtx.fillStyle = '#3d3d5c';
+            wheelCtx.fill();
+            wheelCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            wheelCtx.lineWidth = 1;
+            wheelCtx.stroke();
         }
 
         const midAngle = startAngle + angleStep / 2;
@@ -1550,49 +1553,49 @@ function drawWheel(highlightIndex = -1) {
         const x = centerX + Math.cos(midAngle) * textRadius;
         const y = centerY + Math.sin(midAngle) * textRadius;
 
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(midAngle + (midAngle > Math.PI/2 ? Math.PI : 0));
+        wheelCtx.save();
+        wheelCtx.translate(x, y);
+        wheelCtx.rotate(midAngle + (midAngle > Math.PI/2 ? Math.PI : 0));
 
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        wheelCtx.textAlign = 'center';
+        wheelCtx.textBaseline = 'middle';
 
         if (isHighlight) {
-            ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
-            ctx.shadowBlur = 15;
+            wheelCtx.shadowColor = 'rgba(255, 215, 0, 0.5)';
+            wheelCtx.shadowBlur = 15;
         } else {
-            ctx.shadowBlur = 0;
+            wheelCtx.shadowBlur = 0;
         }
 
-        ctx.font = '20px Segoe UI, sans-serif';
-        ctx.fillStyle = isHighlight ? '#1a1a2e' : '#8888aa';
-        ctx.fillText(wheelSegments[i].icon, 0, -10);
+        wheelCtx.font = '20px Segoe UI, sans-serif';
+        wheelCtx.fillStyle = isHighlight ? '#1a1a2e' : '#8888aa';
+        wheelCtx.fillText(wheelSegments[i].icon, 0, -10);
 
-        ctx.font = '9px Segoe UI, sans-serif';
+        wheelCtx.font = '9px Segoe UI, sans-serif';
         if (wheelSegments[i].value > 0) {
-            ctx.fillStyle = isHighlight ? '#1a1a2e' : '#666688';
-            ctx.fillText(wheelSegments[i].value + '⭐', 0, 16);
+            wheelCtx.fillStyle = isHighlight ? '#1a1a2e' : '#666688';
+            wheelCtx.fillText(wheelSegments[i].value + '⭐', 0, 16);
         } else {
-            ctx.fillStyle = isHighlight ? '#1a1a2e' : '#444466';
-            ctx.fillText('—', 0, 16);
+            wheelCtx.fillStyle = isHighlight ? '#1a1a2e' : '#444466';
+            wheelCtx.fillText('—', 0, 16);
         }
 
-        ctx.restore();
+        wheelCtx.restore();
     }
 
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    wheelCtx.beginPath();
+    wheelCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    wheelCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    wheelCtx.lineWidth = 2;
+    wheelCtx.stroke();
 
-    const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+    const grad = wheelCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
     grad.addColorStop(0, 'rgba(255,215,0,0.02)');
     grad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.fillStyle = grad;
-    ctx.fill();
+    wheelCtx.beginPath();
+    wheelCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    wheelCtx.fillStyle = grad;
+    wheelCtx.fill();
 }
 
 function spinWheel() {
@@ -1711,7 +1714,6 @@ function handleBank() {
         return;
     }
     
-    // Обрабатываем банк перед показом
     processBank();
     
     const bank = user.bank || 0;
@@ -1740,7 +1742,6 @@ function handleBank() {
 
 window.withdrawBank = function() {
     const user = getCurrentUser();
-    // Обрабатываем банк перед выводом
     processBank();
     
     const amount = user.bank || 0;
@@ -2158,32 +2159,44 @@ function render() {
     const user = getCurrentUser();
     if (!user) return;
     
-    document.getElementById('userName').textContent = user.name || '—';
-    document.getElementById('userGender').textContent = user.gender || '—';
-    document.getElementById('userAge').textContent = user.age || '—';
-    document.getElementById('userUid').textContent = user.uid || '—';
-    document.getElementById('userAttempts').textContent = user.attempts || 0;
-    document.getElementById('starsBalance').textContent = user.stars || 0;
-    document.getElementById('bankBalance').textContent = user.bank || 0;
-    
+    const nameEl = document.getElementById('userName');
+    const genderEl = document.getElementById('userGender');
+    const ageEl = document.getElementById('userAge');
+    const uidEl = document.getElementById('userUid');
+    const attemptsEl = document.getElementById('userAttempts');
+    const starsEl = document.getElementById('starsBalance');
+    const bankEl = document.getElementById('bankBalance');
     const statusEl = document.getElementById('userRegStatus');
-    if (user.banned) {
-        statusEl.textContent = 'ЗАБЛОКИРОВАН: ' + (user.banned_reason || 'Нарушение правил');
-        statusEl.style.color = '#ff4757';
-    } else if (user.registered) {
-        statusEl.textContent = 'Зарегистрирован (ID: ' + (user.uid || '—') + ')';
-        statusEl.style.color = '#4caf50';
-    } else {
-        statusEl.textContent = 'Не зарегистрирован';
-        statusEl.style.color = '#ff4757';
+    const petStageEl = document.getElementById('petStage');
+    const petProgressEl = document.getElementById('petProgress');
+    
+    if (nameEl) nameEl.textContent = user.name || '—';
+    if (genderEl) genderEl.textContent = user.gender || '—';
+    if (ageEl) ageEl.textContent = user.age || '—';
+    if (uidEl) uidEl.textContent = user.uid || '—';
+    if (attemptsEl) attemptsEl.textContent = user.attempts || 0;
+    if (starsEl) starsEl.textContent = user.stars || 0;
+    if (bankEl) bankEl.textContent = user.bank || 0;
+    
+    if (statusEl) {
+        if (user.banned) {
+            statusEl.textContent = 'ЗАБЛОКИРОВАН: ' + (user.banned_reason || 'Нарушение правил');
+            statusEl.style.color = '#ff4757';
+        } else if (user.registered) {
+            statusEl.textContent = 'Зарегистрирован (ID: ' + (user.uid || '—') + ')';
+            statusEl.style.color = '#4caf50';
+        } else {
+            statusEl.textContent = 'Не зарегистрирован';
+            statusEl.style.color = '#ff4757';
+        }
     }
     
     const stage = user.petStage || 1;
     const progress = user.petProgress || 0;
     const threshold = stage === 1 ? 100 : stage === 2 ? 500 : stage === 3 ? 1500 : 0;
     const stageText = stage === 1 ? 'Малыш' : stage === 2 ? 'Подросток' : stage === 3 ? 'Взрослый' : 'Гигант';
-    document.getElementById('petStage').textContent = stageText;
-    document.getElementById('petProgress').textContent = progress + ' / ' + threshold + ' ⭐';
+    if (petStageEl) petStageEl.textContent = stageText;
+    if (petProgressEl) petProgressEl.textContent = progress + ' / ' + threshold + ' ⭐';
     
     renderAdminCodes();
     renderContest();
@@ -2341,10 +2354,34 @@ function checkRegistration() {
 //  ИНИЦИАЛИЗАЦИЯ
 // ============================================================
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM загружен!');
+console.log('game.js загружен, инициализация...');
+
+// Ждём DOM для инициализации
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGame);
+} else {
+    initGame();
+}
+
+function initGame() {
+    console.log('DOM загружен, инициализация игры...');
     
-    document.getElementById('btnPlay').addEventListener('click', function() {
+    const btnPlay = document.getElementById('btnPlay');
+    const btnBank = document.getElementById('btnBank');
+    const btnClicker = document.getElementById('btnClicker');
+    const btnCoeff = document.getElementById('btnCoeff');
+    const btnPet = document.getElementById('btnPet');
+    const btnBuy = document.getElementById('btnBuy');
+    const btnCode = document.getElementById('btnCode');
+    const btnLeaderboard = document.getElementById('btnLeaderboard');
+    const btnRules = document.getElementById('btnRules');
+    const btnSupport = document.getElementById('btnSupport');
+    const btnAdmin = document.getElementById('btnAdmin');
+    const wheelSpinBtn = document.getElementById('wheelSpinBtn');
+    const wheelCloseBtn = document.getElementById('wheelCloseBtn');
+    const wheelCanvas = document.getElementById('wheelCanvas');
+    
+    if (btnPlay) btnPlay.addEventListener('click', function() {
         const user = getCurrentUser();
         if (!user.registered) {
             showToast('Сначала зарегистрируйтесь!');
@@ -2361,21 +2398,22 @@ document.addEventListener('DOMContentLoaded', function() {
         openWheel();
     });
     
-    document.getElementById('btnBank').addEventListener('click', handleBank);
-    document.getElementById('btnClicker').addEventListener('click', handleClicker);
-    document.getElementById('btnCoeff').addEventListener('click', handleCoeff);
-    document.getElementById('btnPet').addEventListener('click', handlePet);
-    document.getElementById('btnBuy').addEventListener('click', handleBuy);
-    document.getElementById('btnCode').addEventListener('click', handleCode);
-    document.getElementById('btnLeaderboard').addEventListener('click', handleLeaderboard);
-    document.getElementById('btnRules').addEventListener('click', handleRules);
-    document.getElementById('btnSupport').addEventListener('click', handleSupport);
-    document.getElementById('btnAdmin').addEventListener('click', handleAdmin);
+    if (btnBank) btnBank.addEventListener('click', handleBank);
+    if (btnClicker) btnClicker.addEventListener('click', handleClicker);
+    if (btnCoeff) btnCoeff.addEventListener('click', handleCoeff);
+    if (btnPet) btnPet.addEventListener('click', handlePet);
+    if (btnBuy) btnBuy.addEventListener('click', handleBuy);
+    if (btnCode) btnCode.addEventListener('click', handleCode);
+    if (btnLeaderboard) btnLeaderboard.addEventListener('click', handleLeaderboard);
+    if (btnRules) btnRules.addEventListener('click', handleRules);
+    if (btnSupport) btnSupport.addEventListener('click', handleSupport);
+    if (btnAdmin) btnAdmin.addEventListener('click', handleAdmin);
     
-    document.getElementById('wheelSpinBtn').addEventListener('click', spinWheel);
-    document.getElementById('wheelCloseBtn').addEventListener('click', closeWheel);
-    document.getElementById('wheelCanvas').addEventListener('click', spinWheel);
+    if (wheelSpinBtn) wheelSpinBtn.addEventListener('click', spinWheel);
+    if (wheelCloseBtn) wheelCloseBtn.addEventListener('click', closeWheel);
+    if (wheelCanvas) wheelCanvas.addEventListener('click', spinWheel);
     
+    // Загружаем данные
     render();
     initWheel();
     
@@ -2388,7 +2426,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 500);
     
     console.log('Все обработчики назначены!');
-});
+}
 
 setInterval(() => {
     const user = getCurrentUser();
