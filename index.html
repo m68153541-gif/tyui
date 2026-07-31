@@ -6,7 +6,7 @@
     <title>⭐ Забава Игра</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* ===== ГЛОБАЛЬНЫЕ СТИЛИ ===== */
+        /* ===== ГЛОБАЛЬНЫЕ ===== */
         * {
             margin: 0;
             padding: 0;
@@ -16,24 +16,59 @@
 
         body {
             min-height: 100vh;
-            background: radial-gradient(circle at 20% 30%, #1a1a2e, #0f0f1f);
+            background: radial-gradient(circle at 30% 40%, #1a0e2e, #0a0515);
             display: flex;
             justify-content: center;
             padding: 20px 12px;
             color: #f0f0ff;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Анимированные световые пятна на фоне */
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 0;
+            animation: floatGlow 12s ease-in-out infinite alternate;
+        }
+        body::before {
+            width: 400px;
+            height: 400px;
+            background: #6c5ce7;
+            top: -100px;
+            left: -100px;
+        }
+        body::after {
+            width: 500px;
+            height: 500px;
+            background: #e84393;
+            bottom: -150px;
+            right: -150px;
+            animation-delay: 4s;
+        }
+        @keyframes floatGlow {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(80px, 60px) scale(1.3); }
         }
 
         #app {
-            max-width: 480px;
+            position: relative;
+            z-index: 1;
+            max-width: 500px;
             width: 100%;
-            background: rgba(22, 22, 42, 0.75);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
+            background: rgba(12, 8, 28, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border-radius: 48px 48px 32px 32px;
-            padding: 24px 20px 28px;
+            padding: 24px 20px 30px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.04);
-            transition: all 0.2s;
         }
 
         h1 {
@@ -41,14 +76,19 @@
             font-weight: 700;
             text-align: center;
             letter-spacing: 1px;
-            background: linear-gradient(135deg, #f9ca24, #f0932b);
+            background: linear-gradient(135deg, #ffd700, #ff6b6b, #a29bfe);
+            background-size: 200% 200%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px rgba(249, 202, 36, 0.2);
+            animation: gradShift 4s ease-in-out infinite alternate;
             margin-bottom: 18px;
         }
+        @keyframes gradShift {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
 
-        /* ===== КАРТОЧКА ПОЛЬЗОВАТЕЛЯ ===== */
+        /* ===== КАРТОЧКА ===== */
         .user-card {
             background: rgba(255, 255, 255, 0.04);
             border-radius: 24px;
@@ -138,114 +178,145 @@
             font-size: 14px;
             backdrop-filter: blur(4px);
         }
-        .pet-status .stage {
-            font-weight: 600;
-        }
-        .pet-status .progress {
-            color: #b8b8d8;
-        }
 
-        /* ===== СЕТКА КНОПОК (ГЛАВНАЯ) ===== */
+        /* ===== СЕТКА КНОПОК (НОВОЕ РАСПОЛОЖЕНИЕ) ===== */
         .btn-grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 14px 12px;
+            gap: 16px 14px;
             margin-top: 6px;
         }
 
-        /* ===== УНИВЕРСАЛЬНАЯ КНОПКА ===== */
+        /* ===== КНОПКИ С ЛЕВИТАЦИЕЙ ===== */
         .btn {
             position: relative;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            padding: 14px 8px;
+            padding: 16px 10px;
             border: none;
-            border-radius: 40px;
+            border-radius: 60px;
             font-size: 15px;
-            font-weight: 600;
+            font-weight: 700;
             color: #fff;
-            background: #2d2d4e;
-            box-shadow: 0 6px 0 #1a1a2e, 0 4px 12px rgba(0, 0, 0, 0.3);
             cursor: pointer;
-            transition: all 0.08s ease-out;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.2);
+            will-change: transform, box-shadow, filter;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
             letter-spacing: 0.3px;
-            will-change: transform, box-shadow;
-            border: 1px solid rgba(255, 255, 255, 0.04);
+            background: #2a2a50;
+            box-shadow: 0 8px 0 #15152a, 0 6px 20px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transform: translateY(0px) scale(1);
         }
-        /* Анимация мерцания для всех кнопок */
-        .btn::after {
+
+        /* Левитация: каждая кнопка "плавает" с разной задержкой */
+        .btn:nth-child(1) { animation: floatBtn 3.2s ease-in-out infinite; }
+        .btn:nth-child(2) { animation: floatBtn 3.6s ease-in-out infinite 0.2s; }
+        .btn:nth-child(3) { animation: floatBtn 2.8s ease-in-out infinite 0.5s; }
+        .btn:nth-child(4) { animation: floatBtn 3.4s ease-in-out infinite 0.1s; }
+        .btn:nth-child(5) { animation: floatBtn 3.0s ease-in-out infinite 0.7s; }
+        .btn:nth-child(6) { animation: floatBtn 3.8s ease-in-out infinite 0.3s; }
+        .btn:nth-child(7) { animation: floatBtn 2.6s ease-in-out infinite 0.9s; }
+        .btn:nth-child(8) { animation: floatBtn 3.3s ease-in-out infinite 0.4s; }
+        .btn:nth-child(9) { animation: floatBtn 3.7s ease-in-out infinite 0.6s; }
+        .btn:nth-child(10) { animation: floatBtn 2.9s ease-in-out infinite 0.8s; }
+        .btn:nth-child(11) { animation: floatBtn 3.5s ease-in-out infinite 0.15s; }
+        .btn:nth-child(12) { animation: floatBtn 3.1s ease-in-out infinite 0.55s; }
+
+        @keyframes floatBtn {
+            0% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-8px) scale(1.02); }
+            100% { transform: translateY(0px) scale(1); }
+        }
+
+        /* Состояние "тусклые" для всех кнопок при нажатии на одну */
+        .btn-grid.dimmed .btn {
+            filter: brightness(0.4) saturate(0.3);
+            transform: scale(0.92);
+            transition: all 0.2s;
+        }
+        .btn-grid.dimmed .btn.active-btn {
+            filter: brightness(1.5) saturate(1.2);
+            transform: scale(1.08) translateY(-4px);
+            box-shadow: 0 0 30px #ffd700, 0 0 60px rgba(255, 215, 0, 0.3), 0 8px 0 #b8860b;
+            background: linear-gradient(145deg, #ffd700, #f5a623) !important;
+            color: #1a1a2e !important;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            border-color: #ffd700;
+            z-index: 10;
+        }
+        /* Свечение от активной кнопки */
+        .btn-grid.dimmed .btn.active-btn::before {
             content: '';
             position: absolute;
-            inset: -2px;
-            border-radius: 42px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 60%);
-            opacity: 0.3;
-            transition: 0.4s;
-            pointer-events: none;
+            inset: -8px;
+            border-radius: 70px;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.5), transparent 70%);
+            filter: blur(20px);
+            z-index: -1;
+            animation: pulseGlow 1s ease-in-out infinite alternate;
         }
-        .btn:hover::after {
-            opacity: 0.7;
-        }
-
-        /* Нажатие — кнопка "уезжает" вниз */
-        .btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 2px 0 #1a1a2e, 0 6px 16px rgba(0, 0, 0, 0.4);
-            transition-duration: 0.04s;
+        @keyframes pulseGlow {
+            0% { opacity: 0.6; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1.2); }
         }
 
-        /* Размеры */
-        .btn.full {
-            grid-column: span 3;
+        /* Сброс при отпускании */
+        .btn-grid:not(.dimmed) .btn {
+            filter: brightness(1);
         }
-        .btn.small {
-            padding: 10px 12px;
-            font-size: 13px;
-        }
-        .btn.danger {
-            background: linear-gradient(145deg, #e74c3c, #c0392b);
-            box-shadow: 0 6px 0 #87281e;
-        }
+
+        /* Индивидуальные цвета кнопок (яркие, насыщенные) */
         .btn.primary {
             background: linear-gradient(145deg, #f9ca24, #f0932b);
-            box-shadow: 0 6px 0 #b86d1c;
+            box-shadow: 0 8px 0 #b86d1c, 0 6px 20px rgba(249, 202, 36, 0.3);
             color: #1a1a2e;
         }
         .btn.blue {
             background: linear-gradient(145deg, #4a8fe0, #2d6bb8);
-            box-shadow: 0 6px 0 #1a3f6e;
-        }
-        .btn.purple {
-            background: linear-gradient(145deg, #a29bfe, #6c5ce7);
-            box-shadow: 0 6px 0 #3a2f8a;
-        }
-        .btn.green {
-            background: linear-gradient(145deg, #55efc4, #00b894);
-            box-shadow: 0 6px 0 #00715a;
-            color: #0f1a1a;
+            box-shadow: 0 8px 0 #1a3f6e, 0 6px 20px rgba(45, 107, 184, 0.3);
         }
         .btn.special {
             background: linear-gradient(145deg, #fd79a8, #e84393);
-            box-shadow: 0 6px 0 #a0296a;
+            box-shadow: 0 8px 0 #a0296a, 0 6px 20px rgba(232, 67, 147, 0.3);
+        }
+        .btn.purple {
+            background: linear-gradient(145deg, #a29bfe, #6c5ce7);
+            box-shadow: 0 8px 0 #3a2f8a, 0 6px 20px rgba(108, 92, 231, 0.3);
+        }
+        .btn.green {
+            background: linear-gradient(145deg, #55efc4, #00b894);
+            box-shadow: 0 8px 0 #00715a, 0 6px 20px rgba(0, 184, 148, 0.3);
+            color: #0f1a1a;
+        }
+        .btn.danger {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            box-shadow: 0 8px 0 #87281e, 0 6px 20px rgba(231, 76, 60, 0.3);
+        }
+        .btn.full {
+            grid-column: span 3;
+        }
+        .btn.small {
+            padding: 12px 10px;
+            font-size: 13px;
         }
         .btn:disabled {
             opacity: 0.5;
-            transform: translateY(2px);
-            box-shadow: 0 3px 0 #1a1a2e;
+            transform: translateY(4px) scale(0.96);
+            box-shadow: 0 3px 0 #15152a;
             pointer-events: none;
+            animation: none !important;
         }
 
-        /* ===== КОНТЕЙНЕР КОЛЕСА ===== */
+        /* ===== КОЛЕСО ===== */
         .wheel-overlay {
             display: none;
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
             z-index: 1000;
             align-items: center;
             justify-content: center;
@@ -256,7 +327,7 @@
             display: flex;
         }
         .wheel-container {
-            background: rgba(22, 22, 44, 0.95);
+            background: rgba(12, 8, 28, 0.95);
             border-radius: 48px;
             padding: 28px 24px 32px;
             max-width: 440px;
@@ -268,7 +339,6 @@
         .wheel-container h2 {
             text-align: center;
             margin-bottom: 12px;
-            font-weight: 600;
             background: linear-gradient(135deg, #ffd700, #f5a623);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -286,7 +356,6 @@
             border-radius: 50%;
             box-shadow: 0 0 40px rgba(255, 215, 0, 0.15);
             cursor: pointer;
-            transition: 0.3s;
         }
         .wheel-center {
             position: absolute;
@@ -303,13 +372,6 @@
             font-weight: 600;
             padding: 12px 0 6px;
             min-height: 50px;
-            color: #f0f0ff;
-        }
-        .wheel-attempts {
-            text-align: center;
-            font-size: 14px;
-            color: #a0a0c0;
-            margin-bottom: 10px;
         }
         .wheel-actions {
             display: flex;
@@ -317,16 +379,16 @@
         }
         .wheel-actions .btn {
             flex: 1;
+            animation: none !important;
         }
 
-        /* ===== МОДАЛЬНОЕ ОКНО ===== */
+        /* ===== МОДАЛКА ===== */
         .modal-overlay {
             display: none;
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
             z-index: 2000;
             align-items: center;
             justify-content: center;
@@ -337,7 +399,7 @@
             display: flex;
         }
         .modal {
-            background: rgba(20, 20, 40, 0.96);
+            background: rgba(12, 8, 28, 0.96);
             border-radius: 40px;
             padding: 28px 24px 30px;
             max-width: 440px;
@@ -352,10 +414,8 @@
             text-align: center;
             margin-bottom: 16px;
             font-size: 22px;
-            font-weight: 600;
         }
-        .modal input,
-        .modal select {
+        .modal input {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 30px;
@@ -371,7 +431,13 @@
             box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
         }
         .modal .btn {
+            animation: none !important;
             margin-top: 8px;
+            box-shadow: 0 6px 0 #15152a;
+        }
+        .modal .btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #15152a;
         }
 
         /* ===== ТОСТ ===== */
@@ -380,9 +446,8 @@
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%) translateY(80px);
-            background: rgba(10, 10, 25, 0.92);
+            background: rgba(10, 8, 25, 0.92);
             backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
             padding: 14px 28px;
             border-radius: 60px;
             color: #fff;
@@ -407,9 +472,9 @@
         .clicker-star {
             font-size: 72px;
             cursor: pointer;
-            transition: 0.1s;
             user-select: none;
             margin: 6px 0;
+            transition: 0.1s;
         }
         .clicker-star.pop {
             animation: popStar 0.2s ease;
@@ -434,12 +499,6 @@
             border-radius: 20px;
             transition: 0.2s;
         }
-        .clicker-stats {
-            display: flex;
-            justify-content: space-between;
-            font-size: 15px;
-            margin: 4px 0;
-        }
 
         /* ===== АНИМАЦИИ ===== */
         @keyframes fadeIn {
@@ -447,11 +506,11 @@
             to { opacity: 1; }
         }
         @keyframes scaleUp {
-            from { opacity: 0; transform: scale(0.94); }
+            from { opacity: 0; transform: scale(0.92); }
             to { opacity: 1; transform: scale(1); }
         }
 
-        /* ===== ДОП. ЭЛЕМЕНТЫ ===== */
+        /* ===== ДОПЫ ===== */
         .chat-container {
             max-height: 200px;
             overflow-y: auto;
@@ -461,20 +520,12 @@
             margin: 8px 0;
             font-size: 14px;
         }
-        .chat-container .msg {
-            padding: 6px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-        }
         .chat-container .msg.user { color: #7ed6df; }
         .chat-container .msg.admin { color: #ffd700; }
         .chat-container .msg .time {
             font-size: 10px;
             color: #666;
             margin-left: 10px;
-        }
-        .admin-panel .btn {
-            font-size: 13px;
-            padding: 10px 6px;
         }
         .scrollable {
             max-height: 300px;
@@ -489,7 +540,6 @@
             text-align: center;
             border: 1px solid rgba(255, 215, 0, 0.15);
             margin-bottom: 18px;
-            backdrop-filter: blur(4px);
         }
         #contestBanner .title {
             font-weight: 700;
@@ -503,10 +553,9 @@
             color: #fff;
         }
 
-        /* ===== АДАПТИВ ===== */
         @media (max-width: 420px) {
-            .btn-grid { gap: 10px; }
-            .btn { font-size: 13px; padding: 12px 6px; }
+            .btn-grid { gap: 12px; }
+            .btn { font-size: 13px; padding: 14px 6px; }
             .balance-item .num { font-size: 24px; }
             #app { padding: 18px 14px 22px; }
         }
@@ -541,15 +590,15 @@
             <div class="codes-panel" id="codesList"></div>
         </div>
 
-        <div class="btn-grid">
+        <div class="btn-grid" id="btnGrid">
             <button class="btn primary" id="btnPlay">🎮 Играть</button>
             <button class="btn blue" id="btnBank">🏦 Банк</button>
             <button class="btn special" id="btnClicker">⭐ Кликер</button>
             <button class="btn purple" id="btnCoeff">🔥 Коэфф.</button>
             <button class="btn green" id="btnPet">🪳 Питомец</button>
             <button class="btn green" id="btnBuy">🛒 Попытки</button>
-            <button class="btn" id="btnCode" style="background:linear-gradient(145deg,#00b894,#00a381);box-shadow:0 6px 0 #00715a;">🎫 Код</button>
-            <button class="btn" id="btnLeaderboard" style="background:linear-gradient(145deg,#6c5ce7,#4a3db8);box-shadow:0 6px 0 #3a2f8a;">🏆 Лидеры</button>
+            <button class="btn" id="btnCode" style="background:linear-gradient(145deg,#00b894,#00a381);box-shadow:0 8px 0 #00715a;">🎫 Код</button>
+            <button class="btn" id="btnLeaderboard" style="background:linear-gradient(145deg,#6c5ce7,#4a3db8);box-shadow:0 8px 0 #3a2f8a;">🏆 Лидеры</button>
             <button class="btn full small" id="btnRules">📜 Правила</button>
             <button class="btn full small" id="btnSupport">🆘 Поддержка</button>
             <button class="btn full small danger" id="btnAdmin">🔧 Админ</button>
@@ -585,59 +634,81 @@
 
     <script>
         // ============================================================
-        //  ПОЛНОСТЬЮ ВАША ЛОГИКА (без изменений)
-        //  ВНИМАНИЕ: весь JS-код из вашего game.js вставлен сюда,
-        //  но для краткости я оставлю ссылку на ваш исходный скрипт.
-        //  В реальном проекте вы просто подключаете game.js
+        //  НОВАЯ ЛОГИКА ДЛЯ КНОПОК: тускнение + подсветка
         // ============================================================
-        // (Здесь должен быть ваш game.js, но я его не дублирую,
-        //  чтобы не раздувать ответ. Вы подключите его отдельно.
-        //  Все функции остаются без изменений.)
-        // ============================================================
-
-        // ДЛЯ ПРИМЕРА — минимальный полифил, чтобы страница не падала
-        // (В вашем проекте game.js заменит это)
-        console.log('🚀 Графика обновлена! Анимации кнопок и фон переделаны.');
-
-        // Просто чтобы кнопки имели эффект — уже в CSS.
-        // Дополнительно: обработчик для копирования UID
-        window.copyUid = function() {
-            const el = document.getElementById('userUid');
-            const uid = el.textContent;
-            if (!uid || uid === '—') return;
-            navigator.clipboard?.writeText(uid)?.then(() => {
-                showToast('✅ UID скопирован');
-            })?.catch(() => {
-                const ta = document.createElement('textarea');
-                ta.value = uid;
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand('copy');
-                ta.remove();
-                showToast('✅ UID скопирован');
-            });
-        };
-
-        // Заглушка для showToast (ваша функция из game.js переопределит)
-        window.showToast = function(text) {
-            const t = document.getElementById('toast');
-            if (!t) return;
-            t.textContent = text;
-            t.classList.add('show');
-            clearTimeout(window._toastTimer);
-            window._toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
-        };
-
-        // Имитация загрузки (ваш game.js всё подхватит)
         document.addEventListener('DOMContentLoaded', function() {
-            // Инициализация колеса (ваша функция)
+            const grid = document.getElementById('btnGrid');
+            const allBtns = grid.querySelectorAll('.btn');
+
+            allBtns.forEach(btn => {
+                btn.addEventListener('mousedown', function(e) {
+                    // Убираем левитацию и тускним все кнопки
+                    grid.classList.add('dimmed');
+                    // Добавляем класс активной кнопке
+                    this.classList.add('active-btn');
+                });
+
+                btn.addEventListener('mouseup', function(e) {
+                    grid.classList.remove('dimmed');
+                    this.classList.remove('active-btn');
+                });
+
+                btn.addEventListener('mouseleave', function(e) {
+                    // Если кнопка отпущена за пределами — сброс
+                    if (grid.classList.contains('dimmed')) {
+                        grid.classList.remove('dimmed');
+                        this.classList.remove('active-btn');
+                    }
+                });
+
+                // Для тач-устройств
+                btn.addEventListener('touchstart', function(e) {
+                    grid.classList.add('dimmed');
+                    this.classList.add('active-btn');
+                });
+
+                btn.addEventListener('touchend', function(e) {
+                    grid.classList.remove('dimmed');
+                    this.classList.remove('active-btn');
+                });
+            });
+
+            // Копирование UID
+            window.copyUid = function() {
+                const el = document.getElementById('userUid');
+                const uid = el.textContent;
+                if (!uid || uid === '—') return;
+                navigator.clipboard?.writeText(uid)?.then(() => {
+                    showToast('✅ UID скопирован');
+                })?.catch(() => {
+                    const ta = document.createElement('textarea');
+                    ta.value = uid;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                    showToast('✅ UID скопирован');
+                });
+            };
+
+            // Заглушка для тоста (ваша функция из game.js переопределит)
+            window.showToast = function(text) {
+                const t = document.getElementById('toast');
+                if (!t) return;
+                t.textContent = text;
+                t.classList.add('show');
+                clearTimeout(window._toastTimer);
+                window._toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+            };
+
+            // Инициализация (ваш game.js подхватит)
             if (typeof initWheel === 'function') initWheel();
-            // Рендер
             if (typeof render === 'function') render();
-            console.log('✅ DOM + стили с анимациями загружены');
+            console.log('✅ Новая графика с левитацией и подсветкой кнопок загружена');
         });
     </script>
-    <!-- ВАШ ОСНОВНОЙ СКРИПТ (game.js) ПОДКЛЮЧАЕТСЯ ЗДЕСЬ -->
+
+    <!-- ПОДКЛЮЧИТЕ ВАШ game.js ЗДЕСЬ -->
     <script src="game.js"></script>
 </body>
 </html>
