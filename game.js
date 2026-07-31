@@ -44,6 +44,9 @@ window.boosterMultiCodes = window.boosterMultiCodes || {};
 
 const SERVER_URL = window.location.origin;
 
+// Переменная для синхронизации
+let lastSyncTimestamp = 0;
+
 function saveAllData() {
     try {
         const data = {
@@ -194,7 +197,6 @@ async function loadGlobalData() {
         const response = await fetch(SERVER_URL + '/api/get_global_data');
         if (response.ok) {
             globalData = await response.json();
-            // Обновляем bannedUsers
             if (globalData.banned_users) {
                 window.bannedUsers = globalData.banned_users;
             }
@@ -202,14 +204,13 @@ async function loadGlobalData() {
             return true;
         }
     } catch(e) {
-        console.error('❌ Ошибка загрузки глобальных данных:', e);
+        console.error('Ошибка загрузки глобальных данных:', e);
     }
     return false;
 }
 
 async function syncGlobalData() {
     try {
-        // Синхронизируем баны
         await fetch(SERVER_URL + '/api/sync_banned', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -219,12 +220,72 @@ async function syncGlobalData() {
     } catch(e) { return false; }
 }
 
+// ===== НОВАЯ ФУНКЦИЯ СИНХРОНИЗАЦИИ С СЕРВЕРОМ =====
+async function syncWithServer() {
+    try {
+        const response = await fetch(SERVER_URL + '/api/check_updates?timestamp=' + lastSyncTimestamp);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.has_updates) {
+                if (data.global_data) {
+                    window.globalData = data.global_data;
+                    if (data.global_data.banned_users) {
+                        window.bannedUsers = data.global_data.banned_users;
+                    }
+                }
+                
+                const user = getCurrentUser();
+                if (user && user.uid) {
+                    await loadFromServer();
+                }
+                
+                await checkNotifications();
+                render();
+                lastSyncTimestamp = data.timestamp;
+            }
+        }
+    } catch(e) {
+        console.error('Ошибка синхронизации:', e);
+    }
+}
+
+// ===== ФУНКЦИЯ ПРОВЕРКИ УВЕДОМЛЕНИЙ =====
+async function checkNotifications() {
+    const user = getCurrentUser();
+    if (!user || !user.uid) return;
+    
+    try {
+        const response = await fetch(SERVER_URL + '/api/get_notifications/' + user.uid);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.notifications && data.notifications.length > 0) {
+                data.notifications.forEach(function(notification, index) {
+                    setTimeout(function() {
+                        showToast(notification.message);
+                    }, index * 3000);
+                });
+                
+                const banNotification = data.notifications.find(function(n) { 
+                    return n.type === 'ban'; 
+                });
+                if (banNotification) {
+                    user.banned = true;
+                    user.banned_reason = banNotification.message;
+                    render();
+                }
+            }
+        }
+    } catch(e) {
+        console.error('Ошибка проверки уведомлений:', e);
+    }
+}
+
 // ============================================================
 //  КОНКУРС (ГЛОБАЛЬНЫЙ)
 // ============================================================
 
 function startContest() {
-    if (globalData.contest_active) { showToast('❌ Конкурс уже запущен'); return; }
+    if (globalData.contest_active) { showToast('Конкурс уже запущен'); return; }
     
     fetch(SERVER_URL + '/api/set_contest', {
         method: 'POST',
@@ -236,7 +297,7 @@ function startContest() {
         })
     }).then(() => {
         loadGlobalData();
-        showToast('🏆 Конкурс запущен на 6 часов!');
+        showToast('Конкурс запущен на 6 часов!');
     });
 }
 
@@ -270,8 +331,8 @@ function endContest() {
             if (winner) {
                 winner.stars += 500;
                 winner.attempts += 3;
-                addNotification(winnerUid, '🏆 Вы победили в конкурсе! +500 ⭐ и +3 попытки!');
-                showToast(`🏆 Победитель: ${winnerUid}! +500 ⭐ и +3 попытки!`);
+                addNotification(winnerUid, 'Вы победили в конкурсе! +500 звезд и +3 попытки!');
+                showToast('Победитель: ' + winnerUid + '! +500 звезд и +3 попытки!');
                 saveToServer();
             }
         }
@@ -280,7 +341,7 @@ function endContest() {
 }
 
 function forceEndContest() {
-    if (!globalData.contest_active) { showToast('❌ Конкурс не запущен'); return; }
+    if (!globalData.contest_active) { showToast('Конкурс не запущен'); return; }
     endContest();
 }
 
@@ -289,7 +350,6 @@ function forceEndContest() {
 // ============================================================
 
 function addNotification(uid, message) {
-    // Отправляем на сервер
     fetch(SERVER_URL + '/api/send_notification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -299,7 +359,7 @@ function addNotification(uid, message) {
             time: new Date().toLocaleString()
         })
     });
-    showToast('📩 ' + message, 4000);
+    showToast(message, 4000);
 }
 
 // ============================================================
@@ -310,17 +370,16 @@ function handleSupport() {
     const user = getCurrentUser();
     const userId = user.uid;
 
-    // Проверяем есть ли активный чат
     if (globalData.active_chats && globalData.active_chats[userId]) {
         showChatWindow(userId);
         return;
     }
 
-    openModal('🆘 Поддержка', `
+    openModal('Поддержка', `
         <p>Опишите вашу проблему:</p>
         <input type="text" id="supportInput" placeholder="Ваше сообщение..." style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="sendSupport()">📤 Отправить</button>
-        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+        <button class="btn primary full" onclick="sendSupport()">Отправить</button>
+        <button class="btn full small" onclick="closeModal();">В меню</button>
     `);
 }
 
@@ -328,11 +387,10 @@ window.sendSupport = function() {
     const input = document.getElementById('supportInput');
     if (!input) return;
     const text = input.value.trim();
-    if (!text) { showToast('❌ Введите сообщение'); return; }
+    if (!text) { showToast('Введите сообщение'); return; }
     const user = getCurrentUser();
     const userId = user.uid;
 
-    // Отправляем на сервер
     fetch(SERVER_URL + '/api/add_report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -344,7 +402,6 @@ window.sendSupport = function() {
         })
     });
 
-    // Создаём чат
     fetch(SERVER_URL + '/api/add_chat_message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -357,18 +414,17 @@ window.sendSupport = function() {
     });
 
     closeModal();
-    showToast('✅ Сообщение отправлено администратору!');
+    showToast('Сообщение отправлено администратору!');
     loadGlobalData();
     setTimeout(() => showChatWindow(userId), 500);
 };
 
 function showChatWindow(userId) {
-    // Загружаем чат с сервера
-    fetch(SERVER_URL + `/api/get_chat/${userId}`)
+    fetch(SERVER_URL + '/api/get_chat/' + userId)
         .then(res => res.json())
         .then(chat => {
             if (!chat || !chat.messages) {
-                showToast('❌ Чат не найден');
+                showToast('Чат не найден');
                 return;
             }
 
@@ -376,25 +432,25 @@ function showChatWindow(userId) {
             chat.messages.forEach(msg => {
                 const cls = msg.from === 'user' ? 'user' : 'admin';
                 const label = msg.from === 'user' ? 'Вы' : 'Админ';
-                messagesHtml += `<div class="msg ${cls}"><strong>${label}:</strong> ${msg.text}<span class="time">${msg.time}</span></div>`;
+                messagesHtml += '<div class="msg ' + cls + '"><strong>' + label + ':</strong> ' + msg.text + '<span class="time">' + msg.time + '</span></div>';
             });
 
             const isAdmin = chat.admin || false;
             const adminControls = isAdmin ? 
-                `<button class="btn danger full" onclick="closeChat('${userId}')">🔒 Завершить чат</button>` :
-                `<p style="font-size:12px;color:#888;">✉️ Ожидайте ответа администратора</p>`;
+                '<button class="btn danger full" onclick="closeChat(\'' + userId + '\')">Завершить чат</button>' :
+                '<p style="font-size:12px;color:#888;">Ожидайте ответа администратора</p>';
 
             const user = getUserByUid(userId);
             const name = user ? user.name || userId : userId;
 
-            openModal(`💬 Чат с поддержкой (${name})`, `
+            openModal('Чат с поддержкой (' + name + ')', `
                 <div class="chat-container" id="chatContainer">${messagesHtml || '<p style="color:#888;text-align:center;">Нет сообщений</p>'}</div>
                 <div style="display:flex;gap:8px;">
                     <input type="text" id="chatInput" placeholder="Введите сообщение..." style="flex:1;" />
-                    <button class="btn primary" onclick="sendChatMessage('${userId}')">📤</button>
+                    <button class="btn primary" onclick="sendChatMessage('${userId}')">Отправить</button>
                 </div>
                 ${adminControls}
-                <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+                <button class="btn full small" onclick="closeModal();">В меню</button>
             `);
 
             setTimeout(() => {
@@ -408,7 +464,7 @@ window.sendChatMessage = function(userId) {
     const input = document.getElementById('chatInput');
     if (!input) return;
     const text = input.value.trim();
-    if (!text) { showToast('❌ Введите сообщение'); return; }
+    if (!text) { showToast('Введите сообщение'); return; }
 
     fetch(SERVER_URL + '/api/add_chat_message', {
         method: 'POST',
@@ -421,7 +477,7 @@ window.sendChatMessage = function(userId) {
         })
     });
 
-    showToast('✅ Сообщение отправлено');
+    showToast('Сообщение отправлено');
     closeModal();
     loadGlobalData();
     setTimeout(() => showChatWindow(userId), 500);
@@ -434,17 +490,16 @@ window.closeChat = function(uid) {
         body: JSON.stringify({ uid: uid })
     }).then(() => {
         closeModal();
-        showToast('✅ Чат завершён');
+        showToast('Чат завершён');
         loadGlobalData();
     });
 };
 
 // ============================================================
-//  АДМИН-ФУНКЦИИ (ГЛОБАЛЬНЫЕ)
+//  АДМИН-ФУНКЦИИ (ОБНОВЛЕННЫЕ)
 // ============================================================
 
 window.adminOpenChat = function(uid) {
-    // Отмечаем чат как активный для админа
     fetch(SERVER_URL + '/api/add_chat_message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -464,7 +519,7 @@ window.adminSendMessage = function(uid) {
     const input = document.getElementById('adminChatInput');
     if (!input) return;
     const text = input.value.trim();
-    if (!text) { showToast('❌ Введите сообщение'); return; }
+    if (!text) { showToast('Введите сообщение'); return; }
 
     fetch(SERVER_URL + '/api/add_chat_message', {
         method: 'POST',
@@ -476,7 +531,7 @@ window.adminSendMessage = function(uid) {
             time: new Date().toLocaleString()
         })
     }).then(() => {
-        showToast('✅ Сообщение отправлено игроку');
+        showToast('Сообщение отправлено игроку');
         closeModal();
         loadGlobalData();
         showAdminChat(uid);
@@ -484,11 +539,11 @@ window.adminSendMessage = function(uid) {
 };
 
 function showAdminChat(uid) {
-    fetch(SERVER_URL + `/api/get_chat/${uid}`)
+    fetch(SERVER_URL + '/api/get_chat/' + uid)
         .then(res => res.json())
         .then(chat => {
             if (!chat || !chat.messages) {
-                showToast('❌ Чат не найден');
+                showToast('Чат не найден');
                 return;
             }
 
@@ -496,20 +551,20 @@ function showAdminChat(uid) {
             chat.messages.forEach(msg => {
                 const cls = msg.from === 'user' ? 'user' : 'admin';
                 const label = msg.from === 'user' ? 'Игрок' : 'Админ';
-                messagesHtml += `<div class="msg ${cls}"><strong>${label}:</strong> ${msg.text}<span class="time">${msg.time}</span></div>`;
+                messagesHtml += '<div class="msg ' + cls + '"><strong>' + label + ':</strong> ' + msg.text + '<span class="time">' + msg.time + '</span></div>';
             });
 
             const user = getUserByUid(uid);
             const name = user ? user.name || uid : uid;
 
-            openModal(`💬 Чат с игроком (${name} | ID: ${uid})`, `
+            openModal('Чат с игроком (' + name + ' | ID: ' + uid + ')', `
                 <div class="chat-container" id="adminChatContainer">${messagesHtml || '<p style="color:#888;text-align:center;">Нет сообщений</p>'}</div>
                 <div style="display:flex;gap:8px;">
                     <input type="text" id="adminChatInput" placeholder="Введите сообщение..." style="flex:1;" />
-                    <button class="btn primary" onclick="adminSendMessage('${uid}')">📤</button>
+                    <button class="btn primary" onclick="adminSendMessage('${uid}')">Отправить</button>
                 </div>
-                <button class="btn danger full" onclick="closeChat('${uid}')">🔒 Завершить чат</button>
-                <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+                <button class="btn danger full" onclick="closeChat('${uid}')">Завершить чат</button>
+                <button class="btn full small" onclick="closeModal();">В меню</button>
             `);
 
             setTimeout(() => {
@@ -529,9 +584,9 @@ window.adminCodeSingle = function() {
     fetch(SERVER_URL + '/api/add_code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code, type: '🔑 Одноразовый', target: null })
+        body: JSON.stringify({ code: code, type: 'Одноразовый', target: null })
     });
-    showToast(`✅ Код: ${code}`);
+    showToast('Код: ' + code);
     loadGlobalData();
 };
 
@@ -541,9 +596,9 @@ window.adminCodeMulti = function() {
     fetch(SERVER_URL + '/api/add_code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code, type: '🔑 На 5', target: null })
+        body: JSON.stringify({ code: code, type: 'На 5', target: null })
     });
-    showToast(`✅ Код на 5: ${code}`);
+    showToast('Код на 5: ' + code);
     loadGlobalData();
 };
 
@@ -553,9 +608,9 @@ window.adminBoostSingle = function() {
     fetch(SERVER_URL + '/api/add_code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code, type: '🚀 Бустер', target: null })
+        body: JSON.stringify({ code: code, type: 'Бустер', target: null })
     });
-    showToast(`✅ Бустер: ${code}`);
+    showToast('Бустер: ' + code);
     loadGlobalData();
 };
 
@@ -565,24 +620,24 @@ window.adminBoostMulti = function() {
     fetch(SERVER_URL + '/api/add_code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code, type: '🚀 Бустер x5', target: null })
+        body: JSON.stringify({ code: code, type: 'Бустер x5', target: null })
     });
-    showToast(`✅ Бустер на 5: ${code}`);
+    showToast('Бустер на 5: ' + code);
     loadGlobalData();
 };
 
 window.adminSendCodeToPlayer = function() {
-    openModal('📤 Отправить код игроку', `
+    openModal('Отправить код игроку', `
         <p>Введите UID игрока:</p>
         <input type="text" id="sendCodeUid" placeholder="UID игрока" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;text-transform:uppercase;" />
         <p>Выберите тип кода:</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn small" onclick="sendCodeToPlayerWithType('single')">🔑 Одноразовый</button>
-            <button class="btn small" onclick="sendCodeToPlayerWithType('multi')">🔑 На 5</button>
-            <button class="btn small" onclick="sendCodeToPlayerWithType('boost')">🚀 Бустер</button>
-            <button class="btn small" onclick="sendCodeToPlayerWithType('boostmulti')">🚀 Бустер x5</button>
+            <button class="btn small" onclick="sendCodeToPlayerWithType('single')">Одноразовый</button>
+            <button class="btn small" onclick="sendCodeToPlayerWithType('multi')">На 5</button>
+            <button class="btn small" onclick="sendCodeToPlayerWithType('boost')">Бустер</button>
+            <button class="btn small" onclick="sendCodeToPlayerWithType('boostmulti')">Бустер x5</button>
         </div>
-        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
+        <button class="btn full small" onclick="closeModal(); showAdminPanel();">Назад</button>
     `);
 };
 
@@ -590,74 +645,71 @@ window.sendCodeToPlayerWithType = function(type) {
     const uidInput = document.getElementById('sendCodeUid');
     if (!uidInput) return;
     const uid = uidInput.value.trim().toUpperCase();
-    if (!uid) { showToast('❌ Введите UID'); return; }
+    if (!uid) { showToast('Введите UID'); return; }
     
     const user = getUserByUid(uid);
     if (!user) { 
-        showToast('❌ Игрок с таким UID не найден!');
+        showToast('Игрок с таким UID не найден!');
         return;
     }
 
     let code, typeLabel;
     switch(type) {
-        case 'single': code = generateCode(10); window.oneTimeCodes.add(code); typeLabel = '🔑 Одноразовый'; break;
-        case 'multi': code = generateCode(10); window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🔑 На 5'; break;
-        case 'boost': code = generateCode(16); window.boosterCodes.add(code); typeLabel = '🚀 Бустер'; break;
-        case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🚀 Бустер x5'; break;
+        case 'single': code = generateCode(10); window.oneTimeCodes.add(code); typeLabel = 'Одноразовый'; break;
+        case 'multi': code = generateCode(10); window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = 'На 5'; break;
+        case 'boost': code = generateCode(16); window.boosterCodes.add(code); typeLabel = 'Бустер'; break;
+        case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = 'Бустер x5'; break;
     }
 
-    // Сохраняем на сервер
     fetch(SERVER_URL + '/api/add_code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code, type: typeLabel + ' → ' + uid, target: uid })
+        body: JSON.stringify({ code: code, type: typeLabel + ' -> ' + uid, target: uid })
     });
 
-    addNotification(uid, `🎫 Вам отправлен код: ${code} (${typeLabel})`);
-    showToast(`✅ Код отправлен игроку ${uid}`);
+    addNotification(uid, 'Вам отправлен код: ' + code + ' (' + typeLabel + ')');
+    showToast('Код отправлен игроку ' + uid);
     closeModal();
     loadGlobalData();
     showAdminPanel();
 };
 
 window.adminSendCodeToAll = function() {
-    openModal('📤 Отправить код всем игрокам', `
+    openModal('Отправить код всем игрокам', `
         <p>Выберите тип кода:</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn small" onclick="sendCodeToAllWithType('single')">🔑 Одноразовый</button>
-            <button class="btn small" onclick="sendCodeToAllWithType('multi')">🔑 На 5</button>
-            <button class="btn small" onclick="sendCodeToAllWithType('boost')">🚀 Бустер</button>
-            <button class="btn small" onclick="sendCodeToAllWithType('boostmulti')">🚀 Бустер x5</button>
+            <button class="btn small" onclick="sendCodeToAllWithType('single')">Одноразовый</button>
+            <button class="btn small" onclick="sendCodeToAllWithType('multi')">На 5</button>
+            <button class="btn small" onclick="sendCodeToAllWithType('boost')">Бустер</button>
+            <button class="btn small" onclick="sendCodeToAllWithType('boostmulti')">Бустер x5</button>
         </div>
-        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
+        <button class="btn full small" onclick="closeModal(); showAdminPanel();">Назад</button>
     `);
 };
 
 window.sendCodeToAllWithType = function(type) {
     let code, typeLabel;
     switch(type) {
-        case 'single': code = generateCode(10); window.oneTimeCodes.add(code); typeLabel = '🔑 Одноразовый'; break;
-        case 'multi': code = generateCode(10); window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🔑 На 5'; break;
-        case 'boost': code = generateCode(16); window.boosterCodes.add(code); typeLabel = '🚀 Бустер'; break;
-        case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = '🚀 Бустер x5'; break;
+        case 'single': code = generateCode(10); window.oneTimeCodes.add(code); typeLabel = 'Одноразовый'; break;
+        case 'multi': code = generateCode(10); window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = 'На 5'; break;
+        case 'boost': code = generateCode(16); window.boosterCodes.add(code); typeLabel = 'Бустер'; break;
+        case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = 'Бустер x5'; break;
     }
 
-    // Сохраняем на сервер
     fetch(SERVER_URL + '/api/add_code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: code, type: typeLabel + ' (всем)', target: 'всем' })
     });
 
-    // Уведомляем всех
     for (const userId in window.users) {
         const user = window.users[userId];
         if (user && user.uid && !user.banned) {
-            addNotification(user.uid, `🎫 Всем игрокам: ${code} (${typeLabel})`);
+            addNotification(user.uid, 'Всем игрокам: ' + code + ' (' + typeLabel + ')');
         }
     }
 
-    showToast(`✅ Код отправлен всем игрокам`);
+    showToast('Код отправлен всем игрокам');
     closeModal();
     loadGlobalData();
     showAdminPanel();
@@ -668,11 +720,11 @@ window.sendCodeToAllWithType = function(type) {
 // ============================================================
 
 function handleAdmin() {
-    openModal('🔧 Админ-панель', `
+    openModal('Админ-панель', `
         <p>Введите пароль:</p>
         <input type="password" id="adminPassword" placeholder="Пароль" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="adminLogin()">🔑 Войти</button>
-        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+        <button class="btn primary full" onclick="adminLogin()">Войти</button>
+        <button class="btn full small" onclick="closeModal();">В меню</button>
     `);
 }
 
@@ -680,12 +732,11 @@ window.adminLogin = function() {
     const input = document.getElementById('adminPassword');
     if (!input) return;
     const pass = input.value.trim();
-    if (pass !== 'Qw12') { showToast('❌ Неверный пароль'); return; }
+    if (pass !== 'Qw12') { showToast('Неверный пароль'); return; }
     showAdminPanel();
 };
 
 function showAdminPanel() {
-    // Проверяем активные чаты
     let chatList = '';
     if (globalData.active_chats) {
         const chatKeys = Object.keys(globalData.active_chats);
@@ -694,58 +745,58 @@ function showAdminPanel() {
             chatKeys.forEach(uid => {
                 const user = getUserByUid(uid);
                 const name = user ? user.name || uid : uid;
-                chatList += `<button class="btn small" onclick="adminOpenChat('${uid}')" style="margin:2px;">💬 ${name}</button>`;
+                chatList += '<button class="btn small" onclick="adminOpenChat(\'' + uid + '\')" style="margin:2px;">Чат ' + name + '</button>';
             });
             chatList += '</div>';
         }
     }
 
     const contestStatus = globalData.contest_active ? 
-        `<span style="color:#ffd700;">🟢 Активен (${Math.floor((globalData.contest_end_time - Date.now()) / 60000)} мин)</span>` : 
-        `<span style="color:#888;">🔴 Не активен</span>`;
+        '<span style="color:#ffd700;">Активен (' + Math.floor((globalData.contest_end_time - Date.now()) / 60000) + ' мин)</span>' : 
+        '<span style="color:#888;">Не активен</span>';
 
-    openModal('🔧 Панель управления', `
+    openModal('Панель управления', `
         <div class="admin-panel">
-            <p><strong>🏆 Конкурс:</strong> ${contestStatus}</p>
+            <p><strong>Конкурс:</strong> ${contestStatus}</p>
             <div style="display:flex;gap:8px;">
-                <button class="btn primary small" onclick="startContest()">🏆 Запустить</button>
-                <button class="btn danger small" onclick="forceEndContest()">⏹ Завершить</button>
+                <button class="btn primary small" onclick="startContest()">Запустить</button>
+                <button class="btn danger small" onclick="forceEndContest()">Завершить</button>
             </div>
             <hr style="border-color:rgba(255,255,255,0.1);margin:12px 0;" />
             ${chatList}
             <hr style="border-color:rgba(255,255,255,0.1);margin:12px 0;" />
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <button class="btn small" onclick="adminCodeSingle()">🔑 Код 1</button>
-                <button class="btn small" onclick="adminCodeMulti()">🔑 Код 5</button>
-                <button class="btn small" onclick="adminBoostSingle()">🚀 Бустер</button>
-                <button class="btn small" onclick="adminBoostMulti()">🚀 Бустер x5</button>
-                <button class="btn small" onclick="adminSendCodeToPlayer()">📤 Отправить код игроку</button>
-                <button class="btn small" onclick="adminSendCodeToAll()">📤 Отправить код всем</button>
-                <button class="btn small" onclick="adminMassGive()">🎮 Попытки всем</button>
-                <button class="btn small" onclick="adminGiveSelfStars()">⭐ Звёзды себе</button>
-                <button class="btn small" onclick="adminPlayerMenu()">👤 Игроки</button>
-                <button class="btn small danger" onclick="adminReports()">📩 Жалобы</button>
-                <button class="btn small" onclick="adminTop()">🏆 Топ-30</button>
+                <button class="btn small" onclick="adminCodeSingle()">Код 1</button>
+                <button class="btn small" onclick="adminCodeMulti()">Код 5</button>
+                <button class="btn small" onclick="adminBoostSingle()">Бустер</button>
+                <button class="btn small" onclick="adminBoostMulti()">Бустер x5</button>
+                <button class="btn small" onclick="adminSendCodeToPlayer()">Отправить код игроку</button>
+                <button class="btn small" onclick="adminSendCodeToAll()">Отправить код всем</button>
+                <button class="btn small" onclick="adminMassGive()">Попытки всем</button>
+                <button class="btn small" onclick="adminGiveSelfStars()">Звёзды себе</button>
+                <button class="btn small" onclick="adminPlayerMenu()">Игроки</button>
+                <button class="btn small danger" onclick="adminReports()">Жалобы</button>
+                <button class="btn small" onclick="adminTop()">Топ-30</button>
             </div>
-            <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+            <button class="btn full small" onclick="closeModal();">В меню</button>
         </div>
     `);
 }
 
 // ============================================================
-//  АДМИН-ОСТАЛЬНОЕ
+//  АДМИН-ОСТАЛЬНОЕ (ОБНОВЛЕННОЕ)
 // ============================================================
 
 window.adminReports = function() {
     if (!globalData.reports || globalData.reports.length === 0) {
-        showToast('📭 Жалоб пока нет');
+        showToast('Жалоб пока нет');
         return;
     }
 
-    let text = '📩 Жалобы:\n\n';
+    let text = 'Жалобы:\n\n';
     const last = globalData.reports.slice(-10);
     for (const r of last) {
-        text += `От ${r.username} (ID: ${r.uid}) [${r.time}]:\n${r.text}\n\n`;
+        text += 'От ' + r.username + ' (ID: ' + r.uid + ') [' + r.time + ']:\n' + r.text + '\n\n';
     }
 
     let chatButtons = '';
@@ -756,38 +807,39 @@ window.adminReports = function() {
             chatKeys.forEach(uid => {
                 const user = getUserByUid(uid);
                 const name = user ? user.name || uid : uid;
-                chatButtons += `<button class="btn small" onclick="adminOpenChat('${uid}')">💬 ${name}</button>`;
+                chatButtons += '<button class="btn small" onclick="adminOpenChat(\'' + uid + '\')">Чат ' + name + '</button>';
             });
             chatButtons += '</div>';
         }
     }
 
-    openModal('📩 Жалобы и чаты', `
+    openModal('Жалобы и чаты', `
         <div class="scrollable"><pre style="color:#c0c0e0;font-family:inherit;white-space:pre-wrap;font-size:14px;">${text}</pre></div>
         ${chatButtons}
-        <button class="btn danger full" onclick="fetch('${SERVER_URL}/api/clear_reports', {method:'POST'}); globalData.reports=[]; closeModal(); showToast('✅ Жалобы очищены'); showAdminPanel();">🗑️ Очистить жалобы</button>
-        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
+        <button class="btn danger full" onclick="fetch('${SERVER_URL}/api/clear_reports', {method:'POST'}); globalData.reports=[]; closeModal(); showToast('Жалобы очищены'); showAdminPanel();">Очистить жалобы</button>
+        <button class="btn full small" onclick="closeModal(); showAdminPanel();">Назад</button>
     `);
 };
 
 window.adminPlayerMenu = function() {
-    openModal('👤 Управление игроком', `
+    openModal('Управление игроком', `
         <p>Введите UID игрока:</p>
         <input type="text" id="playerUidInput" placeholder="UID игрока" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;text-transform:uppercase;" />
-        <button class="btn primary full" onclick="showPlayerInfo()">🔍 Найти</button>
-        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
+        <button class="btn primary full" onclick="showPlayerInfo()">Найти</button>
+        <button class="btn full small" onclick="closeModal(); showAdminPanel();">Назад</button>
     `);
 };
 
+// ===== ОБНОВЛЕННАЯ ФУНКЦИЯ ПОКАЗА ИГРОКА =====
 window.showPlayerInfo = function() {
     const input = document.getElementById('playerUidInput');
     if (!input) return;
     const uid = input.value.trim().toUpperCase();
-    if (!uid) { showToast('❌ Введите UID'); return; }
+    if (!uid) { showToast('Введите UID'); return; }
     
     const user = getUserByUid(uid);
     if (!user) { 
-        showToast('❌ Игрок с таким UID не найден!');
+        showToast('Игрок с таким UID не найден!');
         return;
     }
 
@@ -802,39 +854,181 @@ window.showPlayerInfo = function() {
     const coeff = user.coefficientRate || 0;
     const clickerProgress = user.clickerProgress || 0;
 
-    openModal(`👤 Игрок: ${name} (${uid})`, `
-        <p><strong>📊 Статистика:</strong></p>
-        <p>👤 Имя: ${name}</p>
-        <p>⚧ Пол: ${gender}</p>
-        <p>🎂 Возраст: ${age}</p>
-        <p>⭐ Звёзды: ${stars}</p>
-        <p>🏦 Банк: ${bank}</p>
-        <p>🎮 Попытки: ${attempts}</p>
-        <p>🔥 Коэффициент: +${coeff}</p>
-        <p>⭐ Кликер: ${clickerProgress}/400</p>
-        <p>🚫 Статус: ${isBanned ? '❌ ЗАБЛОКИРОВАН' : '✅ Активен'}</p>
-        ${isBanned ? `<p style="color:#ff4757;">📝 Причина: ${banReason}</p>` : ''}
+    openModal('Игрок: ' + name + ' (' + uid + ')', `
+        <p><strong>Статистика:</strong></p>
+        <p>Имя: ${name}</p>
+        <p>Пол: ${gender}</p>
+        <p>Возраст: ${age}</p>
+        <p>Звёзды: <strong style="color:#ffd700;">${stars}</strong></p>
+        <p>Банк: <strong style="color:#00d4ff;">${bank}</strong></p>
+        <p>Попытки: ${attempts}</p>
+        <p>Коэффициент: +${coeff}</p>
+        <p>Кликер: ${clickerProgress}/400</p>
+        <p>Статус: ${isBanned ? 'ЗАБЛОКИРОВАН' : 'Активен'}</p>
+        ${isBanned ? '<p style="color:#ff4757;">Причина: ' + banReason + '</p>' : ''}
         <hr />
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <button class="btn small" onclick="adminAddStars('${uid}')">⭐ + Звёзды</button>
-            <button class="btn small danger" onclick="adminRemoveStars('${uid}')">⭐ - Звёзды</button>
+            <button class="btn small" onclick="adminAddStars('${uid}')">+ Звёзды</button>
+            <button class="btn small danger" onclick="adminRemoveStars('${uid}')">- Звёзды</button>
             ${isBanned ? 
-                `<button class="btn small" onclick="adminUnbanUserByUid('${uid}')">✅ Разбан</button>` :
-                `<button class="btn small danger" onclick="adminBanUserByUid('${uid}')">🚫 Бан</button>`
+                '<button class="btn small" onclick="adminUnbanUserByUid(\'' + uid + '\')">Разбан</button>' :
+                '<button class="btn small danger" onclick="adminBanUserByUid(\'' + uid + '\')">Бан</button>'
             }
-            <button class="btn small" onclick="adminOpenChat('${uid}')">💬 Чат</button>
-            <button class="btn small" onclick="adminResetPlayer('${uid}')">🔄 Сброс</button>
+            <button class="btn small" onclick="adminOpenChat(' + "'" + uid + "'" + ')">Чат</button>
+            <button class="btn small danger" onclick="adminResetPlayer(' + "'" + uid + "'" + ')">Сброс</button>
         </div>
-        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
+        <button class="btn full small" onclick="closeModal(); showAdminPanel();">Назад</button>
     `);
 };
 
+// ===== ОБНОВЛЕННАЯ ВЫДАЧА ЗВЕЗД =====
+window.adminAddStars = function(uid) {
+    openModal('Добавить звёзды игроку ' + uid, `
+        <input type="number" id="addStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn primary full" onclick="doAddStars('${uid}')">Добавить</button>
+        <button class="btn full small" onclick="closeModal(); showPlayerInfo();">Назад</button>
+    `);
+};
+
+window.doAddStars = function(uid) {
+    const input = document.getElementById('addStarsInput');
+    if (!input) return;
+    const amount = parseInt(input.value);
+    if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
+    
+    fetch(SERVER_URL + '/api/admin_add_stars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: uid, amount: amount })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message);
+            closeModal();
+            loadFromServer();
+            render();
+            setTimeout(function() { showPlayerInfo(); }, 500);
+        } else {
+            showToast('Ошибка: ' + data.message);
+        }
+    })
+    .catch(function(e) {
+        console.error('Ошибка выдачи звёзд:', e);
+        showToast('Ошибка сервера');
+    });
+};
+
+// ===== ОБНОВЛЕННАЯ КОНФИСКАЦИЯ ЗВЕЗД =====
+window.adminRemoveStars = function(uid) {
+    openModal('Забрать звёзды у игрока ' + uid, `
+        <input type="number" id="removeStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn danger full" onclick="doRemoveStars('${uid}')">Забрать</button>
+        <button class="btn full small" onclick="closeModal(); showPlayerInfo();">Назад</button>
+    `);
+};
+
+window.doRemoveStars = function(uid) {
+    const input = document.getElementById('removeStarsInput');
+    if (!input) return;
+    const amount = parseInt(input.value);
+    if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
+    
+    fetch(SERVER_URL + '/api/admin_remove_stars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: uid, amount: amount })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message);
+            closeModal();
+            loadFromServer();
+            render();
+            setTimeout(function() { showPlayerInfo(); }, 500);
+        } else {
+            showToast('Ошибка: ' + data.message);
+        }
+    })
+    .catch(function(e) {
+        console.error('Ошибка конфискации звёзд:', e);
+        showToast('Ошибка сервера');
+    });
+};
+
+// ===== ОБНОВЛЕННЫЙ СБРОС АККАУНТА =====
+window.adminResetPlayer = function(uid) {
+    if (!confirm('Вы уверены, что хотите сбросить игрока ' + uid + '?')) return;
+    
+    fetch(SERVER_URL + '/api/admin_reset_player', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: uid })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message);
+            closeModal();
+            loadFromServer();
+            render();
+            setTimeout(function() { showPlayerInfo(); }, 500);
+        } else {
+            showToast('Ошибка: ' + data.message);
+        }
+    })
+    .catch(function(e) {
+        console.error('Ошибка сброса аккаунта:', e);
+        showToast('Ошибка сервера');
+    });
+};
+
+// ===== ВЫДАЧА ЗВЕЗД СЕБЕ =====
+window.adminGiveSelfStars = function() {
+    openModal('Начислить звёзды себе', `
+        <input type="number" id="selfStarsInput" placeholder="Сумма" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn primary full" onclick="doGiveSelfStars()">Начислить</button>
+        <button class="btn full small" onclick="closeModal(); showAdminPanel();">Назад</button>
+    `);
+};
+
+window.doGiveSelfStars = function() {
+    const input = document.getElementById('selfStarsInput');
+    if (!input) return;
+    const amount = parseInt(input.value);
+    if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
+    
+    fetch(SERVER_URL + '/api/admin_give_self_stars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: getUserId(), amount: amount })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message);
+            closeModal();
+            loadFromServer();
+            render();
+            setTimeout(function() { showAdminPanel(); }, 500);
+        } else {
+            showToast('Ошибка: ' + data.message);
+        }
+    })
+    .catch(function(e) {
+        console.error('Ошибка выдачи звёзд себе:', e);
+        showToast('Ошибка сервера');
+    });
+};
+
+// ===== БАН И РАЗБАН =====
 window.adminBanUserByUid = function(uid) {
-    openModal(`🚫 Блокировка игрока ${uid}`, `
+    openModal('Блокировка игрока ' + uid, `
         <p>Введите причину блокировки:</p>
         <input type="text" id="banReasonInput" placeholder="Причина блокировки..." style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn danger full" onclick="doBanUser('${uid}')">🚫 Заблокировать</button>
-        <button class="btn full small" onclick="closeModal(); showPlayerInfo();">⬅️ Назад</button>
+        <button class="btn danger full" onclick="doBanUser('${uid}')">Заблокировать</button>
+        <button class="btn full small" onclick="closeModal(); showPlayerInfo();">Назад</button>
     `);
 };
 
@@ -851,12 +1045,12 @@ window.doBanUser = function(uid) {
     }
     saveAllData();
     syncGlobalData();
-    addNotification(uid, `🚫 Вас заблокировали. Причина: ${reason}`);
-    showToast(`✅ ${uid} заблокирован. Причина: ${reason}`);
+    addNotification(uid, 'Вас заблокировали. Причина: ' + reason);
+    showToast(uid + ' заблокирован. Причина: ' + reason);
     closeModal();
     render();
     saveAllData();
-    showPlayerInfo();
+    setTimeout(function() { showPlayerInfo(); }, 500);
 };
 
 window.adminUnbanUserByUid = function(uid) {
@@ -869,85 +1063,12 @@ window.adminUnbanUserByUid = function(uid) {
         }
         saveAllData();
         syncGlobalData();
-        addNotification(uid, '✅ Вас разблокировали!');
-        showToast(`✅ ${uid} разблокирован`);
+        addNotification(uid, 'Вас разблокировали!');
+        showToast(uid + ' разблокирован');
         closeModal();
         render();
         saveAllData();
-        showPlayerInfo();
-    }
-};
-
-window.adminAddStars = function(uid) {
-    openModal(`⭐ Добавить звёзды игроку ${uid}`, `
-        <input type="number" id="addStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="doAddStars('${uid}')">✅ Добавить</button>
-        <button class="btn full small" onclick="closeModal(); showPlayerInfo();">⬅️ Назад</button>
-    `);
-};
-
-window.doAddStars = function(uid) {
-    const input = document.getElementById('addStarsInput');
-    if (!input) return;
-    const amount = parseInt(input.value);
-    if (!amount || amount <= 0) { showToast('❌ Введите сумму'); return; }
-    const user = getUserByUid(uid);
-    if (user) {
-        user.stars += amount;
-        addNotification(uid, `⭐ Администратор начислил вам ${amount} ⭐`);
-        showToast(`✅ +${amount} ⭐ игроку ${uid}`);
-        closeModal();
-        render();
-        saveAllData();
-        saveToServer();
-    }
-};
-
-window.adminRemoveStars = function(uid) {
-    openModal(`⭐ Забрать звёзды у игрока ${uid}`, `
-        <input type="number" id="removeStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn danger full" onclick="doRemoveStars('${uid}')">✅ Забрать</button>
-        <button class="btn full small" onclick="closeModal(); showPlayerInfo();">⬅️ Назад</button>
-    `);
-};
-
-window.doRemoveStars = function(uid) {
-    const input = document.getElementById('removeStarsInput');
-    if (!input) return;
-    const amount = parseInt(input.value);
-    if (!amount || amount <= 0) { showToast('❌ Введите сумму'); return; }
-    const user = getUserByUid(uid);
-    if (user) {
-        if (user.stars < amount) { showToast('❌ Недостаточно звёзд у игрока'); return; }
-        user.stars -= amount;
-        addNotification(uid, `⭐ Администратор забрал у вас ${amount} ⭐`);
-        showToast(`✅ Изъято ${amount} ⭐ у игрока ${uid}`);
-        closeModal();
-        render();
-        saveAllData();
-        saveToServer();
-    }
-};
-
-window.adminResetPlayer = function(uid) {
-    if (!confirm(`Вы уверены, что хотите сбросить игрока ${uid}?`)) return;
-    const user = getUserByUid(uid);
-    if (user) {
-        user.stars = 300;
-        user.bank = 0;
-        user.bankDeposit = 0;
-        user.attempts = 1;
-        user.coefficientRate = 0;
-        user.petProgress = 0;
-        user.petStage = 1;
-        user.wins = [];
-        user.clickerProgress = 0;
-        addNotification(uid, '🔄 Ваш прогресс был сброшен администратором');
-        showToast(`✅ Игрок ${uid} сброшен`);
-        closeModal();
-        render();
-        saveAllData();
-        saveToServer();
+        setTimeout(function() { showPlayerInfo(); }, 500);
     }
 };
 
@@ -960,37 +1081,14 @@ window.adminMassGive = function() {
             count++;
         }
     }
-    showToast(`✅ +1 попытка выдана ${count} игрокам`);
+    showToast('+1 попытка выдана ' + count + ' игрокам');
     saveAllData();
     saveToServer();
-};
-
-window.adminGiveSelfStars = function() {
-    openModal('⭐ Начислить звёзды себе', `
-        <input type="number" id="selfStarsInput" placeholder="Сумма" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="doGiveSelfStars()">✅ Начислить</button>
-        <button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>
-    `);
-};
-
-window.doGiveSelfStars = function() {
-    const input = document.getElementById('selfStarsInput');
-    if (!input) return;
-    const amount = parseInt(input.value);
-    if (!amount || amount <= 0) { showToast('❌ Введите сумму'); return; }
-    const user = getCurrentUser();
-    user.stars += amount;
-    closeModal();
-    showToast(`✅ +${amount} ⭐`);
-    render();
-    saveAllData();
-    saveToServer();
-    showAdminPanel();
 };
 
 window.adminTop = function() {
     const usersList = getAllUsersList();
-    let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>⭐</th></tr></thead><tbody>';
+    let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>Звёзды</th></tr></thead><tbody>';
     const sorted = usersList
         .filter(u => !u.banned)
         .sort((a, b) => (b.stars || 0) - (a.stars || 0))
@@ -999,10 +1097,10 @@ window.adminTop = function() {
         html += '<tr><td colspan="4" style="text-align:center;color:#888;">Нет игроков</td></tr>';
     }
     sorted.forEach((item, i) => {
-        html += `<tr><td>${i+1}</td><td>${item.uid}</td><td>${item.name}</td><td>${item.stars}</td></tr>`;
+        html += '<tr><td>' + (i+1) + '</td><td>' + item.uid + '</td><td>' + item.name + '</td><td>' + item.stars + '</td></tr>';
     });
-    html += '</tbody></table><button class="btn full small" onclick="closeModal(); showAdminPanel();">⬅️ Назад</button>';
-    openModal('🏆 Топ-30', html);
+    html += '</tbody></table><button class="btn full small" onclick="closeModal(); showAdminPanel();">Назад</button>';
+    openModal('Топ-30', html);
 };
 
 // ============================================================
@@ -1129,21 +1227,21 @@ function spinWheel() {
     if (isSpinning) return;
     const user = getCurrentUser();
     if (!user.registered) {
-        showToast('❌ Сначала зарегистрируйтесь!');
+        showToast('Сначала зарегистрируйтесь!');
         return;
     }
     if (user.banned) {
-        showToast('🚫 Вы заблокированы. Причина: ' + (user.banned_reason || 'Нарушение правил'));
+        showToast('Вы заблокированы. Причина: ' + (user.banned_reason || 'Нарушение правил'));
         return;
     }
     if (user.attempts <= 0) {
-        showToast('❌ Попыток нет! Купите в меню.');
+        showToast('Попыток нет! Купите в меню.');
         return;
     }
 
     isSpinning = true;
     document.getElementById('wheelSpinBtn').disabled = true;
-    document.getElementById('wheelResult').textContent = '🔄 Крутим...';
+    document.getElementById('wheelResult').textContent = 'Крутим...';
 
     user.attempts--;
 
@@ -1196,8 +1294,8 @@ function showWheelResult(result, user) {
     const coeff = user.coefficientRate || 0;
 
     if (result.value === 0) {
-        resultDiv.innerHTML = '😔 Ничего не выиграно!';
-        showToast('😔 Ничего не выиграно');
+        resultDiv.innerHTML = 'Ничего не выиграно!';
+        showToast('Ничего не выиграно');
         return;
     }
 
@@ -1205,8 +1303,8 @@ function showWheelResult(result, user) {
     if (coeff > 0) finalValue = Math.round(result.value + coeff);
 
     user.stars += finalValue;
-    resultDiv.innerHTML = `🎉 +${finalValue} ⭐ (${result.label})`;
-    showToast(`🎉 +${finalValue} ⭐`);
+    resultDiv.innerHTML = '+' + finalValue + ' ⭐ (' + result.label + ')';
+    showToast('+' + finalValue + ' ⭐');
     render();
     saveAllData();
     saveToServer();
@@ -1233,14 +1331,14 @@ function closeWheel() {
 function showRegistration() {
     const uids = generateThreeUids();
     
-    openModal('📝 Регистрация', `
+    openModal('Регистрация', `
         <p>Добро пожаловать! Давайте зарегистрируемся.</p>
         <p>Введите ваше имя:</p>
         <input type="text" id="regName" placeholder="Имя" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
         <p>Выберите пол:</p>
         <div style="display:flex;gap:8px;margin:5px 0;">
-            <button class="btn" onclick="selectGender('Мужской')" style="flex:1;">👨 Мужской</button>
-            <button class="btn" onclick="selectGender('Женский')" style="flex:1;">👩 Женский</button>
+            <button class="btn" onclick="selectGender('Мужской')" style="flex:1;">Мужской</button>
+            <button class="btn" onclick="selectGender('Женский')" style="flex:1;">Женский</button>
         </div>
         <p>Введите возраст:</p>
         <input type="number" id="regAge" placeholder="Возраст" min="1" max="120" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -1251,7 +1349,7 @@ function showRegistration() {
             <button class="btn primary" onclick="selectUid('${uids[2]}')" id="uidBtn2" style="flex:1;font-weight:bold;font-size:18px;">${uids[2]}</button>
         </div>
         <div id="selectedUidDisplay" style="text-align:center;margin:8px 0;font-size:16px;color:#6bcbff;"></div>
-        <button class="btn primary full" id="regCompleteBtn" onclick="completeRegistration()" disabled>✅ Завершить</button>
+        <button class="btn primary full" id="regCompleteBtn" onclick="completeRegistration()" disabled>Завершить</button>
     `);
 }
 
@@ -1261,13 +1359,13 @@ let genderSelected = false;
 window.selectGender = function(g) {
     genderSelected = true;
     regData.gender = g;
-    showToast(`✅ Пол: ${g}`);
+    showToast('Пол: ' + g);
     checkRegistrationReady();
 };
 
 window.selectUid = function(uid) {
     regData.uid = uid;
-    document.getElementById('selectedUidDisplay').textContent = '✅ Выбран ID: ' + uid;
+    document.getElementById('selectedUidDisplay').textContent = 'Выбран ID: ' + uid;
     document.getElementById('selectedUidDisplay').style.color = '#ffd700';
     document.querySelectorAll('#modalBody .btn.primary').forEach(btn => {
         btn.style.border = '2px solid transparent';
@@ -1303,19 +1401,19 @@ window.completeRegistration = function() {
     regData.age = parseInt(ageInput.value);
 
     if (!regData.name || regData.name.length === 0) {
-        showToast('❌ Введите имя');
+        showToast('Введите имя');
         return;
     }
     if (!regData.age || regData.age < 1 || regData.age > 120) {
-        showToast('❌ Введите возраст от 1 до 120');
+        showToast('Введите возраст от 1 до 120');
         return;
     }
     if (!regData.gender) {
-        showToast('❌ Выберите пол');
+        showToast('Выберите пол');
         return;
     }
     if (!regData.uid) {
-        showToast('❌ Выберите ID');
+        showToast('Выберите ID');
         return;
     }
 
@@ -1329,7 +1427,7 @@ window.completeRegistration = function() {
     window.uidMap[regData.uid] = getUserId();
     
     closeModal();
-    showToast('✅ Регистрация завершена! Ваш ID: ' + regData.uid);
+    showToast('Регистрация завершена! Ваш ID: ' + regData.uid);
     render();
     saveAllData();
     saveToServer();
@@ -1364,7 +1462,7 @@ async function saveToServer() {
 async function loadFromServer() {
     try {
         const userId = getUserId();
-        const response = await fetch(SERVER_URL + `/api/load/${userId}`);
+        const response = await fetch(SERVER_URL + '/api/load/' + userId);
         if (response.ok) {
             const data = await response.json();
             const user = getCurrentUser();
@@ -1428,22 +1526,22 @@ function render() {
     
     const statusEl = document.getElementById('userRegStatus');
     if (user.banned) {
-        statusEl.textContent = '🚫 ЗАБЛОКИРОВАН: ' + (user.banned_reason || 'Нарушение правил');
+        statusEl.textContent = 'ЗАБЛОКИРОВАН: ' + (user.banned_reason || 'Нарушение правил');
         statusEl.style.color = '#ff4757';
     } else if (user.registered) {
-        statusEl.textContent = '✅ Зарегистрирован (ID: ' + (user.uid || '—') + ')';
+        statusEl.textContent = 'Зарегистрирован (ID: ' + (user.uid || '—') + ')';
         statusEl.style.color = '#4caf50';
     } else {
-        statusEl.textContent = '❌ Не зарегистрирован';
+        statusEl.textContent = 'Не зарегистрирован';
         statusEl.style.color = '#ff4757';
     }
     
     const stage = user.petStage || 1;
     const progress = user.petProgress || 0;
     const threshold = stage === 1 ? 100 : stage === 2 ? 500 : stage === 3 ? 1500 : 0;
-    const stageText = stage === 1 ? 'Малыш' : stage === 2 ? 'Подросток' : stage === 3 ? 'Взрослый' : 'Гигант 👑';
-    document.getElementById('petStage').textContent = '🪳 ' + stageText;
-    document.getElementById('petProgress').textContent = `${progress} / ${threshold} ⭐`;
+    const stageText = stage === 1 ? 'Малыш' : stage === 2 ? 'Подросток' : stage === 3 ? 'Взрослый' : 'Гигант';
+    document.getElementById('petStage').textContent = stageText;
+    document.getElementById('petProgress').textContent = progress + ' / ' + threshold + ' ⭐';
     
     renderAdminCodes();
     renderContest();
@@ -1457,7 +1555,6 @@ function renderAdminCodes() {
     const list = document.getElementById('codesList');
     if (!panel || !list) return;
     
-    // Загружаем коды из глобальных данных
     const codes = globalData.admin_codes || [];
     if (codes.length === 0) {
         panel.style.display = 'none';
@@ -1467,7 +1564,7 @@ function renderAdminCodes() {
     list.innerHTML = codes.map((item, index) => `
         <div class="code-item">
             <span class="code-text" onclick="copyCode('${item.code}')">${item.code}</span>
-            <span class="code-type">${item.type} ${item.target ? '→ ' + item.target : ''}</span>
+            <span class="code-type">${item.type} ${item.target ? '-> ' + item.target : ''}</span>
             <span class="code-delete" onclick="deleteCodeGlobal('${item.code}')">✕</span>
         </div>
     `).join('');
@@ -1480,13 +1577,13 @@ window.deleteCodeGlobal = function(code) {
         body: JSON.stringify({ code: code })
     }).then(() => {
         loadGlobalData();
-        showToast('🗑️ Код удалён');
+        showToast('Код удалён');
     });
 };
 
 window.copyCode = function(code) {
     navigator.clipboard.writeText(code).then(() => {
-        showToast('✅ Код скопирован!');
+        showToast('Код скопирован!');
     }).catch(() => {
         const textarea = document.createElement('textarea');
         textarea.value = code;
@@ -1494,7 +1591,7 @@ window.copyCode = function(code) {
         textarea.select();
         document.execCommand('copy');
         document.body.removeChild(textarea);
-        showToast('✅ Код скопирован!');
+        showToast('Код скопирован!');
     });
 };
 
@@ -1517,11 +1614,11 @@ function renderContest() {
     const seconds = Math.floor((remaining % 60000) / 1000);
     let winnerText = '';
     if (globalData.contest_winner) {
-        winnerText = `<div class="winner">🏆 Победитель: <strong>${globalData.contest_winner}</strong></div>`;
+        winnerText = '<div class="winner">Победитель: <strong>' + globalData.contest_winner + '</strong></div>';
     }
     banner.innerHTML = `
-        <div class="title">🏆 КОНКУРС</div>
-        <div class="timer">⏱ ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}</div>
+        <div class="title">КОНКУРС</div>
+        <div class="timer">${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}</div>
         <div style="font-size:12px;color:#aaa;">Победит тот, у кого больше звёзд (баланс + банк)</div>
         ${winnerText}
     `;
@@ -1534,15 +1631,15 @@ function renderContest() {
 function handlePlay() {
     const user = getCurrentUser();
     if (!user.registered) {
-        showToast('❌ Сначала зарегистрируйтесь!');
+        showToast('Сначала зарегистрируйтесь!');
         return;
     }
     if (user.banned) {
-        showToast('🚫 Вы заблокированы. Причина: ' + (user.banned_reason || 'Нарушение правил'));
+        showToast('Вы заблокированы. Причина: ' + (user.banned_reason || 'Нарушение правил'));
         return;
     }
     if (user.attempts <= 0) {
-        showToast('❌ Попыток нет! Купите в меню.');
+        showToast('Попыток нет! Купите в меню.');
         return;
     }
     openWheel();
@@ -1551,30 +1648,30 @@ function handlePlay() {
 function handleBank() {
     const user = getCurrentUser();
     if (!user.registered) {
-        showToast('❌ Сначала зарегистрируйтесь!');
+        showToast('Сначала зарегистрируйтесь!');
         return;
     }
     if (user.banned) {
-        showToast('🚫 Вы заблокированы');
+        showToast('Вы заблокированы');
         return;
     }
     const bank = user.bank || 0;
     const deposit = user.bankDeposit || 0;
     if (bank > 0) {
-        openModal('🏦 Банк (20% в час)', `
-            <p>💰 В банке: <strong>${bank}</strong> ⭐</p>
-            <p>📊 Первоначальный вклад: <strong>${deposit}</strong> ⭐</p>
-            <p>📈 Ставка: <strong style="color:#ffd700;">20% в час</strong></p>
-            <button class="btn primary full" onclick="withdrawBank()">💰 Забрать все ⭐</button>
-            <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+        openModal('Банк (20% в час)', `
+            <p>В банке: <strong>${bank}</strong> ⭐</p>
+            <p>Первоначальный вклад: <strong>${deposit}</strong> ⭐</p>
+            <p>Ставка: <strong style="color:#ffd700;">20% в час</strong></p>
+            <button class="btn primary full" onclick="withdrawBank()">Забрать все ⭐</button>
+            <button class="btn full small" onclick="closeModal();">В меню</button>
         `);
     } else {
-        openModal('🏦 Банк (20% в час)', `
+        openModal('Банк (20% в час)', `
             <p>Банк пуст.</p>
-            <p>📈 Ставка: <strong style="color:#ffd700;">20% в час</strong></p>
+            <p>Ставка: <strong style="color:#ffd700;">20% в час</strong></p>
             <input type="number" id="bankDepositInput" placeholder="Сумма для вклада" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-            <button class="btn primary full" onclick="depositBank()">💵 Положить в банк</button>
-            <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+            <button class="btn primary full" onclick="depositBank()">Положить в банк</button>
+            <button class="btn full small" onclick="closeModal();">В меню</button>
         `);
     }
 }
@@ -1582,12 +1679,12 @@ function handleBank() {
 window.withdrawBank = function() {
     const user = getCurrentUser();
     const amount = user.bank || 0;
-    if (amount <= 0) { showToast('❌ Банк пуст'); return; }
+    if (amount <= 0) { showToast('Банк пуст'); return; }
     user.stars += amount;
     user.bank = 0;
     user.bankDeposit = 0;
     closeModal();
-    showToast(`✅ Забрано ${amount} ⭐ из банка`);
+    showToast('Забрано ' + amount + ' ⭐ из банка');
     render();
     saveAllData();
     saveToServer();
@@ -1598,13 +1695,13 @@ window.depositBank = function() {
     const input = document.getElementById('bankDepositInput');
     if (!input) return;
     const amount = parseInt(input.value);
-    if (!amount || amount <= 0) { showToast('❌ Введите сумму'); return; }
-    if (user.stars < amount) { showToast('❌ Недостаточно звёзд'); return; }
+    if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
+    if (user.stars < amount) { showToast('Недостаточно звёзд'); return; }
     user.stars -= amount;
     user.bank = amount;
     user.bankDeposit = amount;
     closeModal();
-    showToast(`✅ ${amount} ⭐ положены в банк под 20% в час`);
+    showToast(amount + ' ⭐ положены в банк под 20% в час');
     render();
     saveAllData();
     saveToServer();
@@ -1613,18 +1710,18 @@ window.depositBank = function() {
 function handleClicker() {
     const user = getCurrentUser();
     if (!user.registered) {
-        showToast('❌ Сначала зарегистрируйтесь!');
+        showToast('Сначала зарегистрируйтесь!');
         return;
     }
     if (user.banned) {
-        showToast('🚫 Вы заблокированы');
+        showToast('Вы заблокированы');
         return;
     }
     const progress = user.clickerProgress || 0;
     const remaining = 400 - progress;
     const reward = 20;
 
-    openModal('⭐ Кликер звёзд', `
+    openModal('Кликер звёзд', `
         <div style="text-align:center;">
             <div class="clicker-star" id="clickerStar" onclick="clickStar()">⭐</div>
             <div class="clicker-stats">
@@ -1635,10 +1732,10 @@ function handleClicker() {
                 <div class="fill" id="clickerFill" style="width: ${(progress/400)*100}%;"></div>
             </div>
             <p style="font-size:13px;color:#888;margin-top:8px;">
-                ${remaining > 0 ? `Осталось кликов: ${remaining}` : '🎉 Готово! Заберите награду!'}
+                ${remaining > 0 ? 'Осталось кликов: ' + remaining : 'Готово! Заберите награду!'}
             </p>
-            ${progress >= 400 ? `<button class="btn primary full" onclick="claimClickerReward()">🎁 Забрать ${reward} ⭐</button>` : ''}
-            <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+            ${progress >= 400 ? '<button class="btn primary full" onclick="claimClickerReward()">Забрать ' + reward + ' ⭐</button>' : ''}
+            <button class="btn full small" onclick="closeModal();">В меню</button>
         </div>
     `);
 }
@@ -1647,7 +1744,7 @@ window.clickStar = function() {
     const user = getCurrentUser();
     if (!user.registered || user.banned) return;
     if (user.clickerProgress >= 400) {
-        showToast('🎉 Вы уже накликали 400 раз! Заберите награду!');
+        showToast('Вы уже накликали 400 раз! Заберите награду!');
         return;
     }
     user.clickerProgress = (user.clickerProgress || 0) + 1;
@@ -1665,17 +1762,17 @@ window.clickStar = function() {
     const remaining = 400 - progress;
     const infoP = document.querySelector('.clicker-stats + p');
     if (infoP) {
-        infoP.textContent = remaining > 0 ? `Осталось кликов: ${remaining}` : '🎉 Готово! Заберите награду!';
+        infoP.textContent = remaining > 0 ? 'Осталось кликов: ' + remaining : 'Готово! Заберите награду!';
     }
     if (progress >= 400) {
         const btn = document.querySelector('button[onclick="claimClickerReward()"]');
         if (!btn) {
             const container = document.querySelector('.clicker-stats + p');
             if (container) {
-                container.innerHTML = `<button class="btn primary full" onclick="claimClickerReward()">🎁 Забрать 20 ⭐</button>`;
+                container.innerHTML = '<button class="btn primary full" onclick="claimClickerReward()">Забрать 20 ⭐</button>';
             }
         }
-        showToast('🎉 400 кликов! Заберите награду!');
+        showToast('400 кликов! Заберите награду!');
     }
     render();
     saveAllData();
@@ -1686,13 +1783,13 @@ window.claimClickerReward = function() {
     const user = getCurrentUser();
     if (!user.registered || user.banned) return;
     if (user.clickerProgress < 400) {
-        showToast('❌ Нужно накликать 400 раз!');
+        showToast('Нужно накликать 400 раз!');
         return;
     }
     user.stars += 20;
     user.clickerProgress = 0;
     closeModal();
-    showToast('✅ +20 ⭐ за клики!');
+    showToast('+20 ⭐ за клики!');
     render();
     saveAllData();
     saveToServer();
@@ -1700,12 +1797,12 @@ window.claimClickerReward = function() {
 
 function handleCoeff() {
     const user = getCurrentUser();
-    if (!user.registered || user.banned) { showToast('❌ Сначала зарегистрируйтесь!'); return; }
-    openModal('🔥 Коэффициент', `
+    if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
+    openModal('Коэффициент', `
         <p>Введите сумму (10% станут коэффициентом):</p>
         <input type="number" id="coeffInput" placeholder="Сумма" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="setCoeff()">💎 Применить</button>
-        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+        <button class="btn primary full" onclick="setCoeff()">Применить</button>
+        <button class="btn full small" onclick="closeModal();">В меню</button>
     `);
 }
 
@@ -1714,12 +1811,12 @@ window.setCoeff = function() {
     const input = document.getElementById('coeffInput');
     if (!input) return;
     const amount = parseInt(input.value);
-    if (!amount || amount <= 0) { showToast('❌ Введите сумму'); return; }
-    if (user.stars < amount) { showToast('❌ Недостаточно звёзд'); return; }
+    if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
+    if (user.stars < amount) { showToast('Недостаточно звёзд'); return; }
     user.stars -= amount;
     user.coefficientRate = Math.round(amount * 0.1 * 10) / 10;
     closeModal();
-    showToast(`✅ Коэффициент: +${user.coefficientRate} ⭐`);
+    showToast('Коэффициент: +' + user.coefficientRate + ' ⭐');
     render();
     saveAllData();
     saveToServer();
@@ -1727,20 +1824,20 @@ window.setCoeff = function() {
 
 function handlePet() {
     const user = getCurrentUser();
-    if (!user.registered || user.banned) { showToast('❌ Сначала зарегистрируйтесь!'); return; }
+    if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
     const stage = user.petStage || 1;
     const progress = user.petProgress || 0;
     const threshold = stage === 1 ? 100 : stage === 2 ? 500 : stage === 3 ? 1500 : 0;
-    const stageText = stage === 1 ? 'Малыш' : stage === 2 ? 'Подросток' : stage === 3 ? 'Взрослый' : 'Гигант 👑';
+    const stageText = stage === 1 ? 'Малыш' : stage === 2 ? 'Подросток' : stage === 3 ? 'Взрослый' : 'Гигант';
     const passive = { 1: 0, 2: 20, 3: 50, giant: 300 }[stage] || 0;
 
-    openModal('🪳 Питомец Забава', `
-        <p><strong>🪳 ${stageText}</strong></p>
+    openModal('Питомец', `
+        <p><strong>${stageText}</strong></p>
         <p>Прогресс: ${progress} / ${threshold} ⭐</p>
-        ${passive > 0 ? `<p>Пассивный доход: ${passive} ⭐/час</p>` : ''}
+        ${passive > 0 ? '<p>Пассивный доход: ' + passive + ' ⭐/час</p>' : ''}
         <input type="number" id="petFeedInput" placeholder="Сколько звёзд скормить?" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="feedPet()">🍖 Покормить</button>
-        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+        <button class="btn primary full" onclick="feedPet()">Покормить</button>
+        <button class="btn full small" onclick="closeModal();">В меню</button>
     `);
 }
 
@@ -1749,13 +1846,13 @@ window.feedPet = function() {
     const input = document.getElementById('petFeedInput');
     if (!input) return;
     const amount = parseInt(input.value);
-    if (!amount || amount <= 0) { showToast('❌ Введите сумму'); return; }
-    if (user.stars < amount) { showToast('❌ Недостаточно звёзд'); return; }
+    if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
+    if (user.stars < amount) { showToast('Недостаточно звёзд'); return; }
     const stage = user.petStage || 1;
     const threshold = stage === 1 ? 100 : stage === 2 ? 500 : stage === 3 ? 1500 : 0;
     const maxFeed = threshold - user.petProgress;
     if (amount > maxFeed && threshold > 0) {
-        showToast(`❌ Максимум ${maxFeed} ⭐`);
+        showToast('Максимум ' + maxFeed + ' ⭐');
         return;
     }
     user.stars -= amount;
@@ -1766,18 +1863,18 @@ window.feedPet = function() {
         if (stage === 1) {
             user.stars += 200;
             user.petStage = 2;
-            showToast('🎁 Стадия 2! +200 ⭐');
+            showToast('Стадия 2! +200 ⭐');
         } else if (stage === 2) {
             user.stars += 800;
             user.petStage = 3;
-            showToast('🎁 Стадия 3! +800 ⭐');
+            showToast('Стадия 3! +800 ⭐');
         } else if (stage === 3) {
             user.stars += 1000;
             user.petStage = 'giant';
-            showToast('🎁 Гигант! +1000 ⭐');
+            showToast('Гигант! +1000 ⭐');
         }
     } else {
-        showToast(`🪳 Прогресс: ${user.petProgress}/${threshold} ⭐`);
+        showToast('Прогресс: ' + user.petProgress + '/' + threshold + ' ⭐');
     }
     closeModal();
     render();
@@ -1787,25 +1884,25 @@ window.feedPet = function() {
 
 function handleBuy() {
     const user = getCurrentUser();
-    if (!user.registered || user.banned) { showToast('❌ Сначала зарегистрируйтесь!'); return; }
-    openModal('🛒 Покупка попыток', `
+    if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
+    openModal('Покупка попыток', `
         <p>Ваш баланс: <strong>${user.stars}</strong> ⭐</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn primary" onclick="buyAttempts(1, 100)" style="flex:1;">1 попытка — 100⭐</button>
             <button class="btn primary" onclick="buyAttempts(2, 180)" style="flex:1;">2 — 180⭐</button>
             <button class="btn primary" onclick="buyAttempts(4, 340)" style="flex:1;">4 — 340⭐</button>
         </div>
-        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+        <button class="btn full small" onclick="closeModal();">В меню</button>
     `);
 }
 
 window.buyAttempts = function(count, price) {
     const user = getCurrentUser();
-    if (user.stars < price) { showToast('❌ Недостаточно звёзд'); return; }
+    if (user.stars < price) { showToast('Недостаточно звёзд'); return; }
     user.stars -= price;
     user.attempts += count;
     closeModal();
-    showToast(`✅ Куплено ${count} попыток`);
+    showToast('Куплено ' + count + ' попыток');
     render();
     saveAllData();
     saveToServer();
@@ -1813,12 +1910,12 @@ window.buyAttempts = function(count, price) {
 
 function handleCode() {
     const user = getCurrentUser();
-    if (!user.registered || user.banned) { showToast('❌ Сначала зарегистрируйтесь!'); return; }
-    openModal('🎫 Ввести код', `
+    if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
+    openModal('Ввести код', `
         <p>Введите код для активации бонуса:</p>
         <input type="text" id="codeInput" placeholder="Код" style="text-transform:uppercase;width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="applyCode()">✅ Активировать</button>
-        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+        <button class="btn primary full" onclick="applyCode()">Активировать</button>
+        <button class="btn full small" onclick="closeModal();">В меню</button>
     `);
 }
 
@@ -1827,7 +1924,7 @@ window.applyCode = function() {
     const input = document.getElementById('codeInput');
     if (!input) return;
     const text = input.value.trim().toUpperCase();
-    if (!text) { showToast('❌ Введите код'); return; }
+    if (!text) { showToast('Введите код'); return; }
 
     let found = false;
     for (const code of window.boosterCodes) {
@@ -1837,7 +1934,7 @@ window.applyCode = function() {
             user.boosted = true;
             found = true;
             closeModal();
-            showToast('🚀 Бустер активирован!');
+            showToast('Бустер активирован!');
             render();
             saveAllData();
             return;
@@ -1846,7 +1943,7 @@ window.applyCode = function() {
     for (const code in window.boosterMultiCodes) {
         if (code === text) {
             if (window.boosterMultiCodes[code].usedUsers.has(user.uid)) {
-                showToast('❌ Уже использован');
+                showToast('Уже использован');
                 return;
             }
             user.attempts += 1;
@@ -1858,7 +1955,7 @@ window.applyCode = function() {
             }
             found = true;
             closeModal();
-            showToast('🚀 Бустер активирован!');
+            showToast('Бустер активирован!');
             render();
             saveAllData();
             return;
@@ -1870,7 +1967,7 @@ window.applyCode = function() {
             user.attempts += 1;
             found = true;
             closeModal();
-            showToast('✅ Код принят!');
+            showToast('Код принят!');
             render();
             saveAllData();
             return;
@@ -1879,7 +1976,7 @@ window.applyCode = function() {
     for (const code in window.multiUseCodes) {
         if (code === text) {
             if (window.multiUseCodes[code].usedUsers.has(user.uid)) {
-                showToast('❌ Уже использован');
+                showToast('Уже использован');
                 return;
             }
             user.attempts += 1;
@@ -1890,13 +1987,13 @@ window.applyCode = function() {
             }
             found = true;
             closeModal();
-            showToast('✅ Код принят!');
+            showToast('Код принят!');
             render();
             saveAllData();
             return;
         }
     }
-    if (!found) showToast('❌ Неверный код');
+    if (!found) showToast('Неверный код');
 };
 
 function handleLeaderboard() {
@@ -1911,37 +2008,37 @@ function handleLeaderboard() {
             html += '<tr><td colspan="4" style="text-align:center;color:#888;">Нет игроков</td></tr>';
         }
         sorted.forEach((item, i) => {
-            html += `<tr><td>${i+1}</td><td>${item.uid}</td><td>${item.name}</td><td>${item.stars}</td></tr>`;
+            html += '<tr><td>' + (i+1) + '</td><td>' + item.uid + '</td><td>' + item.name + '</td><td>' + item.stars + '</td></tr>';
         });
-        html += '</tbody></table><button class="btn full small" onclick="closeModal();">🏠 В меню</button>';
-        openModal('🏆 Таблица лидеров', html);
+        html += '</tbody></table><button class="btn full small" onclick="closeModal();">В меню</button>';
+        openModal('Таблица лидеров', html);
     });
 }
 
 function handleRules() {
-    openModal('📜 Правила', `
+    openModal('Правила', `
         <div class="scrollable">
-            <p><strong>🎰 Колесо удачи</strong></p>
+            <p><strong>Колесо удачи</strong></p>
             <p>• 1 сектор "Ничего" (60% шанс)</p>
             <p>• 9 призовых секторов (40% шанс)</p>
             <p>• Призы: 10⭐, 25⭐, 50⭐, 100⭐, 150⭐, 200⭐, 300⭐, 500⭐, 1000⭐</p>
             <br>
-            <p><strong>🏦 Банк</strong></p>
+            <p><strong>Банк</strong></p>
             <p>• 20% в час от первоначальной суммы</p>
             <br>
-            <p><strong>⭐ Кликер</strong></p>
+            <p><strong>Кликер</strong></p>
             <p>• 400 кликов → +20 ⭐</p>
             <br>
-            <p><strong>🪳 Питомец</strong></p>
+            <p><strong>Питомец</strong></p>
             <p>• Растёт от кормления звёздами</p>
             <p>• Приносит пассивный доход</p>
             <br>
-            <p><strong>🎫 Коды</strong></p>
+            <p><strong>Коды</strong></p>
             <p>• Вводите коды для бонусов</p>
             <br>
-            <p><strong>👑 Администратор всегда прав!</strong></p>
+            <p><strong>Администратор всегда прав!</strong></p>
         </div>
-        <button class="btn full small" onclick="closeModal();">🏠 В меню</button>
+        <button class="btn full small" onclick="closeModal();">В меню</button>
     `);
 }
 
@@ -1979,20 +2076,20 @@ document.getElementById('modalOverlay').addEventListener('click', (e) => {
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ DOM загружен!');
+    console.log('DOM загружен!');
     
     document.getElementById('btnPlay').addEventListener('click', function() {
         const user = getCurrentUser();
         if (!user.registered) {
-            showToast('❌ Сначала зарегистрируйтесь!');
+            showToast('Сначала зарегистрируйтесь!');
             return;
         }
         if (user.banned) {
-            showToast('🚫 Вы заблокированы. Причина: ' + (user.banned_reason || 'Нарушение правил'));
+            showToast('Вы заблокированы. Причина: ' + (user.banned_reason || 'Нарушение правил'));
             return;
         }
         if (user.attempts <= 0) {
-            showToast('❌ Попыток нет! Купите в меню.');
+            showToast('Попыток нет! Купите в меню.');
             return;
         }
         openWheel();
@@ -2016,7 +2113,6 @@ document.addEventListener('DOMContentLoaded', function() {
     render();
     initWheel();
     
-    // Загружаем глобальные данные
     setTimeout(async function() {
         await loadGlobalData();
         await loadFromServer();
@@ -2025,7 +2121,7 @@ document.addEventListener('DOMContentLoaded', function() {
         render();
     }, 500);
     
-    console.log('✅ Все обработчики назначены!');
+    console.log('Все обработчики назначены!');
 });
 
 setInterval(() => {
@@ -2036,7 +2132,17 @@ setInterval(() => {
 }, 15000);
 
 setInterval(saveAllData, 30000);
+
 setInterval(() => {
     loadGlobalData();
     render();
 }, 5000);
+
+// ===== ЗАПУСК СИНХРОНИЗАЦИИ =====
+setInterval(async function() {
+    await syncWithServer();
+}, 5000);
+
+setTimeout(async function() {
+    await syncWithServer();
+}, 1000);
