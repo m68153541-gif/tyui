@@ -5,566 +5,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>⭐ Забава Игра</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css" />
+
     <style>
-        /* ===== ГЛОБАЛЬНЫЕ ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-        }
-
-        body {
-            min-height: 100vh;
-            background: radial-gradient(circle at 30% 40%, #1a0e2e, #0a0515);
-            display: flex;
-            justify-content: center;
-            padding: 20px 12px;
-            color: #f0f0ff;
-            position: relative;
-            overflow-x: hidden;
-        }
-
-        /* Анимированные световые пятна на фоне */
-        body::before,
-        body::after {
-            content: '';
+        /* Стиль для панели управления музыкой */
+        #musicControl {
             position: fixed;
-            border-radius: 50%;
-            filter: blur(100px);
-            opacity: 0.3;
-            pointer-events: none;
-            z-index: 0;
-            animation: floatGlow 12s ease-in-out infinite alternate;
-        }
-        body::before {
-            width: 400px;
-            height: 400px;
-            background: #6c5ce7;
-            top: -100px;
-            left: -100px;
-        }
-        body::after {
-            width: 500px;
-            height: 500px;
-            background: #e84393;
-            bottom: -150px;
-            right: -150px;
-            animation-delay: 4s;
-        }
-        @keyframes floatGlow {
-            0% { transform: translate(0, 0) scale(1); }
-            100% { transform: translate(80px, 60px) scale(1.3); }
-        }
-
-        #app {
-            position: relative;
-            z-index: 1;
-            max-width: 500px;
-            width: 100%;
-            background: rgba(12, 8, 28, 0.75);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-radius: 48px 48px 32px 32px;
-            padding: 24px 20px 30px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.04);
-        }
-
-        h1 {
-            font-size: 26px;
-            font-weight: 700;
-            text-align: center;
-            letter-spacing: 1px;
-            background: linear-gradient(135deg, #ffd700, #ff6b6b, #a29bfe);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: gradShift 4s ease-in-out infinite alternate;
-            margin-bottom: 18px;
-        }
-        @keyframes gradShift {
-            0% { background-position: 0% 50%; }
-            100% { background-position: 100% 50%; }
-        }
-
-        /* ===== КАРТОЧКА ===== */
-        .user-card {
-            background: rgba(255, 255, 255, 0.04);
-            border-radius: 24px;
-            padding: 16px 18px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px 12px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-        }
-        .user-card .label {
-            font-size: 12px;
-            color: #8a8ab0;
-            letter-spacing: 0.3px;
-        }
-        .user-card .value {
-            font-weight: 600;
-            text-align: right;
-            color: #e8e8ff;
-            font-size: 14px;
-            word-break: break-all;
-        }
-        .user-card .full {
-            grid-column: span 2;
-            text-align: center;
-            font-size: 13px;
-            font-weight: 500;
-            padding-top: 6px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        #userUid {
-            cursor: pointer;
-            transition: 0.2s;
-            border-bottom: 1px dashed rgba(255, 215, 0, 0.3);
-        }
-        #userUid:hover {
-            color: #ffd700;
-        }
-
-        /* ===== БАЛАНС ===== */
-        .balance-grid {
-            display: flex;
-            gap: 14px;
-            margin: 12px 0 18px;
-        }
-        .balance-item {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 20px;
-            padding: 14px 8px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(4px);
-        }
-        .balance-item .num {
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            transition: 0.3s;
-        }
-        .balance-item .num.gold {
-            background: linear-gradient(135deg, #f9ca24, #f0932b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .balance-item .num.cyan {
-            background: linear-gradient(135deg, #7ed6df, #22a6b3);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .balance-item .lbl {
-            font-size: 12px;
-            color: #8a8ab0;
-            margin-top: 4px;
-        }
-
-        /* ===== ПИТОМЕЦ ===== */
-        .pet-status {
-            display: flex;
-            justify-content: space-between;
-            background: rgba(255, 255, 255, 0.02);
-            padding: 12px 16px;
-            border-radius: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            margin-bottom: 20px;
-            font-size: 14px;
-            backdrop-filter: blur(4px);
-        }
-
-        /* ===== СЕТКА КНОПОК (НОВОЕ РАСПОЛОЖЕНИЕ) ===== */
-        .btn-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 16px 14px;
-            margin-top: 6px;
-        }
-
-        /* ===== КНОПКИ С ЛЕВИТАЦИЕЙ ===== */
-        .btn {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 16px 10px;
-            border: none;
-            border-radius: 60px;
-            font-size: 15px;
-            font-weight: 700;
-            color: #fff;
-            cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.2);
-            will-change: transform, box-shadow, filter;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-            letter-spacing: 0.3px;
-            background: #2a2a50;
-            box-shadow: 0 8px 0 #15152a, 0 6px 20px rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transform: translateY(0px) scale(1);
-        }
-
-        /* Левитация: каждая кнопка "плавает" с разной задержкой */
-        .btn:nth-child(1) { animation: floatBtn 3.2s ease-in-out infinite; }
-        .btn:nth-child(2) { animation: floatBtn 3.6s ease-in-out infinite 0.2s; }
-        .btn:nth-child(3) { animation: floatBtn 2.8s ease-in-out infinite 0.5s; }
-        .btn:nth-child(4) { animation: floatBtn 3.4s ease-in-out infinite 0.1s; }
-        .btn:nth-child(5) { animation: floatBtn 3.0s ease-in-out infinite 0.7s; }
-        .btn:nth-child(6) { animation: floatBtn 3.8s ease-in-out infinite 0.3s; }
-        .btn:nth-child(7) { animation: floatBtn 2.6s ease-in-out infinite 0.9s; }
-        .btn:nth-child(8) { animation: floatBtn 3.3s ease-in-out infinite 0.4s; }
-        .btn:nth-child(9) { animation: floatBtn 3.7s ease-in-out infinite 0.6s; }
-        .btn:nth-child(10) { animation: floatBtn 2.9s ease-in-out infinite 0.8s; }
-        .btn:nth-child(11) { animation: floatBtn 3.5s ease-in-out infinite 0.15s; }
-        .btn:nth-child(12) { animation: floatBtn 3.1s ease-in-out infinite 0.55s; }
-
-        @keyframes floatBtn {
-            0% { transform: translateY(0px) scale(1); }
-            50% { transform: translateY(-8px) scale(1.02); }
-            100% { transform: translateY(0px) scale(1); }
-        }
-
-        /* Состояние "тусклые" для всех кнопок при нажатии на одну */
-        .btn-grid.dimmed .btn {
-            filter: brightness(0.4) saturate(0.3);
-            transform: scale(0.92);
-            transition: all 0.2s;
-        }
-        .btn-grid.dimmed .btn.active-btn {
-            filter: brightness(1.5) saturate(1.2);
-            transform: scale(1.08) translateY(-4px);
-            box-shadow: 0 0 30px #ffd700, 0 0 60px rgba(255, 215, 0, 0.3), 0 8px 0 #b8860b;
-            background: linear-gradient(145deg, #ffd700, #f5a623) !important;
-            color: #1a1a2e !important;
-            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-            border-color: #ffd700;
-            z-index: 10;
-        }
-        /* Свечение от активной кнопки */
-        .btn-grid.dimmed .btn.active-btn::before {
-            content: '';
-            position: absolute;
-            inset: -8px;
-            border-radius: 70px;
-            background: radial-gradient(circle, rgba(255, 215, 0, 0.5), transparent 70%);
-            filter: blur(20px);
-            z-index: -1;
-            animation: pulseGlow 1s ease-in-out infinite alternate;
-        }
-        @keyframes pulseGlow {
-            0% { opacity: 0.6; transform: scale(0.95); }
-            100% { opacity: 1; transform: scale(1.2); }
-        }
-
-        /* Сброс при отпускании */
-        .btn-grid:not(.dimmed) .btn {
-            filter: brightness(1);
-        }
-
-        /* Индивидуальные цвета кнопок (яркие, насыщенные) */
-        .btn.primary {
-            background: linear-gradient(145deg, #f9ca24, #f0932b);
-            box-shadow: 0 8px 0 #b86d1c, 0 6px 20px rgba(249, 202, 36, 0.3);
-            color: #1a1a2e;
-        }
-        .btn.blue {
-            background: linear-gradient(145deg, #4a8fe0, #2d6bb8);
-            box-shadow: 0 8px 0 #1a3f6e, 0 6px 20px rgba(45, 107, 184, 0.3);
-        }
-        .btn.special {
-            background: linear-gradient(145deg, #fd79a8, #e84393);
-            box-shadow: 0 8px 0 #a0296a, 0 6px 20px rgba(232, 67, 147, 0.3);
-        }
-        .btn.purple {
-            background: linear-gradient(145deg, #a29bfe, #6c5ce7);
-            box-shadow: 0 8px 0 #3a2f8a, 0 6px 20px rgba(108, 92, 231, 0.3);
-        }
-        .btn.green {
-            background: linear-gradient(145deg, #55efc4, #00b894);
-            box-shadow: 0 8px 0 #00715a, 0 6px 20px rgba(0, 184, 148, 0.3);
-            color: #0f1a1a;
-        }
-        .btn.danger {
-            background: linear-gradient(145deg, #e74c3c, #c0392b);
-            box-shadow: 0 8px 0 #87281e, 0 6px 20px rgba(231, 76, 60, 0.3);
-        }
-        .btn.full {
-            grid-column: span 3;
-        }
-        .btn.small {
-            padding: 12px 10px;
-            font-size: 13px;
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            transform: translateY(4px) scale(0.96);
-            box-shadow: 0 3px 0 #15152a;
-            pointer-events: none;
-            animation: none !important;
-        }
-
-        /* ===== КОЛЕСО ===== */
-        .wheel-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            animation: fadeIn 0.25s ease;
-        }
-        .wheel-overlay.active {
-            display: flex;
-        }
-        .wheel-container {
-            background: rgba(12, 8, 28, 0.95);
-            border-radius: 48px;
-            padding: 28px 24px 32px;
-            max-width: 440px;
-            width: 100%;
-            border: 1px solid rgba(255, 215, 0, 0.15);
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
-            animation: scaleUp 0.25s ease;
-        }
-        .wheel-container h2 {
-            text-align: center;
-            margin-bottom: 12px;
-            background: linear-gradient(135deg, #ffd700, #f5a623);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .wheel-wrapper {
-            position: relative;
-            margin: 0 auto;
-            max-width: 320px;
-        }
-        #wheelCanvas {
-            display: block;
-            width: 100%;
-            height: auto;
-            aspect-ratio: 1/1;
-            border-radius: 50%;
-            box-shadow: 0 0 40px rgba(255, 215, 0, 0.15);
-            cursor: pointer;
-        }
-        .wheel-center {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 36px;
-            text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
-            pointer-events: none;
-        }
-        .wheel-result {
-            text-align: center;
-            font-size: 18px;
-            font-weight: 600;
-            padding: 12px 0 6px;
-            min-height: 50px;
-        }
-        .wheel-actions {
-            display: flex;
-            gap: 12px;
-        }
-        .wheel-actions .btn {
-            flex: 1;
-            animation: none !important;
-        }
-
-        /* ===== МОДАЛКА ===== */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(8px);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            animation: fadeIn 0.2s ease;
-        }
-        .modal-overlay.active {
-            display: flex;
-        }
-        .modal {
-            background: rgba(12, 8, 28, 0.96);
-            border-radius: 40px;
-            padding: 28px 24px 30px;
-            max-width: 440px;
-            width: 100%;
-            max-height: 85vh;
-            overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
-            animation: scaleUp 0.2s ease;
-        }
-        .modal h2 {
-            text-align: center;
-            margin-bottom: 16px;
-            font-size: 22px;
-        }
-        .modal input {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 30px;
-            padding: 12px 16px;
-            color: #f0f0ff;
-            font-size: 15px;
-            width: 100%;
-            outline: none;
-            transition: 0.3s;
-        }
-        .modal input:focus {
-            border-color: #ffd700;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
-        }
-        .modal .btn {
-            animation: none !important;
-            margin-top: 8px;
-            box-shadow: 0 6px 0 #15152a;
-        }
-        .modal .btn:active {
-            transform: translateY(3px);
-            box-shadow: 0 2px 0 #15152a;
-        }
-
-        /* ===== ТОСТ ===== */
-        #toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%) translateY(80px);
-            background: rgba(10, 8, 25, 0.92);
-            backdrop-filter: blur(12px);
-            padding: 14px 28px;
-            border-radius: 60px;
-            color: #fff;
-            font-weight: 500;
-            font-size: 15px;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 8px;
             z-index: 9999;
-            transition: 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
-            opacity: 0;
-            pointer-events: none;
-            white-space: nowrap;
-            max-width: 90%;
-            text-align: center;
-        }
-        #toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        /* ===== КЛИКЕР ===== */
-        .clicker-star {
-            font-size: 72px;
-            cursor: pointer;
-            user-select: none;
-            margin: 6px 0;
-            transition: 0.1s;
-        }
-        .clicker-star.pop {
-            animation: popStar 0.2s ease;
-        }
-        @keyframes popStar {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.3); color: #ffd700; }
-            100% { transform: scale(1); }
-        }
-        .clicker-progress {
-            width: 100%;
-            height: 10px;
-            background: #2a2a4a;
-            border-radius: 20px;
-            margin: 8px 0;
-            overflow: hidden;
-        }
-        .clicker-progress .fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #f9ca24, #f0932b);
-            border-radius: 20px;
-            transition: 0.2s;
-        }
-
-        /* ===== АНИМАЦИИ ===== */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes scaleUp {
-            from { opacity: 0; transform: scale(0.92); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        /* ===== ДОПЫ ===== */
-        .chat-container {
-            max-height: 200px;
-            overflow-y: auto;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 20px;
-            padding: 12px;
-            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: sans-serif;
             font-size: 14px;
-        }
-        .chat-container .msg.user { color: #7ed6df; }
-        .chat-container .msg.admin { color: #ffd700; }
-        .chat-container .msg .time {
-            font-size: 10px;
-            color: #666;
-            margin-left: 10px;
-        }
-        .scrollable {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        /* ===== КОНКУРСНЫЙ БАННЕР ===== */
-        #contestBanner {
-            background: linear-gradient(135deg, rgba(249, 202, 36, 0.12), rgba(240, 147, 43, 0.08));
-            border-radius: 40px;
-            padding: 12px 18px;
-            text-align: center;
-            border: 1px solid rgba(255, 215, 0, 0.15);
-            margin-bottom: 18px;
-        }
-        #contestBanner .title {
-            font-weight: 700;
-            font-size: 16px;
-            color: #ffd700;
-        }
-        #contestBanner .timer {
-            font-size: 26px;
-            font-weight: 700;
-            font-variant-numeric: tabular-nums;
             color: #fff;
         }
-
-        @media (max-width: 420px) {
-            .btn-grid { gap: 12px; }
-            .btn { font-size: 13px; padding: 14px 6px; }
-            .balance-item .num { font-size: 24px; }
-            #app { padding: 18px 14px 22px; }
+        #musicToggle {
+            cursor: pointer;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
+    <!-- Панель управления музыкой -->
+    <div id="musicControl">
+        <button id="musicToggle">🔊 Вкл. музыку</button>
+    </div>
+
     <div id="app">
         <h1>⭐ Забава Игра</h1>
-
+        <!-- остальной ваш контент без изменений -->
         <div class="user-card" id="userCard">
             <span class="label">Имя</span><span class="value" id="userName">—</span>
             <span class="label">Пол</span><span class="value" id="userGender">—</span>
@@ -590,22 +69,22 @@
             <div class="codes-panel" id="codesList"></div>
         </div>
 
-        <div class="btn-grid" id="btnGrid">
+        <div class="btn-grid">
             <button class="btn primary" id="btnPlay">🎮 Играть</button>
             <button class="btn blue" id="btnBank">🏦 Банк</button>
-            <button class="btn special" id="btnClicker">⭐ Кликер</button>
+            <button class="btn" id="btnClicker" style="background:linear-gradient(145deg,#fd79a8,#e84393);box-shadow:0 4px 0 #a0296a;">⭐ Кликер</button>
             <button class="btn purple" id="btnCoeff">🔥 Коэфф.</button>
             <button class="btn green" id="btnPet">🪳 Питомец</button>
             <button class="btn green" id="btnBuy">🛒 Попытки</button>
-            <button class="btn" id="btnCode" style="background:linear-gradient(145deg,#00b894,#00a381);box-shadow:0 8px 0 #00715a;">🎫 Код</button>
-            <button class="btn" id="btnLeaderboard" style="background:linear-gradient(145deg,#6c5ce7,#4a3db8);box-shadow:0 8px 0 #3a2f8a;">🏆 Лидеры</button>
+            <button class="btn" id="btnCode" style="background:linear-gradient(145deg,#00b894,#00a381);box-shadow:0 4px 0 #00715a;">🎫 Код</button>
+            <button class="btn" id="btnLeaderboard" style="background:linear-gradient(145deg,#6c5ce7,#4a3db8);box-shadow:0 4px 0 #3a2f8a;">🏆 Лидеры</button>
             <button class="btn full small" id="btnRules">📜 Правила</button>
             <button class="btn full small" id="btnSupport">🆘 Поддержка</button>
             <button class="btn full small danger" id="btnAdmin">🔧 Админ</button>
         </div>
     </div>
 
-    <!-- КОЛЕСО -->
+    <!-- ===== КОЛЕСО УДАЧИ ===== -->
     <div class="wheel-overlay" id="wheelOverlay">
         <div class="wheel-container">
             <h2>🎰 Колесо удачи</h2>
@@ -614,7 +93,7 @@
                 <div class="wheel-center">⭐</div>
             </div>
             <div class="wheel-result" id="wheelResult">Нажмите "Крутить"!</div>
-            <div class="wheel-attempts">🎮 Попыток: <strong id="wheelAttemptsCount">0</strong></div>
+            <div class="wheel-attempts" id="wheelAttempts">🎮 Попыток: <strong id="wheelAttemptsCount">0</strong></div>
             <div class="wheel-actions">
                 <button class="btn primary" id="wheelSpinBtn">🔄 Крутить</button>
                 <button class="btn" id="wheelCloseBtn">✖ Закрыть</button>
@@ -622,7 +101,7 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА -->
+    <!-- Модалка -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal" id="modalContent">
             <h2 id="modalTitle">Заголовок</h2>
@@ -630,85 +109,76 @@
         </div>
     </div>
 
-    <div id="toast"></div>
+    <div class="toast" id="toast"></div>
 
+    <!-- ВАШ скрипт -->
+    <script src="game.js"></script>
+
+    <!-- Добавляем скрипт для управления музыкой и звуком -->
     <script>
-        // ============================================================
-        //  НОВАЯ ЛОГИКА ДЛЯ КНОПОК: тускнение + подсветка
-        // ============================================================
-        document.addEventListener('DOMContentLoaded', function() {
-            const grid = document.getElementById('btnGrid');
-            const allBtns = grid.querySelectorAll('.btn');
+        // Создаем аудиоблоки
+        const backgroundMusic = new Audio('audio/music.mp3'); // путь к вашей музыке
+        backgroundMusic.loop = true; // зацикливаем
+        backgroundMusic.volume = 0.2; // настройте громкость по желанию
 
-            allBtns.forEach(btn => {
-                btn.addEventListener('mousedown', function(e) {
-                    // Убираем левитацию и тускним все кнопки
-                    grid.classList.add('dimmed');
-                    // Добавляем класс активной кнопке
-                    this.classList.add('active-btn');
-                });
+        const clickSound = new Audio('audio/click.mp3'); // звук клика
+        clickSound.volume = 0.5; // громкость звука
 
-                btn.addEventListener('mouseup', function(e) {
-                    grid.classList.remove('dimmed');
-                    this.classList.remove('active-btn');
-                });
+        // Объявляем переменную для состояния включенности музыки
+        let musicOn = false;
 
-                btn.addEventListener('mouseleave', function(e) {
-                    // Если кнопка отпущена за пределами — сброс
-                    if (grid.classList.contains('dimmed')) {
-                        grid.classList.remove('dimmed');
-                        this.classList.remove('active-btn');
-                    }
-                });
+        // Получаем кнопку для включения/выключения музыки
+        const musicToggleBtn = document.getElementById('musicToggle');
 
-                // Для тач-устройств
-                btn.addEventListener('touchstart', function(e) {
-                    grid.classList.add('dimmed');
-                    this.classList.add('active-btn');
+        // Функция для запуска музыки
+        function startMusic() {
+            if (!musicOn) {
+                backgroundMusic.play().then(() => {
+                    musicOn = true;
+                    updateMusicButton();
+                }).catch(e => {
+                    console.log('Не удалось воспроизвести музыку: ', e);
                 });
+            }
+        }
 
-                btn.addEventListener('touchend', function(e) {
-                    grid.classList.remove('dimmed');
-                    this.classList.remove('active-btn');
-                });
+        // Обновляем текст кнопки
+        function updateMusicButton() {
+            if (musicOn) {
+                musicToggleBtn.textContent = '🔇 Выкл. музыку';
+            } else {
+                musicToggleBtn.textContent = '🔊 Вкл. музыку';
+            }
+        }
+
+        // Обработчик для кнопки
+        musicToggleBtn.addEventListener('click', () => {
+            if (musicOn) {
+                backgroundMusic.pause();
+                musicOn = false;
+            } else {
+                startMusic();
+            }
+            updateMusicButton();
+        });
+
+        // Попытка запустить музыку при первом клике по странице
+        document.addEventListener('click', () => {
+            startMusic();
+        }, { once: true });
+
+        // Воспроизведение звука при клике по любой кнопке
+        function playClickSound() {
+            clickSound.currentTime = 0;
+            clickSound.play();
+        }
+
+        // Обработчик на все кнопки
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                playClickSound();
             });
-
-            // Копирование UID
-            window.copyUid = function() {
-                const el = document.getElementById('userUid');
-                const uid = el.textContent;
-                if (!uid || uid === '—') return;
-                navigator.clipboard?.writeText(uid)?.then(() => {
-                    showToast('✅ UID скопирован');
-                })?.catch(() => {
-                    const ta = document.createElement('textarea');
-                    ta.value = uid;
-                    document.body.appendChild(ta);
-                    ta.select();
-                    document.execCommand('copy');
-                    ta.remove();
-                    showToast('✅ UID скопирован');
-                });
-            };
-
-            // Заглушка для тоста (ваша функция из game.js переопределит)
-            window.showToast = function(text) {
-                const t = document.getElementById('toast');
-                if (!t) return;
-                t.textContent = text;
-                t.classList.add('show');
-                clearTimeout(window._toastTimer);
-                window._toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
-            };
-
-            // Инициализация (ваш game.js подхватит)
-            if (typeof initWheel === 'function') initWheel();
-            if (typeof render === 'function') render();
-            console.log('✅ Новая графика с левитацией и подсветкой кнопок загружена');
         });
     </script>
-
-    <!-- ПОДКЛЮЧИТЕ ВАШ game.js ЗДЕСЬ -->
-    <script src="game.js"></script>
 </body>
 </html>
