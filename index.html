@@ -234,7 +234,7 @@
   /* ===== КРУГЛАЯ КНОПКА МУЗЫКИ ===== */
   #musicBtn {
     position: fixed;
-    bottom: 20px; /* внизу */
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
     width: 60px;
@@ -255,21 +255,12 @@
   #musicBtn:hover {
     background: #45a049;
   }
-
-  /* ===== Анимации ===== */
-  @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-  }
-  @keyframes scaleUp {
-      from { opacity: 0; transform: scale(0.92); }
-      to { opacity: 1; transform: scale(1); }
-  }
 </style>
 </head>
 <body>
 <div id="app">
     <h1>⭐ Забава Игра</h1>
+
     <div class="user-card" id="userCard">
         <span class="label">Имя</span><span class="value" id="userName">—</span>
         <span class="label">Пол</span><span class="value" id="userGender">—</span>
@@ -278,18 +269,23 @@
         <span class="label">Попытки</span><span class="value" id="userAttempts">0</span>
         <div class="full" id="userRegStatus">✅ Зарегистрирован</div>
     </div>
+
     <div class="balance-grid">
         <div class="balance-item"><div class="num gold" id="starsBalance">0</div><div class="lbl">⭐ Звёзды</div></div>
         <div class="balance-item"><div class="num cyan" id="bankBalance">0</div><div class="lbl">🏦 Банк</div></div>
     </div>
+
     <div id="contestBanner" style="display:none;"></div>
+
     <div class="pet-status" id="petStatus">
         <span class="stage" id="petStage">🪳 Малыш</span>
         <span class="progress" id="petProgress">0 / 100 ⭐</span>
     </div>
+
     <div id="codesPanel" style="display:none;">
         <div class="codes-panel" id="codesList"></div>
     </div>
+
     <div class="btn-grid" id="btnGrid">
         <button class="btn primary" id="btnPlay">🎮 Играть</button>
         <button class="btn blue" id="btnBank">🏦 Банк</button>
@@ -305,10 +301,9 @@
     </div>
 </div>
 
-<!-- Ваша кнопка управления музыкой -->
+<!-- ВАША КНОПКА МУЗЫКИ -->
 <button id="musicBtn" title="Вкл/Выкл музыку">🎵</button>
 
-<!-- Скрипт управления музыкой -->
 <script>
   const music = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3');
   music.loop = true;
@@ -317,17 +312,17 @@
   const musicBtn = document.getElementById('musicBtn');
   let musicOn = false;
 
-  // Обработчик кнопки
+  // Обработчик
   musicBtn.addEventListener('click', () => {
     if (musicOn) {
       music.pause();
       musicOn = false;
-      musicBtn.textContent = '🎵'; // Иконка включена
+      musicBtn.textContent = '🎵';
       musicBtn.title = 'Включить музыку';
     } else {
       music.play().then(() => {
         musicOn = true;
-        musicBtn.textContent = '🔇'; // Иконка выключена
+        musicBtn.textContent = '🔇';
         musicBtn.title = 'Выключить музыку';
       }).catch(() => {
         alert('Не удалось запустить музыку');
@@ -335,7 +330,7 @@
     }
   });
 
-  // Автоматический запуск при первом клике
+  // Старт при первом клике
   document.addEventListener('click', () => {
     if (!musicOn) {
       music.play().then(() => {
@@ -346,5 +341,6 @@
     }
   }, { once: true });
 </script>
+
 </body>
 </html>
