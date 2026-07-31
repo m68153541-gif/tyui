@@ -807,6 +807,8 @@
                     loadingScreen.classList.add('hidden');
                     setTimeout(() => {
                         app.classList.add('show');
+                        // Загружаем game.js после появления меню
+                        loadGameScript();
                     }, 300);
                 }, 500);
             }
@@ -882,55 +884,74 @@
         //  ЗАГРУЗКА GAME.JS
         // ============================================================
         function loadGameScript() {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = 'game.js';
-                script.onload = () => {
-                    console.log('game.js загружен');
-                    resolve();
-                };
-                script.onerror = () => {
-                    console.error('Ошибка загрузки game.js');
-                    reject();
-                };
-                document.body.appendChild(script);
-            });
+            // Проверяем, не загружен ли уже game.js
+            if (document.querySelector('script[src="game.js"]')) {
+                console.log('game.js уже загружен');
+                initGameAfterLoad();
+                return;
+            }
+
+            console.log('Загружаем game.js...');
+            const script = document.createElement('script');
+            script.src = 'game.js';
+            script.onload = function() {
+                console.log('game.js загружен успешно!');
+                initGameAfterLoad();
+            };
+            script.onerror = function() {
+                console.error('Ошибка загрузки game.js');
+                // Пробуем загрузить ещё раз через 2 секунды
+                setTimeout(loadGameScript, 2000);
+            };
+            document.head.appendChild(script);
         }
 
-        // Загружаем game.js сразу, но ждём появления меню для инициализации
-        loadGameScript().then(() => {
-            console.log('game.js загружен, ожидаем появления меню...');
-        }).catch(() => {
-            console.log('game.js не загружен, проверьте файл');
-        });
-
-        // Следим за появлением меню
-        const appObserver = new MutationObserver(() => {
-            if (app.classList.contains('show')) {
-                appObserver.disconnect();
-                console.log('Меню появилось, инициализация...');
-                setTimeout(() => {
-                    if (typeof render === 'function') {
-                        render();
-                    }
-                    if (typeof initWheel === 'function') {
-                        initWheel();
-                    }
-                    console.log('Игра готова!');
-                }, 100);
-            }
-        });
-
-        appObserver.observe(app, { attributes: true, attributeFilter: ['class'] });
-
-        // Если меню уже видно (на случай быстрой загрузки)
-        if (app.classList.contains('show')) {
-            appObserver.disconnect();
+        function initGameAfterLoad() {
+            console.log('Инициализация игры...');
+            // Даём время на выполнение скрипта
             setTimeout(() => {
-                if (typeof render === 'function') render();
-                if (typeof initWheel === 'function') initWheel();
-                console.log('Игра готова (быстрая загрузка)!');
-            }, 100);
+                if (typeof render === 'function') {
+                    render();
+                    console.log('render() выполнен');
+                } else {
+                    console.log('render() не найден, ждём...');
+                }
+                
+                if (typeof initWheel === 'function') {
+                    initWheel();
+                    console.log('initWheel() выполнен');
+                } else {
+                    console.log('initWheel() не найден, ждём...');
+                }
+                
+                if (typeof loadGlobalData === 'function') {
+                    loadGlobalData();
+                    console.log('loadGlobalData() выполнен');
+                }
+                
+                if (typeof loadFromServer === 'function') {
+                    loadFromServer();
+                    console.log('loadFromServer() выполнен');
+                }
+                
+                if (typeof loadAllUsersFromServer === 'function') {
+                    loadAllUsersFromServer();
+                    console.log('loadAllUsersFromServer() выполнен');
+                }
+                
+                if (typeof checkRegistration === 'function') {
+                    setTimeout(checkRegistration, 500);
+                    console.log('checkRegistration() выполнен');
+                }
+                
+                console.log('Игра готова!');
+            }, 200);
+        }
+
+        // Если game.js уже загружен (например, через тег script)
+        if (document.querySelector('script[src="game.js"]')) {
+            console.log('game.js уже загружен через тег');
+            setTimeout(initGameAfterLoad, 500);
         }
 
         console.log('Готово, ожидаем загрузки');
