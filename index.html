@@ -1,184 +1,172 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>⭐ Забава Игра</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>⭐ Забава Игра</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="style.css" />
 
-    <style>
-        /* Стиль для панели управления музыкой */
-        #musicControl {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.7);
-            padding: 10px;
-            border-radius: 8px;
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-family: sans-serif;
-            font-size: 14px;
-            color: #fff;
-        }
-        #musicToggle {
-            cursor: pointer;
-            padding: 5px 10px;
-            border: none;
-            border-radius: 4px;
-            background-color: #4CAF50;
-            color: white;
-            font-weight: bold;
-        }
-    </style>
+<style>
+/* Стиль панели управления музыкой */
+#musicControl {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.7);
+    padding: 10px 15px;
+    border-radius: 8px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: sans-serif;
+    font-size: 14px;
+    color: #fff;
+}
+
+#musicToggle {
+    cursor: pointer;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    background-color: #4CAF50;
+    color: white;
+    font-weight: bold;
+}
+</style>
 </head>
 <body>
-    <!-- Панель управления музыкой -->
-    <div id="musicControl">
-        <button id="musicToggle">🔊 Вкл. музыку</button>
+
+<!-- Панель управления музыкой -->
+<div id="musicControl">
+    <button id="musicToggle">🔊 Включить музыку</button>
+</div>
+
+<div id="app">
+    <h1>⭐ Забава Игра</h1>
+    <!-- остальной ваш контент без изменений -->
+    <div class="user-card" id="userCard">
+        <span class="label">Имя</span><span class="value" id="userName">—</span>
+        <span class="label">Пол</span><span class="value" id="userGender">—</span>
+        <span class="label">Возраст</span><span class="value" id="userAge">—</span>
+        <span class="label">ID</span><span class="value" id="userUid" onclick="copyUid()">—</span>
+        <span class="label">Попытки</span><span class="value" id="userAttempts">0</span>
+        <div class="full" id="userRegStatus">✅ Зарегистрирован</div>
     </div>
 
-    <div id="app">
-        <h1>⭐ Забава Игра</h1>
-        <!-- остальной ваш контент без изменений -->
-        <div class="user-card" id="userCard">
-            <span class="label">Имя</span><span class="value" id="userName">—</span>
-            <span class="label">Пол</span><span class="value" id="userGender">—</span>
-            <span class="label">Возраст</span><span class="value" id="userAge">—</span>
-            <span class="label">ID</span><span class="value" id="userUid" onclick="copyUid()">—</span>
-            <span class="label">Попытки</span><span class="value" id="userAttempts">0</span>
-            <div class="full" id="userRegStatus">✅ Зарегистрирован</div>
-        </div>
-
-        <div class="balance-grid">
-            <div class="balance-item"><div class="num gold" id="starsBalance">0</div><div class="lbl">⭐ Звёзды</div></div>
-            <div class="balance-item"><div class="num cyan" id="bankBalance">0</div><div class="lbl">🏦 Банк</div></div>
-        </div>
-
-        <div id="contestBanner" style="display:none;"></div>
-
-        <div class="pet-status" id="petStatus">
-            <span class="stage" id="petStage">🪳 Малыш</span>
-            <span class="progress" id="petProgress">0 / 100 ⭐</span>
-        </div>
-
-        <div id="codesPanel" style="display:none;">
-            <div class="codes-panel" id="codesList"></div>
-        </div>
-
-        <div class="btn-grid">
-            <button class="btn primary" id="btnPlay">🎮 Играть</button>
-            <button class="btn blue" id="btnBank">🏦 Банк</button>
-            <button class="btn" id="btnClicker" style="background:linear-gradient(145deg,#fd79a8,#e84393);box-shadow:0 4px 0 #a0296a;">⭐ Кликер</button>
-            <button class="btn purple" id="btnCoeff">🔥 Коэфф.</button>
-            <button class="btn green" id="btnPet">🪳 Питомец</button>
-            <button class="btn green" id="btnBuy">🛒 Попытки</button>
-            <button class="btn" id="btnCode" style="background:linear-gradient(145deg,#00b894,#00a381);box-shadow:0 4px 0 #00715a;">🎫 Код</button>
-            <button class="btn" id="btnLeaderboard" style="background:linear-gradient(145deg,#6c5ce7,#4a3db8);box-shadow:0 4px 0 #3a2f8a;">🏆 Лидеры</button>
-            <button class="btn full small" id="btnRules">📜 Правила</button>
-            <button class="btn full small" id="btnSupport">🆘 Поддержка</button>
-            <button class="btn full small danger" id="btnAdmin">🔧 Админ</button>
-        </div>
+    <div class="balance-grid">
+        <div class="balance-item"><div class="num gold" id="starsBalance">0</div><div class="lbl">⭐ Звёзды</div></div>
+        <div class="balance-item"><div class="num cyan" id="bankBalance">0</div><div class="lbl">🏦 Банк</div></div>
     </div>
 
-    <!-- ===== КОЛЕСО УДАЧИ ===== -->
-    <div class="wheel-overlay" id="wheelOverlay">
-        <div class="wheel-container">
-            <h2>🎰 Колесо удачи</h2>
-            <div class="wheel-wrapper">
-                <canvas id="wheelCanvas" width="400" height="400"></canvas>
-                <div class="wheel-center">⭐</div>
-            </div>
-            <div class="wheel-result" id="wheelResult">Нажмите "Крутить"!</div>
-            <div class="wheel-attempts" id="wheelAttempts">🎮 Попыток: <strong id="wheelAttemptsCount">0</strong></div>
-            <div class="wheel-actions">
-                <button class="btn primary" id="wheelSpinBtn">🔄 Крутить</button>
-                <button class="btn" id="wheelCloseBtn">✖ Закрыть</button>
-            </div>
-        </div>
+    <div id="contestBanner" style="display:none;"></div>
+
+    <div class="pet-status" id="petStatus">
+        <span class="stage" id="petStage">🪳 Малыш</span>
+        <span class="progress" id="petProgress">0 / 100 ⭐</span>
     </div>
 
-    <!-- Модалка -->
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="modal" id="modalContent">
-            <h2 id="modalTitle">Заголовок</h2>
-            <div id="modalBody"></div>
-        </div>
+    <div id="codesPanel" style="display:none;">
+        <div class="codes-panel" id="codesList"></div>
     </div>
 
-    <div class="toast" id="toast"></div>
+    <div class="btn-grid">
+        <button class="btn primary" id="btnPlay">🎮 Играть</button>
+        <button class="btn blue" id="btnBank">🏦 Банк</button>
+        <button class="btn" id="btnClicker" style="background:linear-gradient(145deg,#fd79a8,#e84393);box-shadow:0 4px 0 #a0296a;">⭐ Кликер</button>
+        <button class="btn purple" id="btnCoeff">🔥 Коэфф.</button>
+        <button class="btn green" id="btnPet">🪳 Питомец</button>
+        <button class="btn green" id="btnBuy">🛒 Попытки</button>
+        <button class="btn" id="btnCode" style="background:linear-gradient(145deg,#00b894,#00a381);box-shadow:0 4px 0 #00715a;">🎫 Код</button>
+        <button class="btn" id="btnLeaderboard" style="background:linear-gradient(145deg,#6c5ce7,#4a3db8);box-shadow:0 4px 0 #3a2f8a;">🏆 Лидеры</button>
+        <button class="btn full small" id="btnRules">📜 Правила</button>
+        <button class="btn full small" id="btnSupport">🆘 Поддержка</button>
+        <button class="btn full small danger" id="btnAdmin">🔧 Админ</button>
+    </div>
+</div>
 
-    <!-- ВАШ скрипт -->
-    <script src="game.js"></script>
+<!-- ===== КОЛЕСО УДАЧИ ===== -->
+<div class="wheel-overlay" id="wheelOverlay">
+    <div class="wheel-container">
+        <h2>🎰 Колесо удачи</h2>
+        <div class="wheel-wrapper">
+            <canvas id="wheelCanvas" width="400" height="400"></canvas>
+            <div class="wheel-center">⭐</div>
+        </div>
+        <div class="wheel-result" id="wheelResult">Нажмите "Крутить"!</div>
+        <div class="wheel-attempts" id="wheelAttempts">🎮 Попыток: <strong id="wheelAttemptsCount">0</strong></div>
+        <div class="wheel-actions">
+            <button class="btn primary" id="wheelSpinBtn">🔄 Крутить</button>
+            <button class="btn" id="wheelCloseBtn">✖ Закрыть</button>
+        </div>
+    </div>
+</div>
 
-    <!-- Добавляем скрипт для управления музыкой и звуком -->
-    <script>
-        // Создаем аудиоблоки
-        const backgroundMusic = new Audio('audio/music.mp3'); // путь к вашей музыке
-        backgroundMusic.loop = true; // зацикливаем
-        backgroundMusic.volume = 0.2; // настройте громкость по желанию
+<!-- Модалка -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modalContent">
+        <h2 id="modalTitle">Заголовок</h2>
+        <div id="modalBody"></div>
+    </div>
+</div>
 
-        const clickSound = new Audio('audio/click.mp3'); // звук клика
-        clickSound.volume = 0.5; // громкость звука
+<div class="toast" id="toast"></div>
 
-        // Объявляем переменную для состояния включенности музыки
-        let musicOn = false;
+<!-- ВАШ скрипт -->
+<script src="game.js"></script>
 
-        // Получаем кнопку для включения/выключения музыки
-        const musicToggleBtn = document.getElementById('musicToggle');
+<!-- Скрипт управления музыкой -->
+<script>
+    // Создаем аудиоблоки
+    const music = new Audio('audio/music.mp3'); // укажите путь к вашему файлу
+    music.loop = true;
+    music.volume = 0.2; // громкость
 
-        // Функция для запуска музыки
-        function startMusic() {
-            if (!musicOn) {
-                backgroundMusic.play().then(() => {
-                    musicOn = true;
-                    updateMusicButton();
-                }).catch(e => {
-                    console.log('Не удалось воспроизвести музыку: ', e);
-                });
-            }
+    const clickSound = new Audio('audio/click.mp3'); // звук клика
+    clickSound.volume = 0.5;
+
+    let isMusicPlaying = false;
+
+    const musicBtn = document.getElementById('musicToggle');
+
+    function toggleMusic() {
+        if (isMusicPlaying) {
+            music.pause();
+            isMusicPlaying = false;
+            musicBtn.textContent = '🔊 Включить музыку';
+        } else {
+            music.play().then(() => {
+                isMusicPlaying = true;
+                musicBtn.textContent = '🔇 Выключить музыку';
+            }).catch(() => {
+                console.log('Не удалось запустить музыку');
+            });
         }
+    }
 
-        // Обновляем текст кнопки
-        function updateMusicButton() {
-            if (musicOn) {
-                musicToggleBtn.textContent = '🔇 Выкл. музыку';
-            } else {
-                musicToggleBtn.textContent = '🔊 Вкл. музыку';
-            }
+    // Попытка запустить музыку при первом клике по странице
+    document.addEventListener('click', () => {
+        if (!isMusicPlaying) {
+            music.play().then(() => {
+                isMusicPlaying = true;
+                musicBtn.textContent = '🔇 Выключить музыку';
+            }).catch(() => {
+                console.log('Не удалось запустить музыку');
+            });
         }
+    }, { once: true });
 
-        // Обработчик для кнопки
-        musicToggleBtn.addEventListener('click', () => {
-            if (musicOn) {
-                backgroundMusic.pause();
-                musicOn = false;
-            } else {
-                startMusic();
-            }
-            updateMusicButton();
-        });
+    // Обработчик для кнопки интерфейса
+    document.getElementById('musicToggle').addEventListener('click', toggleMusic);
 
-        // Попытка запустить музыку при первом клике по странице
-        document.addEventListener('click', () => {
-            startMusic();
-        }, { once: true });
-
-        // Воспроизведение звука при клике по любой кнопке
-        function playClickSound() {
+    // Воспроизведение звука при клике по любой кнопке
+    document.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
             clickSound.currentTime = 0;
             clickSound.play();
-        }
-
-        // Обработчик на все кнопки
-        document.querySelectorAll('button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                playClickSound();
-            });
         });
-    </script>
+    });
+</script>
 </body>
 </html>
