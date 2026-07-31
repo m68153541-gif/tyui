@@ -1,791 +1,757 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>⭐ Звезная игра </title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>
-  /* ===== ГЛОБАЛЬНЫЕ ===== */
-  * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-  }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>⭐ Забава Игра</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* ===== ГЛОБАЛЬНЫЕ ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
 
-  body {
-      min-height: 100vh;
-      background: radial-gradient(circle at 30% 40%, #1a0e2e, #0a0515);
-      display: flex;
-      justify-content: center;
-      padding: 20px 12px;
-      color: #f0f0ff;
-      position: relative;
-      overflow-x: hidden;
-  }
+        body {
+            min-height: 100vh;
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            padding: 20px 12px;
+            color: #ffffff;
+            position: relative;
+            overflow-x: hidden;
+        }
 
-  /* Анимированные световые пятна на фоне */
-  body::before,
-  body::after {
-      content: '';
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(100px);
-      opacity: 0.3;
-      pointer-events: none;
-      z-index: 0;
-      animation: floatGlow 12s ease-in-out infinite alternate;
-  }
-  body::before {
-      width: 400px;
-      height: 400px;
-      background: #6c5ce7;
-      top: -100px;
-      left: -100px;
-  }
-  body::after {
-      width: 500px;
-      height: 500px;
-      background: #e84393;
-      bottom: -150px;
-      right: -150px;
-      animation-delay: 4s;
-  }
-  @keyframes floatGlow {
-      0% { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(80px, 60px) scale(1.3); }
-  }
+        #app {
+            position: relative;
+            z-index: 1;
+            max-width: 500px;
+            width: 100%;
+            background: rgba(20, 20, 20, 0.95);
+            border-radius: 48px 48px 32px 32px;
+            padding: 24px 20px 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
 
-  #app {
-      position: relative;
-      z-index: 1;
-      max-width: 500px;
-      width: 100%;
-      background: rgba(12, 8, 28, 0.75);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-radius: 48px 48px 32px 32px;
-      padding: 24px 20px 30px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.04);
-  }
+        h1 {
+            font-size: 26px;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 1px;
+            color: #ffffff;
+            margin-bottom: 18px;
+        }
 
-  h1 {
-      font-size: 26px;
-      font-weight: 700;
-      text-align: center;
-      letter-spacing: 1px;
-      background: linear-gradient(135deg, #ffd700, #ff6b6b, #a29bfe);
-      background-size: 200% 200%;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: gradShift 4s ease-in-out infinite alternate;
-      margin-bottom: 18px;
-  }
-  @keyframes gradShift {
-      0% { background-position: 0% 50%; }
-      100% { background-position: 100% 50%; }
-  }
+        /* ===== КАРТОЧКА ===== */
+        .user-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 16px 18px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 12px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .user-card .label {
+            font-size: 12px;
+            color: #888888;
+            letter-spacing: 0.3px;
+        }
+        .user-card .value {
+            font-weight: 600;
+            text-align: right;
+            color: #ffffff;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        .user-card .full {
+            grid-column: span 2;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        #userUid {
+            cursor: pointer;
+            transition: 0.2s;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+        }
+        #userUid:hover {
+            color: #ffffff;
+        }
 
-  /* ===== КАРТОЧКА ===== */
-  .user-card {
-      background: rgba(255, 255, 255, 0.04);
-      border-radius: 24px;
-      padding: 16px 18px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px 12px;
-      margin-bottom: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  }
-  .user-card .label {
-      font-size: 12px;
-      color: #8a8ab0;
-      letter-spacing: 0.3px;
-  }
-  .user-card .value {
-      font-weight: 600;
-      text-align: right;
-      color: #e8e8ff;
-      font-size: 14px;
-      word-break: break-all;
-  }
-  .user-card .full {
-      grid-column: span 2;
-      text-align: center;
-      font-size: 13px;
-      font-weight: 500;
-      padding-top: 6px;
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
-  }
-  #userUid {
-      cursor: pointer;
-      transition: 0.2s;
-      border-bottom: 1px dashed rgba(255, 215, 0, 0.3);
-  }
-  #userUid:hover {
-      color: #ffd700;
-  }
+        /* ===== БАЛАНС ===== */
+        .balance-grid {
+            display: flex;
+            gap: 14px;
+            margin: 12px 0 18px;
+        }
+        .balance-item {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            padding: 14px 8px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .balance-item .num {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            transition: 0.3s;
+        }
+        .balance-item .num.gold {
+            color: #ffd700;
+        }
+        .balance-item .num.cyan {
+            color: #00d4ff;
+        }
+        .balance-item .lbl {
+            font-size: 12px;
+            color: #888888;
+            margin-top: 4px;
+        }
 
-  /* ===== БАЛАНС ===== */
-  .balance-grid {
-      display: flex;
-      gap: 14px;
-      margin: 12px 0 18px;
-  }
-  .balance-item {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 20px;
-      padding: 14px 8px;
-      text-align: center;
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      backdrop-filter: blur(4px);
-  }
-  .balance-item .num {
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      transition: 0.3s;
-  }
-  .balance-item .num.gold {
-      background: linear-gradient(135deg, #f9ca24, #f0932b);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-  }
-  .balance-item .num.cyan {
-      background: linear-gradient(135deg, #7ed6df, #22a6b3);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-  }
-  .balance-item .lbl {
-      font-size: 12px;
-      color: #8a8ab0;
-      margin-top: 4px;
-  }
+        /* ===== ПИТОМЕЦ ===== */
+        .pet-status {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 12px 16px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
 
-  /* ===== ПИТОМЕЦ ===== */
-  .pet-status {
-      display: flex;
-      justify-content: space-between;
-      background: rgba(255, 255, 255, 0.02);
-      padding: 12px 16px;
-      border-radius: 40px;
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      margin-bottom: 20px;
-      font-size: 14px;
-      backdrop-filter: blur(4px);
-  }
+        /* ===== СЕТКА КНОПОК ===== */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 14px 12px;
+            margin-top: 6px;
+        }
 
-  /* ===== СЕТКА КНОПОК ===== */
-  .btn-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 16px 14px;
-      margin-top: 6px;
-  }
+        /* ===== КНОПКИ (БЕЛЫЕ) ===== */
+        .btn {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 16px 10px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #000000;
+            cursor: pointer;
+            transition: all 0.08s ease-out;
+            will-change: transform, box-shadow;
+            letter-spacing: 0.3px;
+            background: #ffffff;
+            box-shadow: 0 4px 0 #999999, 0 4px 12px rgba(0, 0, 0, 0.3);
+            text-shadow: none;
+        }
 
-  /* ===== КНОПКИ С ЛЕВИТАЦИЕЙ ===== */
-  .btn {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 16px 10px;
-      border: none;
-      border-radius: 60px;
-      font-size: 15px;
-      font-weight: 700;
-      color: #fff;
-      cursor: pointer;
-      transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.2);
-      will-change: transform, box-shadow, filter;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-      letter-spacing: 0.3px;
-      background: #2a2a50;
-      box-shadow: 0 8px 0 #15152a, 0 6px 20px rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      transform: translateY(0px) scale(1);
-  }
+        /* Анимация падения при нажатии */
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #999999, 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition-duration: 0.04s;
+        }
 
-  /* Левитация: каждая кнопка "плавает" с разной задержкой */
-  .btn:nth-child(1) { animation: floatBtn 3.2s ease-in-out infinite; }
-  .btn:nth-child(2) { animation: floatBtn 3.6s ease-in-out infinite 0.2s; }
-  .btn:nth-child(3) { animation: floatBtn 2.8s ease-in-out infinite 0.5s; }
-  .btn:nth-child(4) { animation: floatBtn 3.4s ease-in-out infinite 0.1s; }
-  .btn:nth-child(5) { animation: floatBtn 3.0s ease-in-out infinite 0.7s; }
-  .btn:nth-child(6) { animation: floatBtn 3.8s ease-in-out infinite 0.3s; }
-  .btn:nth-child(7) { animation: floatBtn 2.6s ease-in-out infinite 0.9s; }
-  .btn:nth-child(8) { animation: floatBtn 3.3s ease-in-out infinite 0.4s; }
-  .btn:nth-child(9) { animation: floatBtn 3.7s ease-in-out infinite 0.6s; }
-  .btn:nth-child(10) { animation: floatBtn 2.9s ease-in-out infinite 0.8s; }
-  .btn:nth-child(11) { animation: floatBtn 3.5s ease-in-out infinite 0.15s; }
-  .btn:nth-child(12) { animation: floatBtn 3.1s ease-in-out infinite 0.55s; }
+        /* Кнопка Поддержка - красная */
+        .btn.danger {
+            background: #e74c3c;
+            color: #ffffff;
+            box-shadow: 0 4px 0 #962d22, 0 4px 12px rgba(231, 76, 60, 0.3);
+        }
+        .btn.danger:active {
+            box-shadow: 0 1px 0 #962d22, 0 4px 12px rgba(231, 76, 60, 0.3);
+        }
 
-  @keyframes floatBtn {
-      0% { transform: translateY(0px) scale(1); }
-      50% { transform: translateY(-8px) scale(1.02); }
-      100% { transform: translateY(0px) scale(1); }
-  }
+        /* Размеры */
+        .btn.full {
+            grid-column: span 3;
+        }
+        .btn.small {
+            padding: 12px 10px;
+            font-size: 13px;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #999999;
+            pointer-events: none;
+        }
 
-  /* Состояние "тусклые" для всех кнопок при нажатии на одну */
-  .btn-grid.dimmed .btn {
-      filter: brightness(0.4) saturate(0.3);
-      transform: scale(0.92);
-      transition: all 0.2s;
-  }
-  .btn-grid.dimmed .btn.active-btn {
-      filter: brightness(1.5) saturate(1.2);
-      transform: scale(1.08) translateY(-4px);
-      box-shadow: 0 0 30px #ffd700, 0 0 60px rgba(255, 215, 0, 0.3), 0 8px 0 #b8860b;
-      background: linear-gradient(145deg, #ffd700, #f5a623) !important;
-      color: #1a1a2e !important;
-      text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-      border-color: #ffd700;
-      z-index: 10;
-  }
-  /* Свечение от активной кнопки */
-  .btn-grid.dimmed .btn.active-btn::before {
-      content: '';
-      position: absolute;
-      inset: -8px;
-      border-radius: 70px;
-      background: radial-gradient(circle, rgba(255, 215, 0, 0.5), transparent 70%);
-      filter: blur(20px);
-      z-index: -1;
-      animation: pulseGlow 1s ease-in-out infinite alternate;
-  }
-  @keyframes pulseGlow {
-      0% { opacity: 0.6; transform: scale(0.95); }
-      100% { opacity: 1; transform: scale(1.2); }
-  }
+        /* ===== КОЛЕСО ===== */
+        .wheel-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.25s ease;
+        }
+        .wheel-overlay.active {
+            display: flex;
+        }
+        .wheel-container {
+            background: rgba(20, 20, 20, 0.98);
+            border-radius: 48px;
+            padding: 28px 24px 32px;
+            max-width: 440px;
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+            animation: scaleUp 0.25s ease;
+        }
+        .wheel-container h2 {
+            text-align: center;
+            margin-bottom: 12px;
+            color: #ffffff;
+        }
+        .wheel-wrapper {
+            position: relative;
+            margin: 0 auto;
+            max-width: 320px;
+        }
+        #wheelCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+            border-radius: 50%;
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+        }
+        .wheel-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+        }
+        .wheel-result {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            padding: 12px 0 6px;
+            min-height: 50px;
+            color: #ffffff;
+        }
+        .wheel-actions {
+            display: flex;
+            gap: 12px;
+        }
+        .wheel-actions .btn {
+            flex: 1;
+        }
 
-  /* Индивидуальные цвета кнопок */
-  .btn.primary {
-      background: linear-gradient(145deg, #f9ca24, #f0932b);
-      box-shadow: 0 8px 0 #b86d1c, 0 6px 20px rgba(249, 202, 36, 0.3);
-      color: #1a1a2e;
-  }
-  .btn.blue {
-      background: linear-gradient(145deg, #4a8fe0, #2d6bb8);
-      box-shadow: 0 8px 0 #1a3f6e, 0 6px 20px rgba(45, 107, 184, 0.3);
-  }
-  .btn.special {
-      background: linear-gradient(145deg, #fd79a8, #e84393);
-      box-shadow: 0 8px 0 #a0296a, 0 6px 20px rgba(232, 67, 147, 0.3);
-  }
-  .btn.purple {
-      background: linear-gradient(145deg, #a29bfe, #6c5ce7);
-      box-shadow: 0 8px 0 #3a2f8a, 0 6px 20px rgba(108, 92, 231, 0.3);
-  }
-  .btn.green {
-      background: linear-gradient(145deg, #55efc4, #00b894);
-      box-shadow: 0 8px 0 #00715a, 0 6px 20px rgba(0, 184, 148, 0.3);
-      color: #0f1a1a;
-  }
-  .btn.danger {
-      background: linear-gradient(145deg, #e74c3c, #c0392b);
-      box-shadow: 0 8px 0 #87281e, 0 6px 20px rgba(231, 76, 60, 0.3);
-  }
-  .btn.full {
-      grid-column: span 3;
-  }
-  .btn.small {
-      padding: 12px 10px;
-      font-size: 13px;
-  }
-  .btn:disabled {
-      opacity: 0.5;
-      transform: translateY(4px) scale(0.96);
-      box-shadow: 0 3px 0 #15152a;
-      pointer-events: none;
-      animation: none !important;
-  }
+        /* ===== МОДАЛКА ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.2s ease;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: rgba(20, 20, 20, 0.98);
+            border-radius: 40px;
+            padding: 28px 24px 30px;
+            max-width: 440px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            animation: scaleUp 0.2s ease;
+        }
+        .modal h2 {
+            text-align: center;
+            margin-bottom: 16px;
+            font-size: 22px;
+            color: #ffffff;
+        }
+        .modal input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #ffffff;
+            font-size: 15px;
+            width: 100%;
+            outline: none;
+            transition: 0.3s;
+        }
+        .modal input:focus {
+            border-color: #ffffff;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+        }
+        .modal .btn {
+            margin-top: 8px;
+        }
 
-  /* ===== КОЛЕСО ===== */
-  .wheel-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(10px);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      animation: fadeIn 0.25s ease;
-  }
-  .wheel-overlay.active {
-      display: flex;
-  }
-  .wheel-container {
-      background: rgba(12, 8, 28, 0.95);
-      border-radius: 48px;
-      padding: 28px 24px 32px;
-      max-width: 440px;
-      width: 100%;
-      border: 1px solid rgba(255, 215, 0, 0.15);
-      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
-      animation: scaleUp 0.25s ease;
-  }
-  .wheel-container h2 {
-      text-align: center;
-      margin-bottom: 12px;
-      background: linear-gradient(135deg, #ffd700, #f5a623);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-  }
-  .wheel-wrapper {
-      position: relative;
-      margin: 0 auto;
-      max-width: 320px;
-  }
-  #wheelCanvas {
-      display: block;
-      width: 100%;
-      height: auto;
-      aspect-ratio: 1/1;
-      border-radius: 50%;
-      box-shadow: 0 0 40px rgba(255, 215, 0, 0.15);
-      cursor: pointer;
-  }
-  .wheel-center {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 36px;
-      text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
-      pointer-events: none;
-  }
-  .wheel-result {
-      text-align: center;
-      font-size: 18px;
-      font-weight: 600;
-      padding: 12px 0 6px;
-      min-height: 50px;
-  }
-  .wheel-actions {
-      display: flex;
-      gap: 12px;
-  }
-  .wheel-actions .btn {
-      flex: 1;
-      animation: none !important;
-  }
+        /* ===== ТОСТ ===== */
+        #toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: rgba(20, 20, 20, 0.95);
+            backdrop-filter: blur(12px);
+            padding: 14px 28px;
+            border-radius: 12px;
+            color: #ffffff;
+            font-weight: 500;
+            font-size: 15px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 9999;
+            transition: 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+            opacity: 0;
+            pointer-events: none;
+            white-space: nowrap;
+            max-width: 90%;
+            text-align: center;
+        }
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
 
-  /* ===== МОДАЛКА ===== */
-  .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(8px);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      animation: fadeIn 0.2s ease;
-  }
-  .modal-overlay.active {
-      display: flex;
-  }
-  .modal {
-      background: rgba(12, 8, 28, 0.96);
-      border-radius: 40px;
-      padding: 28px 24px 30px;
-      max-width: 440px;
-      width: 100%;
-      max-height: 85vh;
-      overflow-y: auto;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
-      animation: scaleUp 0.2s ease;
-  }
-  .modal h2 {
-      text-align: center;
-      margin-bottom: 16px;
-      font-size: 22px;
-  }
-  .modal input {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 30px;
-      padding: 12px 16px;
-      color: #f0f0ff;
-      font-size: 15px;
-      width: 100%;
-      outline: none;
-      transition: 0.3s;
-  }
-  .modal input:focus {
-      border-color: #ffd700;
-      box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
-  }
-  .modal .btn {
-      animation: none !important;
-      margin-top: 8px;
-      box-shadow: 0 6px 0 #15152a;
-  }
-  .modal .btn:active {
-      transform: translateY(3px);
-      box-shadow: 0 2px 0 #15152a;
-  }
+        /* ===== КЛИКЕР ===== */
+        .clicker-star {
+            font-size: 72px;
+            cursor: pointer;
+            user-select: none;
+            margin: 6px 0;
+            transition: 0.1s;
+        }
+        .clicker-star.pop {
+            animation: popStar 0.2s ease;
+        }
+        @keyframes popStar {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); color: #ffd700; }
+            100% { transform: scale(1); }
+        }
+        .clicker-progress {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            margin: 8px 0;
+            overflow: hidden;
+        }
+        .clicker-progress .fill {
+            height: 100%;
+            width: 0%;
+            background: #ffffff;
+            border-radius: 20px;
+            transition: 0.2s;
+        }
 
-  /* ===== ТОСТ ===== */
-  #toast {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%) translateY(80px);
-      background: rgba(10, 8, 25, 0.92);
-      backdrop-filter: blur(12px);
-      padding: 14px 28px;
-      border-radius: 60px;
-      color: #fff;
-      font-weight: 500;
-      font-size: 15px;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      z-index: 9999;
-      transition: 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
-      opacity: 0;
-      pointer-events: none;
-      white-space: nowrap;
-      max-width: 90%;
-      text-align: center;
-  }
-  #toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-  }
+        /* ===== КНОПКА МУЗЫКИ ===== */
+        #musicBtn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #000000;
+            box-shadow: 0 4px 0 #999999, 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            transition: all 0.08s ease-out;
+        }
+        #musicBtn:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #999999, 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
 
-  /* ===== КЛИКЕР ===== */
-  .clicker-star {
-      font-size: 72px;
-      cursor: pointer;
-      user-select: none;
-      margin: 6px 0;
-      transition: 0.1s;
-  }
-  .clicker-star.pop {
-      animation: popStar 0.2s ease;
-  }
-  @keyframes popStar {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.3); color: #ffd700; }
-      100% { transform: scale(1); }
-  }
-  .clicker-progress {
-      width: 100%;
-      height: 10px;
-      background: #2a2a4a;
-      border-radius: 20px;
-      margin: 8px 0;
-      overflow: hidden;
-  }
-  .clicker-progress .fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #f9ca24, #f0932b);
-      border-radius: 20px;
-      transition: 0.2s;
-  }
+        /* ===== АНИМАЦИИ ===== */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes scaleUp {
+            from { opacity: 0; transform: scale(0.92); }
+            to { opacity: 1; transform: scale(1); }
+        }
 
-  /* ===== МУЗЫКАЛЬНАЯ КНОПКА ===== */
-  #musicBtn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: linear-gradient(145deg, #4CAF50, #2e7d32);
-      border: 2px solid rgba(255,255,255,0.2);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      color: white;
-      box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4), 0 4px 0 #1b5e20;
-      z-index: 9999;
-      transition: all 0.2s;
-      animation: floatBtn 3s ease-in-out infinite;
-  }
-  #musicBtn:hover {
-      transform: scale(1.1);
-      box-shadow: 0 8px 30px rgba(76, 175, 80, 0.6), 0 4px 0 #1b5e20;
-  }
-  #musicBtn:active {
-      transform: translateY(4px) scale(0.95);
-      box-shadow: 0 2px 0 #1b5e20;
-  }
+        /* ===== ДОПЫ ===== */
+        .chat-container {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 12px;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .chat-container .msg.user { color: #00d4ff; }
+        .chat-container .msg.admin { color: #ffd700; }
+        .chat-container .msg .time {
+            font-size: 10px;
+            color: #666;
+            margin-left: 10px;
+        }
+        .scrollable {
+            max-height: 300px;
+            overflow-y: auto;
+        }
 
-  /* ===== АНИМАЦИИ ===== */
-  @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-  }
-  @keyframes scaleUp {
-      from { opacity: 0; transform: scale(0.92); }
-      to { opacity: 1; transform: scale(1); }
-  }
+        /* ===== КОНКУРСНЫЙ БАННЕР ===== */
+        #contestBanner {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 40px;
+            padding: 12px 18px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 18px;
+        }
+        #contestBanner .title {
+            font-weight: 700;
+            font-size: 16px;
+            color: #ffd700;
+        }
+        #contestBanner .timer {
+            font-size: 26px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #ffffff;
+        }
 
-  /* ===== ДОПЫ ===== */
-  .chat-container {
-      max-height: 200px;
-      overflow-y: auto;
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 20px;
-      padding: 12px;
-      margin: 8px 0;
-      font-size: 14px;
-  }
-  .chat-container .msg.user { color: #7ed6df; }
-  .chat-container .msg.admin { color: #ffd700; }
-  .chat-container .msg .time {
-      font-size: 10px;
-      color: #666;
-      margin-left: 10px;
-  }
-  .scrollable {
-      max-height: 300px;
-      overflow-y: auto;
-  }
+        /* ===== ТАБЛИЦА ЛИДЕРОВ ===== */
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        .leaderboard-table th {
+            padding: 8px;
+            text-align: left;
+            color: #888;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .leaderboard-table td {
+            padding: 8px;
+            color: #fff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
 
-  /* ===== КОНКУРСНЫЙ БАННЕР ===== */
-  #contestBanner {
-      background: linear-gradient(135deg, rgba(249, 202, 36, 0.12), rgba(240, 147, 43, 0.08));
-      border-radius: 40px;
-      padding: 12px 18px;
-      text-align: center;
-      border: 1px solid rgba(255, 215, 0, 0.15);
-      margin-bottom: 18px;
-  }
-  #contestBanner .title {
-      font-weight: 700;
-      font-size: 16px;
-      color: #ffd700;
-  }
-  #contestBanner .timer {
-      font-size: 26px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      color: #fff;
-  }
-
-  @media (max-width: 420px) {
-      .btn-grid { gap: 12px; }
-      .btn { font-size: 13px; padding: 14px 6px; }
-      .balance-item .num { font-size: 24px; }
-      #app { padding: 18px 14px 22px; }
-      #musicBtn {
-          width: 48px;
-          height: 48px;
-          font-size: 20px;
-          bottom: 12px;
-          right: 12px;
-      }
-  }
-</style>
+        @media (max-width: 420px) {
+            .btn-grid { gap: 10px; }
+            .btn { font-size: 13px; padding: 14px 6px; }
+            .balance-item .num { font-size: 24px; }
+            #app { padding: 18px 14px 22px; }
+            #musicBtn {
+                width: 48px;
+                height: 48px;
+                font-size: 20px;
+                bottom: 12px;
+                right: 12px;
+            }
+        }
+    </style>
 </head>
 <body>
-<div id="app">
-    <h1>⭐ Забава Игра</h1>
+    <div id="app">
+        <h1>⭐ Забава Игра</h1>
 
-    <div class="user-card" id="userCard">
-        <span class="label">Имя</span><span class="value" id="userName">—</span>
-        <span class="label">Пол</span><span class="value" id="userGender">—</span>
-        <span class="label">Возраст</span><span class="value" id="userAge">—</span>
-        <span class="label">ID</span><span class="value" id="userUid" onclick="copyUid()">—</span>
-        <span class="label">Попытки</span><span class="value" id="userAttempts">0</span>
-        <div class="full" id="userRegStatus">✅ Зарегистрирован</div>
-    </div>
-
-    <div class="balance-grid">
-        <div class="balance-item"><div class="num gold" id="starsBalance">0</div><div class="lbl">⭐ Звёзды</div></div>
-        <div class="balance-item"><div class="num cyan" id="bankBalance">0</div><div class="lbl">🏦 Банк</div></div>
-    </div>
-
-    <div id="contestBanner" style="display:none;"></div>
-
-    <div class="pet-status" id="petStatus">
-        <span class="stage" id="petStage">🪳 Малыш</span>
-        <span class="progress" id="petProgress">0 / 100 ⭐</span>
-    </div>
-
-    <div id="codesPanel" style="display:none;">
-        <div class="codes-panel" id="codesList"></div>
-    </div>
-
-    <div class="btn-grid" id="btnGrid">
-        <button class="btn primary" id="btnPlay">🎮 Играть</button>
-        <button class="btn blue" id="btnBank">🏦 Банк</button>
-        <button class="btn special" id="btnClicker">⭐ Кликер</button>
-        <button class="btn purple" id="btnCoeff">🔥 Коэфф.</button>
-        <button class="btn green" id="btnPet">🪳 Питомец</button>
-        <button class="btn green" id="btnBuy">🛒 Попытки</button>
-        <button class="btn" id="btnCode" style="background:linear-gradient(145deg,#00b894,#00a381);box-shadow:0 8px 0 #00715a;">🎫 Код</button>
-        <button class="btn" id="btnLeaderboard" style="background:linear-gradient(145deg,#6c5ce7,#4a3db8);box-shadow:0 8px 0 #3a2f8a;">🏆 Лидеры</button>
-        <button class="btn full small" id="btnRules">📜 Правила</button>
-        <button class="btn full small" id="btnSupport">🆘 Поддержка</button>
-        <button class="btn full small danger" id="btnAdmin">🔧 Админ</button>
-    </div>
-</div>
-
-<!-- КОЛЕСО -->
-<div class="wheel-overlay" id="wheelOverlay">
-    <div class="wheel-container">
-        <h2>🎰 Колесо удачи</h2>
-        <div class="wheel-wrapper">
-            <canvas id="wheelCanvas" width="400" height="400"></canvas>
-            <div class="wheel-center">⭐</div>
+        <div class="user-card" id="userCard">
+            <span class="label">Имя</span><span class="value" id="userName">—</span>
+            <span class="label">Пол</span><span class="value" id="userGender">—</span>
+            <span class="label">Возраст</span><span class="value" id="userAge">—</span>
+            <span class="label">ID</span><span class="value" id="userUid" onclick="copyUid()">—</span>
+            <span class="label">Попытки</span><span class="value" id="userAttempts">0</span>
+            <div class="full" id="userRegStatus">✅ Зарегистрирован</div>
         </div>
-        <div class="wheel-result" id="wheelResult">Нажмите "Крутить"!</div>
-        <div class="wheel-attempts">🎮 Попыток: <strong id="wheelAttemptsCount">0</strong></div>
-        <div class="wheel-actions">
-            <button class="btn primary" id="wheelSpinBtn">🔄 Крутить</button>
-            <button class="btn" id="wheelCloseBtn">✖ Закрыть</button>
+
+        <div class="balance-grid">
+            <div class="balance-item"><div class="num gold" id="starsBalance">0</div><div class="lbl">⭐ Звёзды</div></div>
+            <div class="balance-item"><div class="num cyan" id="bankBalance">0</div><div class="lbl">🏦 Банк</div></div>
+        </div>
+
+        <div id="contestBanner" style="display:none;"></div>
+
+        <div class="pet-status" id="petStatus">
+            <span class="stage" id="petStage">🪳 Малыш</span>
+            <span class="progress" id="petProgress">0 / 100 ⭐</span>
+        </div>
+
+        <div id="codesPanel" style="display:none;">
+            <div class="codes-panel" id="codesList"></div>
+        </div>
+
+        <div class="btn-grid" id="btnGrid">
+            <button class="btn" id="btnPlay">🎮 Играть</button>
+            <button class="btn" id="btnBank">🏦 Банк</button>
+            <button class="btn" id="btnClicker">⭐ Кликер</button>
+            <button class="btn" id="btnCoeff">🔥 Коэфф.</button>
+            <button class="btn" id="btnPet">🪳 Питомец</button>
+            <button class="btn" id="btnBuy">🛒 Попытки</button>
+            <button class="btn" id="btnCode">🎫 Код</button>
+            <button class="btn" id="btnLeaderboard">🏆 Лидеры</button>
+            <button class="btn full small" id="btnRules">📜 Правила</button>
+            <button class="btn full small danger" id="btnSupport">🆘 Поддержка</button>
+            <button class="btn full small" id="btnAdmin">🔧 Админ</button>
         </div>
     </div>
-</div>
 
-<!-- МОДАЛКА -->
-<div class="modal-overlay" id="modalOverlay">
-    <div class="modal" id="modalContent">
-        <h2 id="modalTitle">Заголовок</h2>
-        <div id="modalBody"></div>
+    <!-- КОЛЕСО -->
+    <div class="wheel-overlay" id="wheelOverlay">
+        <div class="wheel-container">
+            <h2>🎰 Колесо удачи</h2>
+            <div class="wheel-wrapper">
+                <canvas id="wheelCanvas" width="400" height="400"></canvas>
+                <div class="wheel-center">⭐</div>
+            </div>
+            <div class="wheel-result" id="wheelResult">Нажмите "Крутить"!</div>
+            <div class="wheel-attempts">🎮 Попыток: <strong id="wheelAttemptsCount">0</strong></div>
+            <div class="wheel-actions">
+                <button class="btn" id="wheelSpinBtn">🔄 Крутить</button>
+                <button class="btn" id="wheelCloseBtn">✖ Закрыть</button>
+            </div>
+        </div>
     </div>
-</div>
 
-<div id="toast"></div>
+    <!-- МОДАЛКА -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalContent">
+            <h2 id="modalTitle">Заголовок</h2>
+            <div id="modalBody"></div>
+        </div>
+    </div>
 
-<!-- КНОПКА МУЗЫКИ -->
-<button id="musicBtn" title="Вкл/Выкл музыку">🎵</button>
+    <div id="toast"></div>
 
-<script>
-// ============================================================
-//  МУЗЫКА (независимый блок)
-// ============================================================
-const music = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3');
-music.loop = true;
-music.volume = 0.2;
+    <!-- КНОПКА МУЗЫКИ -->
+    <button id="musicBtn" title="Вкл/Выкл музыку">🎵</button>
 
-const musicBtn = document.getElementById('musicBtn');
-let musicOn = false;
+    <script>
+        // ============================================================
+        //  МУЗЫКА
+        // ============================================================
+        const music = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3');
+        music.loop = true;
+        music.volume = 0.2;
 
-musicBtn.addEventListener('click', () => {
-    if (musicOn) {
-        music.pause();
-        musicOn = false;
-        musicBtn.textContent = '🎵';
-        musicBtn.title = 'Включить музыку';
-    } else {
-        music.play().then(() => {
-            musicOn = true;
-            musicBtn.textContent = '🔇';
-            musicBtn.title = 'Выключить музыку';
-        }).catch(() => {
-            alert('Не удалось запустить музыку');
-        });
-    }
-});
+        const musicBtn = document.getElementById('musicBtn');
+        let musicOn = false;
 
-// Старт при первом клике
-document.addEventListener('click', () => {
-    if (!musicOn) {
-        music.play().then(() => {
-            musicOn = true;
-            musicBtn.textContent = '🔇';
-            musicBtn.title = 'Выключить музыку';
-        }).catch(() => {});
-    }
-}, { once: true });
-
-// ============================================================
-//  ЭФФЕКТЫ ДЛЯ КНОПОК (тускнение + подсветка)
-// ============================================================
-document.addEventListener('DOMContentLoaded', function() {
-    const grid = document.getElementById('btnGrid');
-    const allBtns = grid.querySelectorAll('.btn');
-
-    allBtns.forEach(btn => {
-        btn.addEventListener('mousedown', function(e) {
-            grid.classList.add('dimmed');
-            this.classList.add('active-btn');
-        });
-
-        btn.addEventListener('mouseup', function(e) {
-            grid.classList.remove('dimmed');
-            this.classList.remove('active-btn');
-        });
-
-        btn.addEventListener('mouseleave', function(e) {
-            if (grid.classList.contains('dimmed')) {
-                grid.classList.remove('dimmed');
-                this.classList.remove('active-btn');
+        musicBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (musicOn) {
+                music.pause();
+                musicOn = false;
+                musicBtn.textContent = '🎵';
+                musicBtn.title = 'Включить музыку';
+            } else {
+                music.play().then(() => {
+                    musicOn = true;
+                    musicBtn.textContent = '🔇';
+                    musicBtn.title = 'Выключить музыку';
+                }).catch(() => {
+                    alert('Не удалось запустить музыку');
+                });
             }
         });
 
-        btn.addEventListener('touchstart', function(e) {
-            grid.classList.add('dimmed');
-            this.classList.add('active-btn');
-        });
+        // Автозапуск при первом клике
+        document.addEventListener('click', function firstClick() {
+            if (!musicOn) {
+                music.play().then(() => {
+                    musicOn = true;
+                    musicBtn.textContent = '🔇';
+                    musicBtn.title = 'Выключить музыку';
+                }).catch(() => {});
+            }
+            document.removeEventListener('click', firstClick);
+        }, { once: true });
 
-        btn.addEventListener('touchend', function(e) {
-            grid.classList.remove('dimmed');
-            this.classList.remove('active-btn');
-        });
-    });
-});
+        // ============================================================
+        //  КОПИРОВАНИЕ UID
+        // ============================================================
+        window.copyUid = function() {
+            const el = document.getElementById('userUid');
+            const uid = el.textContent;
+            if (!uid || uid === '—') return;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(uid).then(() => {
+                    showToast('✅ UID скопирован');
+                }).catch(() => {
+                    fallbackCopy(uid);
+                });
+            } else {
+                fallbackCopy(uid);
+            }
+        };
 
-// ============================================================
-//  КОПИРОВАНИЕ UID (заглушка, будет переопределена в game.js)
-// ============================================================
-window.copyUid = function() {
-    const el = document.getElementById('userUid');
-    const uid = el.textContent;
-    if (!uid || uid === '—') return;
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(uid).then(() => {
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
             showToast('✅ UID скопирован');
-        }).catch(() => {
-            fallbackCopy(uid);
+        }
+
+        // ============================================================
+        //  TOAST
+        // ============================================================
+        window.showToast = function(text) {
+            const t = document.getElementById('toast');
+            if (!t) return;
+            t.textContent = text;
+            t.classList.add('show');
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+        };
+
+        // ============================================================
+        //  КОЛЕСО (для теста, будет переопределено game.js)
+        // ============================================================
+        function initWheel() {
+            const canvas = document.getElementById('wheelCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+            const r = Math.min(w, h) / 2 - 10;
+            const segments = [
+                { label: 'Ничего', icon: '😔', value: 0 },
+                { label: '10 ⭐', icon: '⭐', value: 10 },
+                { label: '25 ⭐', icon: '⭐', value: 25 },
+                { label: '50 ⭐', icon: '⭐', value: 50 },
+                { label: '100 ⭐', icon: '⭐', value: 100 },
+                { label: '150 ⭐', icon: '🌟', value: 150 },
+                { label: '200 ⭐', icon: '🌟', value: 200 },
+                { label: '300 ⭐', icon: '💎', value: 300 },
+                { label: '500 ⭐', icon: '💎', value: 500 },
+                { label: '1000 ⭐', icon: '👑', value: 1000 }
+            ];
+            const angleStep = (2 * Math.PI) / segments.length;
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            segments.forEach((seg, i) => {
+                const startAngle = i * angleStep;
+                const endAngle = startAngle + angleStep;
+                
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, r, startAngle, endAngle);
+                ctx.closePath();
+                
+                ctx.fillStyle = i % 2 === 0 ? '#2a2a2a' : '#333333';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                const midAngle = startAngle + angleStep / 2;
+                const tx = cx + Math.cos(midAngle) * r * 0.65;
+                const ty = cy + Math.sin(midAngle) * r * 0.65;
+                
+                ctx.save();
+                ctx.translate(tx, ty);
+                ctx.rotate(midAngle);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = '20px sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(seg.icon, 0, -10);
+                ctx.font = '9px sans-serif';
+                ctx.fillStyle = '#888888';
+                ctx.fillText(seg.value > 0 ? seg.value + '⭐' : '—', 0, 16);
+                ctx.restore();
+            });
+        }
+
+        // ============================================================
+        //  ЗАГЛУШКИ ДЛЯ КНОПОК (будут переопределены game.js)
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Инициализация колеса
+            if (typeof initWheel === 'function') initWheel();
+            
+            // Обработчики для кнопок (заглушки)
+            document.getElementById('btnPlay').addEventListener('click', function() {
+                showToast('🎮 Игра загружается...');
+            });
+            document.getElementById('btnBank').addEventListener('click', function() {
+                showToast('🏦 Банк загружается...');
+            });
+            document.getElementById('btnClicker').addEventListener('click', function() {
+                showToast('⭐ Кликер загружается...');
+            });
+            document.getElementById('btnCoeff').addEventListener('click', function() {
+                showToast('🔥 Коэффициент загружается...');
+            });
+            document.getElementById('btnPet').addEventListener('click', function() {
+                showToast('🪳 Питомец загружается...');
+            });
+            document.getElementById('btnBuy').addEventListener('click', function() {
+                showToast('🛒 Покупка загружается...');
+            });
+            document.getElementById('btnCode').addEventListener('click', function() {
+                showToast('🎫 Код загружается...');
+            });
+            document.getElementById('btnLeaderboard').addEventListener('click', function() {
+                showToast('🏆 Лидеры загружаются...');
+            });
+            document.getElementById('btnRules').addEventListener('click', function() {
+                showToast('📜 Правила загружаются...');
+            });
+            document.getElementById('btnSupport').addEventListener('click', function() {
+                showToast('🆘 Поддержка загружается...');
+            });
+            document.getElementById('btnAdmin').addEventListener('click', function() {
+                showToast('🔧 Админ-панель загружается...');
+            });
+            
+            console.log('✅ Интерфейс загружен!');
         });
-    } else {
-        fallbackCopy(uid);
-    }
-};
+    </script>
 
-function fallbackCopy(text) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    ta.remove();
-    showToast('✅ UID скопирован');
-}
-
-// Заглушка для showToast (будет переопределена в game.js)
-window.showToast = function(text) {
-    const t = document.getElementById('toast');
-    if (!t) return;
-    t.textContent = text;
-    t.classList.add('show');
-    clearTimeout(window._toastTimer);
-    window._toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
-};
-</script>
-
-<!-- ============================================================
-     ПОДКЛЮЧАЕМ ВАШ ОСНОВНОЙ ФАЙЛ С ЛОГИКОЙ
-     ============================================================ -->
-<script src="game.js"></script>
-
+    <!-- ============================================================
+         ПОДКЛЮЧАЕМ ВАШ ОСНОВНОЙ ФАЙЛ С ЛОГИКОЙ
+         ============================================================ -->
+    <script src="game.js"></script>
 </body>
 </html>
