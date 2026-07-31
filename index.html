@@ -6,7 +6,6 @@
     <title>⭐ Забава Игра</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* ===== ГЛОБАЛЬНЫЕ ===== */
         * {
             margin: 0;
             padding: 0;
@@ -19,14 +18,12 @@
             background: #0a0515;
             display: flex;
             justify-content: center;
-            align-items: center;
             padding: 20px 12px;
             color: #ffffff;
-            overflow: hidden;
+            overflow-y: auto;
             position: relative;
         }
 
-        /* ===== КОСМИЧЕСКИЙ ФОН ===== */
         #backgroundCanvas {
             position: fixed;
             top: 0;
@@ -37,7 +34,6 @@
             pointer-events: none;
         }
 
-        /* ===== ЭКРАН ЗАГРУЗКИ ===== */
         #loadingScreen {
             position: fixed;
             top: 0;
@@ -124,7 +120,6 @@
             color: #a29bfe;
         }
 
-        /* ===== ОСНОВНОЕ ПРИЛОЖЕНИЕ ===== */
         #app {
             position: relative;
             z-index: 1;
@@ -140,6 +135,7 @@
             opacity: 0;
             transform: translateY(30px) scale(0.95);
             transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            margin-bottom: 80px;
         }
 
         #app.show {
@@ -159,12 +155,12 @@
             animation: gradShift 4s ease-in-out infinite alternate;
             margin-bottom: 18px;
         }
+
         @keyframes gradShift {
             0% { background-position: 0% 50%; }
             100% { background-position: 100% 50%; }
         }
 
-        /* ===== КАРТОЧКА ===== */
         .user-card {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 24px;
@@ -176,11 +172,13 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
         }
+
         .user-card .label {
             font-size: 12px;
             color: #8a8ab0;
             letter-spacing: 0.3px;
         }
+
         .user-card .value {
             font-weight: 600;
             text-align: right;
@@ -188,6 +186,7 @@
             font-size: 14px;
             word-break: break-all;
         }
+
         .user-card .full {
             grid-column: span 2;
             text-align: center;
@@ -196,21 +195,23 @@
             padding-top: 6px;
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
+
         #userUid {
             cursor: pointer;
             transition: 0.2s;
             border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
         }
+
         #userUid:hover {
             color: #a29bfe;
         }
 
-        /* ===== БАЛАНС ===== */
         .balance-grid {
             display: flex;
             gap: 14px;
             margin: 12px 0 18px;
         }
+
         .balance-item {
             flex: 1;
             background: rgba(255, 255, 255, 0.03);
@@ -220,29 +221,32 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(4px);
         }
+
         .balance-item .num {
             font-size: 28px;
             font-weight: 800;
             letter-spacing: 0.5px;
             transition: 0.3s;
         }
+
         .balance-item .num.gold {
             background: linear-gradient(135deg, #f9ca24, #f0932b);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+
         .balance-item .num.cyan {
             background: linear-gradient(135deg, #7ed6df, #22a6b3);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+
         .balance-item .lbl {
             font-size: 12px;
             color: #8a8ab0;
             margin-top: 4px;
         }
 
-        /* ===== ПИТОМЕЦ ===== */
         .pet-status {
             display: flex;
             justify-content: space-between;
@@ -255,7 +259,6 @@
             backdrop-filter: blur(4px);
         }
 
-        /* ===== КНОПКИ (ПРОЗРАЧНЫЕ С ОБВОДКОЙ) ===== */
         .btn-grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
@@ -301,6 +304,7 @@
             border-color: rgba(231, 76, 60, 0.5);
             background: rgba(231, 76, 60, 0.1);
         }
+
         .btn.danger:hover {
             border-color: rgba(231, 76, 60, 0.8);
             background: rgba(231, 76, 60, 0.15);
@@ -310,17 +314,18 @@
         .btn.full {
             grid-column: span 3;
         }
+
         .btn.small {
             padding: 12px 10px;
             font-size: 13px;
         }
+
         .btn:disabled {
             opacity: 0.4;
             transform: translateY(2px);
             pointer-events: none;
         }
 
-        /* ===== КОЛЕСО ===== */
         .wheel-overlay {
             display: none;
             position: fixed;
@@ -333,9 +338,11 @@
             padding: 20px;
             animation: fadeIn 0.25s ease;
         }
+
         .wheel-overlay.active {
             display: flex;
         }
+
         .wheel-container {
             background: rgba(20, 16, 40, 0.95);
             border-radius: 48px;
@@ -346,6 +353,7 @@
             box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
             animation: scaleUp 0.25s ease;
         }
+
         .wheel-container h2 {
             text-align: center;
             margin-bottom: 12px;
@@ -353,11 +361,13 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+
         .wheel-wrapper {
             position: relative;
             margin: 0 auto;
             max-width: 320px;
         }
+
         #wheelCanvas {
             display: block;
             width: 100%;
@@ -367,6 +377,7 @@
             box-shadow: 0 0 40px rgba(108, 92, 231, 0.1);
             cursor: pointer;
         }
+
         .wheel-center {
             position: absolute;
             top: 50%;
@@ -376,6 +387,7 @@
             text-shadow: 0 0 30px rgba(162, 155, 254, 0.3);
             pointer-events: none;
         }
+
         .wheel-result {
             text-align: center;
             font-size: 18px;
@@ -384,15 +396,16 @@
             min-height: 50px;
             color: #ffffff;
         }
+
         .wheel-actions {
             display: flex;
             gap: 12px;
         }
+
         .wheel-actions .btn {
             flex: 1;
         }
 
-        /* ===== МОДАЛКА ===== */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -405,9 +418,11 @@
             padding: 20px;
             animation: fadeIn 0.2s ease;
         }
+
         .modal-overlay.active {
             display: flex;
         }
+
         .modal {
             background: rgba(20, 16, 40, 0.96);
             border-radius: 40px;
@@ -420,12 +435,14 @@
             box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
             animation: scaleUp 0.2s ease;
         }
+
         .modal h2 {
             text-align: center;
             margin-bottom: 16px;
             font-size: 22px;
             color: #ffffff;
         }
+
         .modal input {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -437,15 +454,16 @@
             outline: none;
             transition: 0.3s;
         }
+
         .modal input:focus {
             border-color: #a29bfe;
             box-shadow: 0 0 20px rgba(162, 155, 254, 0.1);
         }
+
         .modal .btn {
             margin-top: 8px;
         }
 
-        /* ===== ТОСТ ===== */
         #toast {
             position: fixed;
             bottom: 30px;
@@ -468,12 +486,12 @@
             max-width: 90%;
             text-align: center;
         }
+
         #toast.show {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
 
-        /* ===== КЛИКЕР ===== */
         .clicker-star {
             font-size: 72px;
             cursor: pointer;
@@ -481,14 +499,17 @@
             margin: 6px 0;
             transition: 0.1s;
         }
+
         .clicker-star.pop {
             animation: popStar 0.2s ease;
         }
+
         @keyframes popStar {
             0% { transform: scale(1); }
             50% { transform: scale(1.3); color: #a29bfe; }
             100% { transform: scale(1); }
         }
+
         .clicker-progress {
             width: 100%;
             height: 10px;
@@ -497,6 +518,7 @@
             margin: 8px 0;
             overflow: hidden;
         }
+
         .clicker-progress .fill {
             height: 100%;
             width: 0%;
@@ -505,7 +527,6 @@
             transition: 0.2s;
         }
 
-        /* ===== КНОПКА МУЗЫКИ ===== */
         #musicBtn {
             position: fixed;
             bottom: 20px;
@@ -526,26 +547,27 @@
             z-index: 9999;
             transition: all 0.3s ease;
         }
+
         #musicBtn:hover {
             border-color: rgba(162, 155, 254, 0.6);
             background: rgba(255, 255, 255, 0.08);
             transform: scale(1.05);
         }
+
         #musicBtn:active {
             transform: scale(0.95);
         }
 
-        /* ===== АНИМАЦИИ ===== */
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
         }
+
         @keyframes scaleUp {
             from { opacity: 0; transform: scale(0.92); }
             to { opacity: 1; transform: scale(1); }
         }
 
-        /* ===== ДОПЫ ===== */
         .chat-container {
             max-height: 200px;
             overflow-y: auto;
@@ -555,6 +577,7 @@
             margin: 8px 0;
             font-size: 14px;
         }
+
         .chat-container .msg.user { color: #7ed6df; }
         .chat-container .msg.admin { color: #a29bfe; }
         .chat-container .msg .time {
@@ -562,12 +585,12 @@
             color: #666;
             margin-left: 10px;
         }
+
         .scrollable {
             max-height: 300px;
             overflow-y: auto;
         }
 
-        /* ===== КОНКУРСНЫЙ БАННЕР ===== */
         #contestBanner {
             background: rgba(108, 92, 231, 0.1);
             border-radius: 40px;
@@ -576,11 +599,13 @@
             border: 1px solid rgba(108, 92, 231, 0.15);
             margin-bottom: 18px;
         }
+
         #contestBanner .title {
             font-weight: 700;
             font-size: 16px;
             color: #a29bfe;
         }
+
         #contestBanner .timer {
             font-size: 26px;
             font-weight: 700;
@@ -588,22 +613,55 @@
             color: #ffffff;
         }
 
-        /* ===== ТАБЛИЦА ===== */
         .leaderboard-table {
             width: 100%;
             border-collapse: collapse;
             margin: 10px 0;
         }
+
         .leaderboard-table th {
             padding: 8px;
             text-align: left;
             color: #8a8ab0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
+
         .leaderboard-table td {
             padding: 8px;
             color: #fff;
             border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .admin-panel .btn {
+            font-size: 13px;
+            padding: 10px 6px;
+        }
+
+        .code-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin: 4px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .code-text {
+            cursor: pointer;
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .code-type {
+            color: #888;
+            font-size: 12px;
+        }
+
+        .code-delete {
+            cursor: pointer;
+            color: #ff4757;
+            font-weight: bold;
         }
 
         @media (max-width: 420px) {
@@ -622,10 +680,8 @@
     </style>
 </head>
 <body>
-    <!-- КОСМИЧЕСКИЙ ФОН -->
     <canvas id="backgroundCanvas"></canvas>
 
-    <!-- ЭКРАН ЗАГРУЗКИ -->
     <div id="loadingScreen">
         <div class="logo">⭐</div>
         <h2>Забава Игра</h2>
@@ -637,7 +693,6 @@
         </div>
     </div>
 
-    <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->
     <div id="app">
         <h1>⭐ Забава Игра</h1>
 
@@ -676,12 +731,11 @@
             <button class="btn" id="btnCode">🎫 Код</button>
             <button class="btn" id="btnLeaderboard">🏆 Лидеры</button>
             <button class="btn full small" id="btnRules">📜 Правила</button>
-            <button class="btn full small danger" id="btnSupport">🆘 Поддержка</button>
+            <button class="btn full small danger" id="btnSupport">🆘 Жалобы</button>
             <button class="btn full small" id="btnAdmin">🔧 Админ</button>
         </div>
     </div>
 
-    <!-- КОЛЕСО -->
     <div class="wheel-overlay" id="wheelOverlay">
         <div class="wheel-container">
             <h2>🎰 Колесо удачи</h2>
@@ -698,7 +752,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal" id="modalContent">
             <h2 id="modalTitle">Заголовок</h2>
@@ -708,13 +761,10 @@
 
     <div id="toast"></div>
 
-    <!-- КНОПКА МУЗЫКИ -->
     <button id="musicBtn" title="Вкл/Выкл музыку">🎵</button>
 
     <script>
-        // ============================================================
-        //  КОСМИЧЕСКИЙ ФОН (звёзды)
-        // ============================================================
+        // ФОН
         const canvas = document.getElementById('backgroundCanvas');
         const ctx = canvas.getContext('2d');
         let stars = [];
@@ -785,9 +835,7 @@
         }
         drawStars();
 
-        // ============================================================
-        //  ЗАГРУЗКА
-        // ============================================================
+        // ЗАГРУЗКА
         const loadingScreen = document.getElementById('loadingScreen');
         const loadingBar = document.getElementById('loadingBar');
         const loadingPercent = document.getElementById('loadingPercent');
@@ -807,16 +855,13 @@
                     loadingScreen.classList.add('hidden');
                     setTimeout(() => {
                         app.classList.add('show');
-                        // Загружаем game.js после появления меню
                         loadGameScript();
                     }, 300);
                 }, 500);
             }
         }, 80);
 
-        // ============================================================
-        //  МУЗЫКА
-        // ============================================================
+        // МУЗЫКА
         const music = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3');
         music.loop = true;
         music.volume = 0.2;
@@ -840,9 +885,6 @@
             }
         });
 
-        // ============================================================
-        //  КОПИРОВАНИЕ UID
-        // ============================================================
         window.copyUid = function() {
             const el = document.getElementById('userUid');
             const uid = el.textContent;
@@ -868,9 +910,6 @@
             showToast('✅ UID скопирован');
         }
 
-        // ============================================================
-        //  TOAST
-        // ============================================================
         window.showToast = function(text) {
             const t = document.getElementById('toast');
             if (!t) return;
@@ -880,14 +919,9 @@
             window._toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
         };
 
-        // ============================================================
-        //  ЗАГРУЗКА GAME.JS
-        // ============================================================
         function loadGameScript() {
-            // Проверяем, не загружен ли уже game.js
             if (document.querySelector('script[src="game.js"]')) {
                 console.log('game.js уже загружен');
-                initGameAfterLoad();
                 return;
             }
 
@@ -896,62 +930,12 @@
             script.src = 'game.js';
             script.onload = function() {
                 console.log('game.js загружен успешно!');
-                initGameAfterLoad();
             };
             script.onerror = function() {
                 console.error('Ошибка загрузки game.js');
-                // Пробуем загрузить ещё раз через 2 секунды
                 setTimeout(loadGameScript, 2000);
             };
             document.head.appendChild(script);
-        }
-
-        function initGameAfterLoad() {
-            console.log('Инициализация игры...');
-            // Даём время на выполнение скрипта
-            setTimeout(() => {
-                if (typeof render === 'function') {
-                    render();
-                    console.log('render() выполнен');
-                } else {
-                    console.log('render() не найден, ждём...');
-                }
-                
-                if (typeof initWheel === 'function') {
-                    initWheel();
-                    console.log('initWheel() выполнен');
-                } else {
-                    console.log('initWheel() не найден, ждём...');
-                }
-                
-                if (typeof loadGlobalData === 'function') {
-                    loadGlobalData();
-                    console.log('loadGlobalData() выполнен');
-                }
-                
-                if (typeof loadFromServer === 'function') {
-                    loadFromServer();
-                    console.log('loadFromServer() выполнен');
-                }
-                
-                if (typeof loadAllUsersFromServer === 'function') {
-                    loadAllUsersFromServer();
-                    console.log('loadAllUsersFromServer() выполнен');
-                }
-                
-                if (typeof checkRegistration === 'function') {
-                    setTimeout(checkRegistration, 500);
-                    console.log('checkRegistration() выполнен');
-                }
-                
-                console.log('Игра готова!');
-            }, 200);
-        }
-
-        // Если game.js уже загружен (например, через тег script)
-        if (document.querySelector('script[src="game.js"]')) {
-            console.log('game.js уже загружен через тег');
-            setTimeout(initGameAfterLoad, 500);
         }
 
         console.log('Готово, ожидаем загрузки');
