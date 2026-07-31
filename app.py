@@ -14,7 +14,7 @@ function activatePlayerCode(codeData) {
         const starsToAdd = parseInt(codeData.value) || 0;
         if (starsToAdd > 0) {
             user.stars = (user.stars || 0) + starsToAdd;
-            showToast(`🎉 Получено ${starsToAdd} звёзд за использование кода!`);
+            showToast('Получено ' + starsToAdd + ' звёзд за использование кода!');
             saveAllData();
             render();
             return true;
@@ -23,7 +23,7 @@ function activatePlayerCode(codeData) {
         // Добавляем попытки
         const attemptsToAdd = parseInt(codeData.value) || 1;
         user.attempts = (user.attempts || 0) + attemptsToAdd;
-        showToast(`🎉 Получено ${attemptsToAdd} попыток за использование кода!`);
+        showToast('Получено ' + attemptsToAdd + ' попыток за использование кода!');
         saveAllData();
         render();
         return true;
@@ -31,7 +31,7 @@ function activatePlayerCode(codeData) {
         // Активируем бустер
         user.boosted = true;
         user.attempts = (user.attempts || 0) + 1;
-        showToast('🚀 Бустер активирован! +1 попытка');
+        showToast('Бустер активирован! +1 попытка');
         saveAllData();
         render();
         return true;
@@ -44,7 +44,7 @@ function activatePlayerCode(codeData) {
 async function syncWithServer() {
     try {
         // Проверяем обновления
-        const response = await fetch(`${SERVER_URL}/api/check_updates?timestamp=${lastSyncTimestamp}`);
+        const response = await fetch(SERVER_URL + '/api/check_updates?timestamp=' + lastSyncTimestamp);
         if (response.ok) {
             const data = await response.json();
             if (data.has_updates) {
@@ -92,19 +92,21 @@ async function checkNotifications() {
     if (!user || !user.uid) return;
     
     try {
-        const response = await fetch(`${SERVER_URL}/api/get_notifications/${user.uid}`);
+        const response = await fetch(SERVER_URL + '/api/get_notifications/' + user.uid);
         if (response.ok) {
             const data = await response.json();
             if (data.notifications && data.notifications.length > 0) {
                 // Показываем все уведомления по очереди
-                data.notifications.forEach((notification, index) => {
-                    setTimeout(() => {
+                data.notifications.forEach(function(notification, index) {
+                    setTimeout(function() {
                         showToast(notification.message);
                     }, index * 3000);
                 });
                 
                 // Если есть бан, обновляем статус
-                const banNotification = data.notifications.find(n => n.type === 'ban');
+                var banNotification = data.notifications.find(function(n) { 
+                    return n.type === 'ban'; 
+                });
                 if (banNotification) {
                     user.banned = true;
                     user.banned_reason = banNotification.message;
@@ -120,7 +122,7 @@ async function checkNotifications() {
 // Функция для отправки кода на сервер (для администратора)
 async function sendCodeToPlayer(uid, codeData) {
     try {
-        const response = await fetch(`${SERVER_URL}/api/send_code_to_player`, {
+        const response = await fetch(SERVER_URL + '/api/send_code_to_player', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -132,16 +134,16 @@ async function sendCodeToPlayer(uid, codeData) {
         if (response.ok) {
             const result = await response.json();
             if (result.success) {
-                showToast('✅ Код отправлен игроку!');
+                showToast('Код отправлен игроку!');
                 return true;
             } else {
-                showToast('❌ Ошибка: ' + result.message);
+                showToast('Ошибка: ' + result.message);
                 return false;
             }
         }
     } catch(e) {
         console.error('Ошибка отправки кода:', e);
-        showToast('❌ Ошибка отправки кода');
+        showToast('Ошибка отправки кода');
         return false;
     }
 }
@@ -150,7 +152,7 @@ async function sendCodeToPlayer(uid, codeData) {
 async function activateCodeOnServer(code) {
     try {
         const user = getCurrentUser();
-        const response = await fetch(`${SERVER_URL}/api/use_code`, {
+        const response = await fetch(SERVER_URL + '/api/use_code', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -163,19 +165,19 @@ async function activateCodeOnServer(code) {
         if (response.ok) {
             const result = await response.json();
             if (result.success) {
-                showToast(result.message || '✅ Код активирован!');
+                showToast(result.message || 'Код активирован!');
                 // Обновляем данные после активации
                 await loadFromServer();
                 render();
                 return true;
             } else {
-                showToast(result.message || '❌ Ошибка активации кода');
+                showToast(result.message || 'Ошибка активации кода');
                 return false;
             }
         }
     } catch(e) {
         console.error('Ошибка активации кода:', e);
-        showToast('❌ Ошибка активации кода');
+        showToast('Ошибка активации кода');
         return false;
     }
 }
@@ -186,7 +188,7 @@ async function getNotifications() {
     if (!user || !user.uid) return;
     
     try {
-        const response = await fetch(`${SERVER_URL}/api/get_notifications/${user.uid}`);
+        const response = await fetch(SERVER_URL + '/api/get_notifications/' + user.uid);
         if (response.ok) {
             const data = await response.json();
             if (data.notifications) {
@@ -200,14 +202,14 @@ async function getNotifications() {
 }
 
 // Вызов синхронизации каждые 5 секунд
-setInterval(async () => {
-    await syncWithServer();
+setInterval(function() {
+    syncWithServer();
 }, 5000);
 
 // Вызов синхронизации при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(async () => {
-        await syncWithServer();
+    setTimeout(function() {
+        syncWithServer();
     }, 1000);
 });
 
@@ -218,7 +220,7 @@ window.applyCode = async function() {
     if (!input) return;
     const text = input.value.trim().toUpperCase();
     if (!text) { 
-        showToast('❌ Введите код'); 
+        showToast('Введите код'); 
         return; 
     }
     
@@ -232,9 +234,9 @@ window.applyCode = async function() {
 // Добавляем функцию для копирования кода
 window.copyCode = function(code) {
     if (navigator.clipboard) {
-        navigator.clipboard.writeText(code).then(() => {
-            showToast('✅ Код скопирован!');
-        }).catch(() => {
+        navigator.clipboard.writeText(code).then(function() {
+            showToast('Код скопирован!');
+        }).catch(function() {
             fallbackCopyCode(code);
         });
     } else {
@@ -243,11 +245,11 @@ window.copyCode = function(code) {
 };
 
 function fallbackCopyCode(text) {
-    const ta = document.createElement('textarea');
+    var ta = document.createElement('textarea');
     ta.value = text;
     document.body.appendChild(ta);
     ta.select();
     document.execCommand('copy');
     ta.remove();
-    showToast('✅ Код скопирован!');
+    showToast('Код скопирован!');
 };
