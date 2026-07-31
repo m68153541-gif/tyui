@@ -218,7 +218,7 @@ async function syncGlobalData() {
 }
 
 // ============================================================
-//  КОНКУРС (С ИСПРАВЛЕННЫМ ТАЙМЕРОМ)
+//  КОНКУРС
 // ============================================================
 
 function startContest() {
@@ -235,7 +235,6 @@ function startContest() {
     }).then(() => {
         loadGlobalData();
         showToast('Конкурс запущен на 6 часов!');
-        // Запускаем обновление таймера
         updateContestTimer();
     });
 }
@@ -285,7 +284,6 @@ function forceEndContest() {
     endContest();
 }
 
-// Функция обновления таймера конкурса
 function updateContestTimer() {
     const banner = document.getElementById('contestBanner');
     if (!banner) return;
@@ -315,7 +313,6 @@ function updateContestTimer() {
     }
 }
 
-// Запускаем обновление таймера каждую секунду
 setInterval(updateContestTimer, 1000);
 
 // ============================================================
@@ -1102,7 +1099,7 @@ function showAdminPanel() {
 }
 
 // ============================================================
-//  АДМИН-ОСТАЛЬНОЕ (ИСПРАВЛЕННОЕ)
+//  АДМИН-ОСТАЛЬНОЕ (РАБОТАЕТ ЛОКАЛЬНО)
 // ============================================================
 
 window.adminReports = function() {
@@ -1198,7 +1195,7 @@ window.showPlayerInfo = function() {
     `);
 };
 
-// ===== ВЫДАЧА ЗВЕЗД (РАБОТАЕТ) =====
+// ===== ВЫДАЧА ЗВЕЗД (РАБОТАЕТ ЛОКАЛЬНО) =====
 window.adminAddStars = function(uid) {
     openModal('Добавить звёзды игроку ' + uid, `
         <input type="number" id="addStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -1213,31 +1210,31 @@ window.doAddStars = function(uid) {
     const amount = parseInt(input.value);
     if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
     
-    fetch(SERVER_URL + '/api/admin_add_stars', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: uid, amount: amount })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.message);
-            closeModal();
-            loadFromServer();
-            loadAllUsersFromServer();
-            render();
-            setTimeout(function() { showPlayerInfo(); }, 500);
-        } else {
-            showToast('Ошибка: ' + data.message);
-        }
-    })
-    .catch(function(e) {
-        console.error('Ошибка выдачи звёзд:', e);
-        showToast('Ошибка сервера');
+    const user = getUserByUid(uid);
+    if (!user) {
+        showToast('Игрок не найден');
+        return;
+    }
+    
+    user.stars = (user.stars || 0) + amount;
+    
+    if (!user.notifications) user.notifications = [];
+    user.notifications.push({
+        type: 'admin_action',
+        message: 'Администратор начислил вам ' + amount + ' звёзд',
+        time: new Date().toLocaleString()
     });
+    
+    saveAllData();
+    saveToServer();
+    loadAllUsersFromServer();
+    render();
+    showToast('+' + amount + ' звёзд игроку ' + uid);
+    closeModal();
+    setTimeout(function() { showPlayerInfo(); }, 500);
 };
 
-// ===== КОНФИСКАЦИЯ ЗВЕЗД (ИСПРАВЛЕНА) =====
+// ===== КОНФИСКАЦИЯ ЗВЕЗД (РАБОТАЕТ ЛОКАЛЬНО) =====
 window.adminRemoveStars = function(uid) {
     openModal('Забрать звёзды у игрока ' + uid, `
         <input type="number" id="removeStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -1252,43 +1249,36 @@ window.doRemoveStars = function(uid) {
     const amount = parseInt(input.value);
     if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
     
-    // Проверяем локально, есть ли у игрока столько звёзд
     const user = getUserByUid(uid);
     if (!user) {
         showToast('Игрок не найден');
         return;
     }
     
-    if (user.stars < amount) {
+    if ((user.stars || 0) < amount) {
         showToast('Недостаточно звёзд у игрока!');
         return;
     }
     
-    fetch(SERVER_URL + '/api/admin_remove_stars', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: uid, amount: amount })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.message);
-            closeModal();
-            loadFromServer();
-            loadAllUsersFromServer();
-            render();
-            setTimeout(function() { showPlayerInfo(); }, 500);
-        } else {
-            showToast('Ошибка: ' + data.message);
-        }
-    })
-    .catch(function(e) {
-        console.error('Ошибка конфискации звёзд:', e);
-        showToast('Ошибка сервера');
+    user.stars = (user.stars || 0) - amount;
+    
+    if (!user.notifications) user.notifications = [];
+    user.notifications.push({
+        type: 'admin_action',
+        message: 'Администратор забрал у вас ' + amount + ' звёзд',
+        time: new Date().toLocaleString()
     });
+    
+    saveAllData();
+    saveToServer();
+    loadAllUsersFromServer();
+    render();
+    showToast('-' + amount + ' звёзд у игрока ' + uid);
+    closeModal();
+    setTimeout(function() { showPlayerInfo(); }, 500);
 };
 
-// ===== ПОЛНЫЙ СБРОС АККАУНТА ДО РЕГИСТРАЦИИ (ИСПРАВЛЕН) =====
+// ===== ПОЛНЫЙ СБРОС АККАУНТА (РАБОТАЕТ ЛОКАЛЬНО) =====
 window.adminResetPlayer = function(uid) {
     if (!confirm('Вы уверены, что хотите полностью сбросить игрока ' + uid + '? Все данные будут удалены!')) return;
     
@@ -1320,22 +1310,17 @@ window.adminResetPlayer = function(uid) {
     user.bankTime = Date.now();
     user.lastPassiveTime = Date.now();
     
-    // Удаляем из uidMap
     if (window.uidMap[uid]) {
         delete window.uidMap[uid];
     }
     
-    // Удаляем из банов
     if (window.bannedUsers[uid]) {
         delete window.bannedUsers[uid];
     }
     
-    // Сохраняем изменения
     saveAllData();
     saveToServer();
     syncGlobalData();
-    
-    // Обновляем данные
     loadFromServer();
     loadAllUsersFromServer();
     render();
@@ -1345,7 +1330,7 @@ window.adminResetPlayer = function(uid) {
     setTimeout(function() { showAdminPanel(); }, 500);
 };
 
-// ===== ВЫДАЧА ЗВЕЗД СЕБЕ =====
+// ===== ВЫДАЧА ЗВЕЗД СЕБЕ (РАБОТАЕТ ЛОКАЛЬНО) =====
 window.adminGiveSelfStars = function() {
     openModal('Начислить звёзды себе', `
         <input type="number" id="selfStarsInput" placeholder="Сумма" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -1360,28 +1345,16 @@ window.doGiveSelfStars = function() {
     const amount = parseInt(input.value);
     if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
     
-    fetch(SERVER_URL + '/api/admin_give_self_stars', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: getUserId(), amount: amount })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.message);
-            closeModal();
-            loadFromServer();
-            loadAllUsersFromServer();
-            render();
-            setTimeout(function() { showAdminPanel(); }, 500);
-        } else {
-            showToast('Ошибка: ' + data.message);
-        }
-    })
-    .catch(function(e) {
-        console.error('Ошибка выдачи звёзд себе:', e);
-        showToast('Ошибка сервера');
-    });
+    const user = getCurrentUser();
+    user.stars = (user.stars || 0) + amount;
+    
+    saveAllData();
+    saveToServer();
+    loadAllUsersFromServer();
+    render();
+    showToast('+' + amount + ' звёзд себе');
+    closeModal();
+    setTimeout(function() { showAdminPanel(); }, 500);
 };
 
 // ===== БАН И РАЗБАН =====
