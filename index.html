@@ -179,7 +179,7 @@
       backdrop-filter: blur(4px);
   }
 
-  /* ===== СЕТКА КНОПОК (НОВОЕ РАСПОЛОЖЕНИЕ) ===== */
+  /* ===== СЕТКА КНОПОК ===== */
   .btn-grid {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
@@ -231,29 +231,365 @@
       100% { transform: translateY(0px) scale(1); }
   }
 
-  /* ===== КРУГЛАЯ КНОПКА МУЗЫКИ ===== */
+  /* Состояние "тусклые" для всех кнопок при нажатии на одну */
+  .btn-grid.dimmed .btn {
+      filter: brightness(0.4) saturate(0.3);
+      transform: scale(0.92);
+      transition: all 0.2s;
+  }
+  .btn-grid.dimmed .btn.active-btn {
+      filter: brightness(1.5) saturate(1.2);
+      transform: scale(1.08) translateY(-4px);
+      box-shadow: 0 0 30px #ffd700, 0 0 60px rgba(255, 215, 0, 0.3), 0 8px 0 #b8860b;
+      background: linear-gradient(145deg, #ffd700, #f5a623) !important;
+      color: #1a1a2e !important;
+      text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+      border-color: #ffd700;
+      z-index: 10;
+  }
+  /* Свечение от активной кнопки */
+  .btn-grid.dimmed .btn.active-btn::before {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border-radius: 70px;
+      background: radial-gradient(circle, rgba(255, 215, 0, 0.5), transparent 70%);
+      filter: blur(20px);
+      z-index: -1;
+      animation: pulseGlow 1s ease-in-out infinite alternate;
+  }
+  @keyframes pulseGlow {
+      0% { opacity: 0.6; transform: scale(0.95); }
+      100% { opacity: 1; transform: scale(1.2); }
+  }
+
+  /* Индивидуальные цвета кнопок */
+  .btn.primary {
+      background: linear-gradient(145deg, #f9ca24, #f0932b);
+      box-shadow: 0 8px 0 #b86d1c, 0 6px 20px rgba(249, 202, 36, 0.3);
+      color: #1a1a2e;
+  }
+  .btn.blue {
+      background: linear-gradient(145deg, #4a8fe0, #2d6bb8);
+      box-shadow: 0 8px 0 #1a3f6e, 0 6px 20px rgba(45, 107, 184, 0.3);
+  }
+  .btn.special {
+      background: linear-gradient(145deg, #fd79a8, #e84393);
+      box-shadow: 0 8px 0 #a0296a, 0 6px 20px rgba(232, 67, 147, 0.3);
+  }
+  .btn.purple {
+      background: linear-gradient(145deg, #a29bfe, #6c5ce7);
+      box-shadow: 0 8px 0 #3a2f8a, 0 6px 20px rgba(108, 92, 231, 0.3);
+  }
+  .btn.green {
+      background: linear-gradient(145deg, #55efc4, #00b894);
+      box-shadow: 0 8px 0 #00715a, 0 6px 20px rgba(0, 184, 148, 0.3);
+      color: #0f1a1a;
+  }
+  .btn.danger {
+      background: linear-gradient(145deg, #e74c3c, #c0392b);
+      box-shadow: 0 8px 0 #87281e, 0 6px 20px rgba(231, 76, 60, 0.3);
+  }
+  .btn.full {
+      grid-column: span 3;
+  }
+  .btn.small {
+      padding: 12px 10px;
+      font-size: 13px;
+  }
+  .btn:disabled {
+      opacity: 0.5;
+      transform: translateY(4px) scale(0.96);
+      box-shadow: 0 3px 0 #15152a;
+      pointer-events: none;
+      animation: none !important;
+  }
+
+  /* ===== КОЛЕСО ===== */
+  .wheel-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: fadeIn 0.25s ease;
+  }
+  .wheel-overlay.active {
+      display: flex;
+  }
+  .wheel-container {
+      background: rgba(12, 8, 28, 0.95);
+      border-radius: 48px;
+      padding: 28px 24px 32px;
+      max-width: 440px;
+      width: 100%;
+      border: 1px solid rgba(255, 215, 0, 0.15);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+      animation: scaleUp 0.25s ease;
+  }
+  .wheel-container h2 {
+      text-align: center;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #ffd700, #f5a623);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+  }
+  .wheel-wrapper {
+      position: relative;
+      margin: 0 auto;
+      max-width: 320px;
+  }
+  #wheelCanvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1/1;
+      border-radius: 50%;
+      box-shadow: 0 0 40px rgba(255, 215, 0, 0.15);
+      cursor: pointer;
+  }
+  .wheel-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 36px;
+      text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+      pointer-events: none;
+  }
+  .wheel-result {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      padding: 12px 0 6px;
+      min-height: 50px;
+  }
+  .wheel-actions {
+      display: flex;
+      gap: 12px;
+  }
+  .wheel-actions .btn {
+      flex: 1;
+      animation: none !important;
+  }
+
+  /* ===== МОДАЛКА ===== */
+  .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: fadeIn 0.2s ease;
+  }
+  .modal-overlay.active {
+      display: flex;
+  }
+  .modal {
+      background: rgba(12, 8, 28, 0.96);
+      border-radius: 40px;
+      padding: 28px 24px 30px;
+      max-width: 440px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+      animation: scaleUp 0.2s ease;
+  }
+  .modal h2 {
+      text-align: center;
+      margin-bottom: 16px;
+      font-size: 22px;
+  }
+  .modal input {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 30px;
+      padding: 12px 16px;
+      color: #f0f0ff;
+      font-size: 15px;
+      width: 100%;
+      outline: none;
+      transition: 0.3s;
+  }
+  .modal input:focus {
+      border-color: #ffd700;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+  }
+  .modal .btn {
+      animation: none !important;
+      margin-top: 8px;
+      box-shadow: 0 6px 0 #15152a;
+  }
+  .modal .btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #15152a;
+  }
+
+  /* ===== ТОСТ ===== */
+  #toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: rgba(10, 8, 25, 0.92);
+      backdrop-filter: blur(12px);
+      padding: 14px 28px;
+      border-radius: 60px;
+      color: #fff;
+      font-weight: 500;
+      font-size: 15px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      z-index: 9999;
+      transition: 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+      opacity: 0;
+      pointer-events: none;
+      white-space: nowrap;
+      max-width: 90%;
+      text-align: center;
+  }
+  #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+  }
+
+  /* ===== КЛИКЕР ===== */
+  .clicker-star {
+      font-size: 72px;
+      cursor: pointer;
+      user-select: none;
+      margin: 6px 0;
+      transition: 0.1s;
+  }
+  .clicker-star.pop {
+      animation: popStar 0.2s ease;
+  }
+  @keyframes popStar {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); color: #ffd700; }
+      100% { transform: scale(1); }
+  }
+  .clicker-progress {
+      width: 100%;
+      height: 10px;
+      background: #2a2a4a;
+      border-radius: 20px;
+      margin: 8px 0;
+      overflow: hidden;
+  }
+  .clicker-progress .fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #f9ca24, #f0932b);
+      border-radius: 20px;
+      transition: 0.2s;
+  }
+
+  /* ===== МУЗЫКАЛЬНАЯ КНОПКА ===== */
   #musicBtn {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: #4CAF50;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    color: white;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    z-index: 9999;
-    transition: background 0.3s;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #4CAF50, #2e7d32);
+      border: 2px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: white;
+      box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4), 0 4px 0 #1b5e20;
+      z-index: 9999;
+      transition: all 0.2s;
+      animation: floatBtn 3s ease-in-out infinite;
   }
   #musicBtn:hover {
-    background: #45a049;
+      transform: scale(1.1);
+      box-shadow: 0 8px 30px rgba(76, 175, 80, 0.6), 0 4px 0 #1b5e20;
+  }
+  #musicBtn:active {
+      transform: translateY(4px) scale(0.95);
+      box-shadow: 0 2px 0 #1b5e20;
+  }
+
+  /* ===== АНИМАЦИИ ===== */
+  @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+  }
+  @keyframes scaleUp {
+      from { opacity: 0; transform: scale(0.92); }
+      to { opacity: 1; transform: scale(1); }
+  }
+
+  /* ===== ДОПЫ ===== */
+  .chat-container {
+      max-height: 200px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 20px;
+      padding: 12px;
+      margin: 8px 0;
+      font-size: 14px;
+  }
+  .chat-container .msg.user { color: #7ed6df; }
+  .chat-container .msg.admin { color: #ffd700; }
+  .chat-container .msg .time {
+      font-size: 10px;
+      color: #666;
+      margin-left: 10px;
+  }
+  .scrollable {
+      max-height: 300px;
+      overflow-y: auto;
+  }
+
+  /* ===== КОНКУРСНЫЙ БАННЕР ===== */
+  #contestBanner {
+      background: linear-gradient(135deg, rgba(249, 202, 36, 0.12), rgba(240, 147, 43, 0.08));
+      border-radius: 40px;
+      padding: 12px 18px;
+      text-align: center;
+      border: 1px solid rgba(255, 215, 0, 0.15);
+      margin-bottom: 18px;
+  }
+  #contestBanner .title {
+      font-weight: 700;
+      font-size: 16px;
+      color: #ffd700;
+  }
+  #contestBanner .timer {
+      font-size: 26px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+  }
+
+  @media (max-width: 420px) {
+      .btn-grid { gap: 12px; }
+      .btn { font-size: 13px; padding: 14px 6px; }
+      .balance-item .num { font-size: 24px; }
+      #app { padding: 18px 14px 22px; }
+      #musicBtn {
+          width: 48px;
+          height: 48px;
+          font-size: 20px;
+          bottom: 12px;
+          right: 12px;
+      }
   }
 </style>
 </head>
@@ -301,46 +637,155 @@
     </div>
 </div>
 
-<!-- ВАША КНОПКА МУЗЫКИ -->
+<!-- КОЛЕСО -->
+<div class="wheel-overlay" id="wheelOverlay">
+    <div class="wheel-container">
+        <h2>🎰 Колесо удачи</h2>
+        <div class="wheel-wrapper">
+            <canvas id="wheelCanvas" width="400" height="400"></canvas>
+            <div class="wheel-center">⭐</div>
+        </div>
+        <div class="wheel-result" id="wheelResult">Нажмите "Крутить"!</div>
+        <div class="wheel-attempts">🎮 Попыток: <strong id="wheelAttemptsCount">0</strong></div>
+        <div class="wheel-actions">
+            <button class="btn primary" id="wheelSpinBtn">🔄 Крутить</button>
+            <button class="btn" id="wheelCloseBtn">✖ Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<!-- МОДАЛКА -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modalContent">
+        <h2 id="modalTitle">Заголовок</h2>
+        <div id="modalBody"></div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- КНОПКА МУЗЫКИ -->
 <button id="musicBtn" title="Вкл/Выкл музыку">🎵</button>
 
 <script>
-  const music = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3');
-  music.loop = true;
-  music.volume = 0.2;
+// ============================================================
+//  МУЗЫКА (независимый блок)
+// ============================================================
+const music = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3');
+music.loop = true;
+music.volume = 0.2;
 
-  const musicBtn = document.getElementById('musicBtn');
-  let musicOn = false;
+const musicBtn = document.getElementById('musicBtn');
+let musicOn = false;
 
-  // Обработчик
-  musicBtn.addEventListener('click', () => {
+musicBtn.addEventListener('click', () => {
     if (musicOn) {
-      music.pause();
-      musicOn = false;
-      musicBtn.textContent = '🎵';
-      musicBtn.title = 'Включить музыку';
+        music.pause();
+        musicOn = false;
+        musicBtn.textContent = '🎵';
+        musicBtn.title = 'Включить музыку';
     } else {
-      music.play().then(() => {
-        musicOn = true;
-        musicBtn.textContent = '🔇';
-        musicBtn.title = 'Выключить музыку';
-      }).catch(() => {
-        alert('Не удалось запустить музыку');
-      });
+        music.play().then(() => {
+            musicOn = true;
+            musicBtn.textContent = '🔇';
+            musicBtn.title = 'Выключить музыку';
+        }).catch(() => {
+            alert('Не удалось запустить музыку');
+        });
     }
-  });
+});
 
-  // Старт при первом клике
-  document.addEventListener('click', () => {
+// Старт при первом клике
+document.addEventListener('click', () => {
     if (!musicOn) {
-      music.play().then(() => {
-        musicOn = true;
-        musicBtn.textContent = '🔇';
-        musicBtn.title = 'Выключить музыку';
-      }).catch(() => {});
+        music.play().then(() => {
+            musicOn = true;
+            musicBtn.textContent = '🔇';
+            musicBtn.title = 'Выключить музыку';
+        }).catch(() => {});
     }
-  }, { once: true });
+}, { once: true });
+
+// ============================================================
+//  ЭФФЕКТЫ ДЛЯ КНОПОК (тускнение + подсветка)
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    const grid = document.getElementById('btnGrid');
+    const allBtns = grid.querySelectorAll('.btn');
+
+    allBtns.forEach(btn => {
+        btn.addEventListener('mousedown', function(e) {
+            grid.classList.add('dimmed');
+            this.classList.add('active-btn');
+        });
+
+        btn.addEventListener('mouseup', function(e) {
+            grid.classList.remove('dimmed');
+            this.classList.remove('active-btn');
+        });
+
+        btn.addEventListener('mouseleave', function(e) {
+            if (grid.classList.contains('dimmed')) {
+                grid.classList.remove('dimmed');
+                this.classList.remove('active-btn');
+            }
+        });
+
+        btn.addEventListener('touchstart', function(e) {
+            grid.classList.add('dimmed');
+            this.classList.add('active-btn');
+        });
+
+        btn.addEventListener('touchend', function(e) {
+            grid.classList.remove('dimmed');
+            this.classList.remove('active-btn');
+        });
+    });
+});
+
+// ============================================================
+//  КОПИРОВАНИЕ UID (заглушка, будет переопределена в game.js)
+// ============================================================
+window.copyUid = function() {
+    const el = document.getElementById('userUid');
+    const uid = el.textContent;
+    if (!uid || uid === '—') return;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(uid).then(() => {
+            showToast('✅ UID скопирован');
+        }).catch(() => {
+            fallbackCopy(uid);
+        });
+    } else {
+        fallbackCopy(uid);
+    }
+};
+
+function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    showToast('✅ UID скопирован');
+}
+
+// Заглушка для showToast (будет переопределена в game.js)
+window.showToast = function(text) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = text;
+    t.classList.add('show');
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+};
 </script>
+
+<!-- ============================================================
+     ПОДКЛЮЧАЕМ ВАШ ОСНОВНОЙ ФАЙЛ С ЛОГИКОЙ
+     ============================================================ -->
+<script src="game.js"></script>
 
 </body>
 </html>
