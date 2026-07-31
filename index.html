@@ -806,10 +806,6 @@
                     loadingScreen.classList.add('hidden');
                     setTimeout(() => {
                         app.classList.add('show');
-                        // Инициализация игры после загрузки
-                        if (typeof initGame === 'function') {
-                            initGame();
-                        }
                     }, 300);
                 }, 500);
             }
@@ -842,14 +838,8 @@
         });
 
         // ============================================================
-        //  ОСНОВНАЯ ЛОГИКА ИГРЫ (заглушка, будет переопределена game.js)
+        //  КОПИРОВАНИЕ UID
         // ============================================================
-        function initGame() {
-            console.log('Игра инициализирована');
-            // Здесь будет ваш game.js
-        }
-
-        // Копирование UID
         window.copyUid = function() {
             const el = document.getElementById('userUid');
             const uid = el.textContent;
@@ -875,7 +865,9 @@
             showToast('✅ UID скопирован');
         }
 
-        // Toast
+        // ============================================================
+        //  TOAST
+        // ============================================================
         window.showToast = function(text) {
             const t = document.getElementById('toast');
             if (!t) return;
@@ -885,16 +877,63 @@
             window._toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
         };
 
-        // Заглушки для кнопок
+        // ============================================================
+        //  ЗАГРУЗКА GAME.JS И ИНИЦИАЛИЗАЦИЯ
+        // ============================================================
+        // Функция, которая будет вызвана после загрузки game.js
+        window.initGame = function() {
+            console.log('Игра инициализирована через game.js');
+            // game.js сам назначит обработчики
+            if (typeof render === 'function') {
+                render();
+            }
+            if (typeof initWheel === 'function') {
+                initWheel();
+            }
+        };
+
+        // Загружаем game.js динамически
+        function loadGameScript() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'game.js';
+                script.onload = () => {
+                    console.log('game.js загружен');
+                    resolve();
+                };
+                script.onerror = () => {
+                    console.error('Ошибка загрузки game.js');
+                    reject();
+                };
+                document.body.appendChild(script);
+            });
+        }
+
+        // Ждём загрузки game.js после появления меню
         document.addEventListener('DOMContentLoaded', function() {
-            // Кнопки будут переопределены game.js
-            console.log('Интерфейс загружен, ожидается game.js');
+            // Ждём пока меню появится
+            const observer = new MutationObserver(() => {
+                if (app.classList.contains('show')) {
+                    observer.disconnect();
+                    // Загружаем game.js
+                    loadGameScript().then(() => {
+                        if (typeof window.initGame === 'function') {
+                            window.initGame();
+                        }
+                        // Повторно назначаем обработчики если game.js их не назначил
+                        setTimeout(() => {
+                            if (typeof render === 'function') render();
+                            if (typeof initWheel === 'function') initWheel();
+                        }, 100);
+                    }).catch(() => {
+                        console.log('Используем встроенную логику');
+                    });
+                }
+            });
+            observer.observe(app, { attributes: true, attributeFilter: ['class'] });
         });
 
-        // ============================================================
-        //  ПОДКЛЮЧАЕМ ОСНОВНУЮ ЛОГИКУ
-        // ============================================================
+        console.log('Готово, ожидаем загрузки game.js');
     </script>
-    <script src="game.js"></script>
 </body>
 </html>
