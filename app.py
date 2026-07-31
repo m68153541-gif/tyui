@@ -1,7 +1,24 @@
 // Добавьте в начало game.js после глобальных переменных
 let lastSyncTimestamp = 0;
 
-// Функция синхронизации с сервером
+// Функция активации кода у игрока (например, добавление звезд)
+function activatePlayerCode(code) {
+    if (!code) return;
+
+    // Предположим, что код — это число звезд, которое нужно прибавить
+    const starsToAdd = parseInt(code);
+    if (isNaN(starsToAdd)) return;
+
+    const user = getCurrentUser();
+    if (user) {
+        user.stars = (user.stars || 0) + starsToAdd;
+        saveAllData();
+        showToast(`🎉 Получено ${starsToAdd} звезд за использование кода!`);
+        render();
+    }
+}
+
+// Обновленная функция синхронизации с сервером
 async function syncWithServer() {
     try {
         // Проверяем обновления
@@ -21,7 +38,6 @@ async function syncWithServer() {
                 // Обновляем данные пользователя
                 const user = getCurrentUser();
                 if (user && user.uid) {
-                    // Загружаем свежие данные пользователя
                     await loadFromServer();
                 }
                 
@@ -30,6 +46,13 @@ async function syncWithServer() {
                 
                 // Обновляем отображение
                 render();
+
+                // ===== ВАЖНО =====
+                // После синхронизации активируем код, если он есть
+                if (user && user.newCode) {
+                    activatePlayerCode(user.newCode);
+                }
+
                 lastSyncTimestamp = data.timestamp;
             }
         }
@@ -38,7 +61,7 @@ async function syncWithServer() {
     }
 }
 
-// Функция проверки уведомлений
+// Проверка уведомлений
 async function checkNotifications() {
     const user = getCurrentUser();
     if (!user || !user.uid) return;
@@ -65,16 +88,13 @@ async function checkNotifications() {
     }
 }
 
-// Добавляем периодическую синхронизацию
+// Вызов синхронизации каждые 5 секунд
 setInterval(async () => {
     await syncWithServer();
-}, 5000); // Каждые 5 секунд
+}, 5000);
 
-// Синхронизация при загрузке страницы
+// Вызов синхронизации при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
-    // ... существующий код ...
-    
-    // Запускаем синхронизацию
     setTimeout(async () => {
         await syncWithServer();
     }, 1000);
