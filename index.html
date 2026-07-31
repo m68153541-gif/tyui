@@ -58,14 +58,19 @@
             pointer-events: none;
         }
 
-        #loadingScreen img {
-            width: 200px;
-            height: 200px;
+        #loadingScreen .logo {
+            width: 120px;
+            height: 120px;
             border-radius: 50%;
-            object-fit: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            background: rgba(108, 92, 231, 0.15);
             box-shadow: 0 0 60px rgba(108, 92, 231, 0.3);
             animation: pulseLogo 1.5s ease-in-out infinite;
             margin-bottom: 30px;
+            border: 2px solid rgba(108, 92, 231, 0.2);
         }
 
         @keyframes pulseLogo {
@@ -622,7 +627,7 @@
 
     <!-- ЭКРАН ЗАГРУЗКИ -->
     <div id="loadingScreen">
-        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='90' fill='%236c5ce7' opacity='0.2'/%3E%3Ccircle cx='100' cy='100' r='70' fill='%236c5ce7' opacity='0.3'/%3E%3Ctext x='100' y='110' font-size='60' text-anchor='middle' font-family='sans-serif' fill='%23a29bfe'%3E⭐%3C/text%3E%3C/svg%3E" alt="Logo" />
+        <div class="logo">⭐</div>
         <h2>Забава Игра</h2>
         <div class="loading-bar-container">
             <div class="loading-bar" id="loadingBar"></div>
@@ -878,21 +883,8 @@
         };
 
         // ============================================================
-        //  ЗАГРУЗКА GAME.JS И ИНИЦИАЛИЗАЦИЯ
+        //  ЗАГРУЗКА GAME.JS
         // ============================================================
-        // Функция, которая будет вызвана после загрузки game.js
-        window.initGame = function() {
-            console.log('Игра инициализирована через game.js');
-            // game.js сам назначит обработчики
-            if (typeof render === 'function') {
-                render();
-            }
-            if (typeof initWheel === 'function') {
-                initWheel();
-            }
-        };
-
-        // Загружаем game.js динамически
         function loadGameScript() {
             return new Promise((resolve, reject) => {
                 const script = document.createElement('script');
@@ -909,29 +901,44 @@
             });
         }
 
-        // Ждём загрузки game.js после появления меню
-        document.addEventListener('DOMContentLoaded', function() {
-            // Ждём пока меню появится
-            const observer = new MutationObserver(() => {
-                if (app.classList.contains('show')) {
-                    observer.disconnect();
-                    // Загружаем game.js
-                    loadGameScript().then(() => {
-                        if (typeof window.initGame === 'function') {
-                            window.initGame();
+        // Ждём появления меню и загружаем game.js
+        const appObserver = new MutationObserver(async () => {
+            if (app.classList.contains('show')) {
+                appObserver.disconnect();
+                console.log('Меню появилось, загружаем game.js...');
+                try {
+                    await loadGameScript();
+                    console.log('game.js загружен, инициализация...');
+                    // Даём время на инициализацию
+                    setTimeout(() => {
+                        if (typeof render === 'function') {
+                            render();
                         }
-                        // Повторно назначаем обработчики если game.js их не назначил
-                        setTimeout(() => {
-                            if (typeof render === 'function') render();
-                            if (typeof initWheel === 'function') initWheel();
-                        }, 100);
-                    }).catch(() => {
-                        console.log('Используем встроенную логику');
-                    });
+                        if (typeof initWheel === 'function') {
+                            initWheel();
+                        }
+                        console.log('Игра готова!');
+                    }, 100);
+                } catch(e) {
+                    console.error('Ошибка загрузки game.js:', e);
                 }
-            });
-            observer.observe(app, { attributes: true, attributeFilter: ['class'] });
+            }
         });
+
+        appObserver.observe(app, { attributes: true, attributeFilter: ['class'] });
+
+        // Если загрузка game.js не удалась - используем встроенную логику
+        setTimeout(() => {
+            if (!document.querySelector('script[src="game.js"]')) {
+                console.log('game.js не загружен, пробуем ещё раз...');
+                loadGameScript().then(() => {
+                    setTimeout(() => {
+                        if (typeof render === 'function') render();
+                        if (typeof initWheel === 'function') initWheel();
+                    }, 100);
+                });
+            }
+        }, 5000);
 
         console.log('Готово, ожидаем загрузки game.js');
     </script>
