@@ -1,255 +1,461 @@
-// Добавьте в начало game.js после глобальных переменных
-let lastSyncTimestamp = 0;
+from flask import Flask, send_from_directory, request, jsonify
+from flask_cors import CORS
+import os
+import json
+import time
 
-// Функция активации кода у игрока (добавление попыток или звёзд)
-function activatePlayerCode(codeData) {
-    if (!codeData) return false;
-    
-    const user = getCurrentUser();
-    if (!user) return false;
-    
-    // Проверяем тип кода
-    if (codeData.type === 'stars') {
-        // Добавляем звёзды
-        const starsToAdd = parseInt(codeData.value) || 0;
-        if (starsToAdd > 0) {
-            user.stars = (user.stars || 0) + starsToAdd;
-            showToast('Получено ' + starsToAdd + ' звёзд за использование кода!');
-            saveAllData();
-            render();
-            return true;
-        }
-    } else if (codeData.type === 'attempts') {
-        // Добавляем попытки
-        const attemptsToAdd = parseInt(codeData.value) || 1;
-        user.attempts = (user.attempts || 0) + attemptsToAdd;
-        showToast('Получено ' + attemptsToAdd + ' попыток за использование кода!');
-        saveAllData();
-        render();
-        return true;
-    } else if (codeData.type === 'boost') {
-        // Активируем бустер
-        user.boosted = true;
-        user.attempts = (user.attempts || 0) + 1;
-        showToast('Бустер активирован! +1 попытка');
-        saveAllData();
-        render();
-        return true;
+app = Flask(__name__)
+CORS(app)
+
+DATA_FILE = 'users_data.json'
+GLOBAL_DATA_FILE = 'global_data.json'
+
+# Загрузка данных о пользователях
+def load_users():
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+# Сохранение данных о пользователях
+def save_users(users):
+    with open(DATA_FILE, 'w', encoding='utf-8') as f:
+        json.dump(users, f, ensure_ascii=False, indent=2)
+
+# Загрузка глобальных данных
+def load_global_data():
+    if os.path.exists(GLOBAL_DATA_FILE):
+        try:
+            with open(GLOBAL_DATA_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {
+        'contest_active': False,
+        'contest_end_time': None,
+        'contest_winner': None,
+        'admin_codes': [],
+        'reports': [],
+        'active_chats': {},
+        'banned_users': {}
     }
+
+# Сохранение глобальных данных
+def save_global_data(data):
+    with open(GLOBAL_DATA_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+# Основные маршруты
+@app.route('/')
+def index():
+    return send_from_directory('.', 'index.html')
+
+@app.route('/style.css')
+def css():
+    return send_from_directory('.', 'style.css')
+
+@app.route('/game.js')
+def js():
+    return send_from_directory('.', 'game.js')
+
+# API: сохранить пользователя
+@app.route('/api/save', methods=['POST'])
+def save_user():
+    data = request.json
+    user_id = data.get('user_id')
+    user_data = data.get('user_data')
+    if not user_id or not user_data:
+        return jsonify({'error': 'Missing data'}), 400
     
-    return false;
-}
-
-// Обновленная функция синхронизации с сервером
-async function syncWithServer() {
-    try {
-        // Проверяем обновления
-        const response = await fetch(SERVER_URL + '/api/check_updates?timestamp=' + lastSyncTimestamp);
-        if (response.ok) {
-            const data = await response.json();
-            if (data.has_updates) {
-                // Обновляем глобальные данные
-                if (data.global_data) {
-                    window.globalData = data.global_data;
-                    // Обновляем баны
-                    if (data.global_data.banned_users) {
-                        window.bannedUsers = data.global_data.banned_users;
-                    }
-                }
-                
-                // Обновляем данные пользователя
-                const user = getCurrentUser();
-                if (user && user.uid) {
-                    await loadFromServer();
-                }
-                
-                // Проверяем уведомления
-                await checkNotifications();
-                
-                // Обновляем отображение
-                render();
-
-                // Проверяем наличие нового кода для активации
-                if (user && user.pendingCode) {
-                    const codeData = user.pendingCode;
-                    // Удаляем код после активации
-                    delete user.pendingCode;
-                    saveAllData();
-                    activatePlayerCode(codeData);
-                }
-
-                lastSyncTimestamp = data.timestamp;
-            }
-        }
-    } catch(e) {
-        console.error('Ошибка синхронизации:', e);
-    }
-}
-
-// Проверка уведомлений
-async function checkNotifications() {
-    const user = getCurrentUser();
-    if (!user || !user.uid) return;
+    users = load_users()
     
-    try {
-        const response = await fetch(SERVER_URL + '/api/get_notifications/' + user.uid);
-        if (response.ok) {
-            const data = await response.json();
-            if (data.notifications && data.notifications.length > 0) {
-                // Показываем все уведомления по очереди
-                data.notifications.forEach(function(notification, index) {
-                    setTimeout(function() {
-                        showToast(notification.message);
-                    }, index * 3000);
-                });
-                
-                // Если есть бан, обновляем статус
-                var banNotification = data.notifications.find(function(n) { 
-                    return n.type === 'ban'; 
-                });
-                if (banNotification) {
-                    user.banned = true;
-                    user.banned_reason = banNotification.message;
-                    render();
-                }
-            }
-        }
-    } catch(e) {
-        console.error('Ошибка проверки уведомлений:', e);
-    }
-}
-
-// Функция для отправки кода на сервер (для администратора)
-async function sendCodeToPlayer(uid, codeData) {
-    try {
-        const response = await fetch(SERVER_URL + '/api/send_code_to_player', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                uid: uid,
-                code: codeData
-            })
-        });
+    # Сохраняем uid отдельно для поиска
+    if 'uid' in user_data:
+        # Проверяем бан в глобальных данных
+        global_data = load_global_data()
+        uid = user_data.get('uid')
         
-        if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-                showToast('Код отправлен игроку!');
-                return true;
-            } else {
-                showToast('Ошибка: ' + result.message);
-                return false;
-            }
-        }
-    } catch(e) {
-        console.error('Ошибка отправки кода:', e);
-        showToast('Ошибка отправки кода');
-        return false;
-    }
-}
-
-// Функция для активации кода на сервере (для игрока)
-async function activateCodeOnServer(code) {
-    try {
-        const user = getCurrentUser();
-        const response = await fetch(SERVER_URL + '/api/use_code', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                code: code,
-                user_id: getUserId(),
-                user_uid: user ? user.uid : null
-            })
-        });
+        # Если пользователь в списке забаненных - обновляем его статус
+        if uid and uid in global_data.get('banned_users', {}):
+            user_data['banned'] = True
+            user_data['banned_reason'] = global_data['banned_users'][uid]
         
-        if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-                showToast(result.message || 'Код активирован!');
-                // Обновляем данные после активации
-                await loadFromServer();
-                render();
-                return true;
-            } else {
-                showToast(result.message || 'Ошибка активации кода');
-                return false;
-            }
-        }
-    } catch(e) {
-        console.error('Ошибка активации кода:', e);
-        showToast('Ошибка активации кода');
-        return false;
-    }
-}
-
-// Функция для получения уведомлений
-async function getNotifications() {
-    const user = getCurrentUser();
-    if (!user || !user.uid) return;
+        users[user_id] = user_data
+        save_users(users)
+        return jsonify({'success': True, 'timestamp': time.time()})
     
-    try {
-        const response = await fetch(SERVER_URL + '/api/get_notifications/' + user.uid);
-        if (response.ok) {
-            const data = await response.json();
-            if (data.notifications) {
-                return data.notifications;
-            }
-        }
-    } catch(e) {
-        console.error('Ошибка получения уведомлений:', e);
-    }
-    return [];
-}
+    return jsonify({'error': 'No uid'}), 400
 
-// Вызов синхронизации каждые 5 секунд
-setInterval(function() {
-    syncWithServer();
-}, 5000);
+# API: загрузить пользователя по id
+@app.route('/api/load/<user_id>')
+def load_user(user_id):
+    users = load_users()
+    global_data = load_global_data()
+    user_data = users.get(user_id)
+    
+    if user_data:
+        # Проверяем бан
+        uid = user_data.get('uid')
+        if uid and uid in global_data.get('banned_users', {}):
+            user_data['banned'] = True
+            user_data['banned_reason'] = global_data['banned_users'][uid]
+            users[user_id] = user_data
+            save_users(users)
+        else:
+            # Если пользователь не в бане, но у него стоит флаг banned - снимаем
+            if user_data.get('banned', False):
+                user_data['banned'] = False
+                user_data['banned_reason'] = ''
+                users[user_id] = user_data
+                save_users(users)
+        
+        return jsonify(user_data)
+    return jsonify({'error': 'Not found'}), 404
 
-// Вызов синхронизации при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-        syncWithServer();
-    }, 1000);
-});
+# API: все пользователи
+@app.route('/api/all_users')
+def all_users():
+    users = load_users()
+    global_data = load_global_data()
+    result = []
+    for user_id, data in users.items():
+        uid = data.get('uid')
+        if uid:
+            # Проверяем бан из глобальных данных
+            is_banned = uid in global_data.get('banned_users', {})
+            banned_reason = global_data.get('banned_users', {}).get(uid, '')
+            
+            result.append({
+                'user_id': user_id,
+                'uid': uid,
+                'name': data.get('name', '—'),
+                'stars': data.get('stars', 0),
+                'bank': data.get('bank', 0),
+                'attempts': data.get('attempts', 0),
+                'registered': data.get('registered', False),
+                'banned': is_banned,
+                'banned_reason': banned_reason
+            })
+    return jsonify(result)
 
-// Переопределяем функцию applyCode для работы с сервером
-window.applyCode = async function() {
-    const user = getCurrentUser();
-    const input = document.getElementById('codeInput');
-    if (!input) return;
-    const text = input.value.trim().toUpperCase();
-    if (!text) { 
-        showToast('Введите код'); 
-        return; 
+# API: получить глобальные данные
+@app.route('/api/get_global_data')
+def get_global_data():
+    data = load_global_data()
+    return jsonify(data)
+
+# API: установить активность конкурса
+@app.route('/api/set_contest', methods=['POST'])
+def set_contest():
+    data = request.json
+    global_data = load_global_data()
+    global_data['contest_active'] = data.get('active', False)
+    global_data['contest_end_time'] = data.get('end_time')
+    global_data['contest_winner'] = data.get('winner')
+    save_global_data(global_data)
+    return jsonify({'success': True})
+
+# API: добавление жалобы
+@app.route('/api/add_report', methods=['POST'])
+def add_report():
+    data = request.json
+    global_data = load_global_data()
+    if 'reports' not in global_data:
+        global_data['reports'] = []
+    global_data['reports'].append({
+        'uid': data.get('uid'),
+        'username': data.get('username'),
+        'text': data.get('text'),
+        'time': data.get('time', str(time.time()))
+    })
+    save_global_data(global_data)
+    return jsonify({'success': True})
+
+# API: очистить жалобы
+@app.route('/api/clear_reports', methods=['POST'])
+def clear_reports():
+    global_data = load_global_data()
+    global_data['reports'] = []
+    save_global_data(global_data)
+    return jsonify({'success': True})
+
+# API: чат - добавить сообщение
+@app.route('/api/add_chat_message', methods=['POST'])
+def add_chat_message():
+    data = request.json
+    uid = data.get('uid')
+    message = data.get('message')
+    sender = data.get('sender', 'user')
+    
+    global_data = load_global_data()
+    if 'active_chats' not in global_data:
+        global_data['active_chats'] = {}
+    if uid not in global_data['active_chats']:
+        global_data['active_chats'][uid] = {'messages': [], 'admin': False}
+    
+    global_data['active_chats'][uid]['messages'].append({
+        'from': sender,
+        'text': message,
+        'time': data.get('time', str(time.time()))
+    })
+    
+    if sender == 'admin':
+        global_data['active_chats'][uid]['admin'] = True
+    
+    save_global_data(global_data)
+    return jsonify({'success': True})
+
+# API: получить чат по uid
+@app.route('/api/get_chat/<uid>')
+def get_chat(uid):
+    global_data = load_global_data()
+    chat = global_data.get('active_chats', {}).get(uid)
+    if chat:
+        return jsonify(chat)
+    return jsonify({'messages': [], 'admin': False})
+
+# API: закрыть чат
+@app.route('/api/close_chat', methods=['POST'])
+def close_chat():
+    data = request.json
+    uid = data.get('uid')
+    global_data = load_global_data()
+    if 'active_chats' in global_data and uid in global_data['active_chats']:
+        del global_data['active_chats'][uid]
+        save_global_data(global_data)
+    return jsonify({'success': True})
+
+# API: добавить код
+@app.route('/api/add_code', methods=['POST'])
+def add_code():
+    data = request.json
+    global_data = load_global_data()
+    if 'admin_codes' not in global_data:
+        global_data['admin_codes'] = []
+    
+    code_info = {
+        'code': data.get('code'),
+        'type': data.get('type'),
+        'target': data.get('target'),
+        'created_at': time.time(),
+        'used': False
     }
     
-    // Отправляем код на сервер
-    const success = await activateCodeOnServer(text);
-    if (success) {
-        closeModal();
-    }
-};
+    # Если код для конкретного игрока, добавляем уведомление
+    target = data.get('target')
+    if target and target != 'всем' and target != 'all' and '→' not in target:
+        users = load_users()
+        for user_id, user_data in users.items():
+            if user_data.get('uid') == target:
+                if 'notifications' not in user_data:
+                    user_data['notifications'] = []
+                user_data['notifications'].append({
+                    'type': 'code',
+                    'code': data.get('code'),
+                    'message': 'Вам отправлен код: ' + data.get('code') + ' (' + data.get('type') + ')',
+                    'time': time.strftime('%Y-%m-%d %H:%M:%S')
+                })
+                save_users(users)
+                break
+    
+    global_data['admin_codes'].append(code_info)
+    save_global_data(global_data)
+    return jsonify({'success': True, 'code': data.get('code')})
 
-// Добавляем функцию для копирования кода
-window.copyCode = function(code) {
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(code).then(function() {
-            showToast('Код скопирован!');
-        }).catch(function() {
-            fallbackCopyCode(code);
-        });
-    } else {
-        fallbackCopyCode(code);
-    }
-};
+# API: удалить код
+@app.route('/api/delete_code', methods=['POST'])
+def delete_code():
+    data = request.json
+    code_value = data.get('code')
+    global_data = load_global_data()
+    if 'admin_codes' in global_data:
+        global_data['admin_codes'] = [c for c in global_data['admin_codes'] if c.get('code') != code_value]
+        save_global_data(global_data)
+    return jsonify({'success': True})
 
-function fallbackCopyCode(text) {
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    ta.remove();
-    showToast('Код скопирован!');
-};
+# API: использовать код
+@app.route('/api/use_code', methods=['POST'])
+def use_code():
+    data = request.json
+    code_value = data.get('code')
+    user_id = data.get('user_id')
+    user_uid = data.get('user_uid')
+    
+    if not code_value or not user_id:
+        return jsonify({'success': False, 'message': 'Missing data'}), 400
+    
+    global_data = load_global_data()
+    users = load_users()
+    
+    # Ищем код
+    code_obj = None
+    for c in global_data.get('admin_codes', []):
+        if c.get('code') == code_value and not c.get('used', False):
+            code_obj = c
+            break
+    
+    if not code_obj:
+        return jsonify({'success': False, 'message': 'Code not found or already used'}), 404
+    
+    # Проверяем target
+    target = code_obj.get('target')
+    if target and target != 'всем' and target != 'all':
+        if '→' in target:
+            target_uid = target.split('→')[-1].strip()
+        else:
+            target_uid = target
+        
+        if target_uid != user_uid:
+            return jsonify({'success': False, 'message': 'This code is not for you'}), 403
+    
+    # Отмечаем код как использованный
+    code_obj['used'] = True
+    save_global_data(global_data)
+    
+    # Получаем пользователя
+    user = users.get(user_id)
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'}), 404
+    
+    # Определяем тип кода и добавляем бонус
+    code_type = code_obj.get('type', '')
+    message = 'Code activated!'
+    
+    if 'Одноразовый' in code_type or 'Код 1' in code_type or 'single' in code_type:
+        user['attempts'] = user.get('attempts', 0) + 1
+        message = '+1 attempt!'
+    elif 'На 5' in code_type or 'Код 5' in code_type or 'multi' in code_type:
+        user['attempts'] = user.get('attempts', 0) + 5
+        message = '+5 attempts!'
+    elif 'Бустер' in code_type and 'x5' not in code_type:
+        user['attempts'] = user.get('attempts', 0) + 1
+        user['boosted'] = True
+        message = 'Booster activated! +1 attempt'
+    elif 'Бустер x5' in code_type or 'boostmulti' in code_type:
+        user['attempts'] = user.get('attempts', 0) + 5
+        user['boosted'] = True
+        message = 'Booster x5 activated! +5 attempts'
+    else:
+        user['attempts'] = user.get('attempts', 0) + 1
+        message = 'Code activated! +1 attempt'
+    
+    # Добавляем уведомление
+    if 'notifications' not in user:
+        user['notifications'] = []
+    user['notifications'].append({
+        'type': 'code_used',
+        'message': message,
+        'time': time.strftime('%Y-%m-%d %H:%M:%S')
+    })
+    
+    # Сохраняем пользователя
+    users[user_id] = user
+    save_users(users)
+    
+    return jsonify({'success': True, 'message': message})
+
+# API: синхронизация банов
+@app.route('/api/sync_banned', methods=['POST'])
+def sync_banned():
+    data = request.json
+    banned_data = data.get('banned', {})
+    
+    # Сохраняем баны в глобальные данные
+    global_data = load_global_data()
+    global_data['banned_users'] = banned_data
+    save_global_data(global_data)
+    
+    # Обновляем всех пользователей
+    users = load_users()
+    for user_id, user_data in users.items():
+        uid = user_data.get('uid')
+        if uid and uid in banned_data:
+            user_data['banned'] = True
+            user_data['banned_reason'] = banned_data[uid]
+            # Добавляем уведомление о бане
+            if 'notifications' not in user_data:
+                user_data['notifications'] = []
+            user_data['notifications'].append({
+                'type': 'ban',
+                'message': 'You have been banned. Reason: ' + banned_data[uid],
+                'time': time.strftime('%Y-%m-%d %H:%M:%S')
+            })
+        else:
+            user_data['banned'] = False
+            user_data['banned_reason'] = ''
+    save_users(users)
+    
+    return jsonify({'success': True})
+
+# API: отправить уведомление
+@app.route('/api/send_notification', methods=['POST'])
+def send_notification():
+    data = request.json
+    uid = data.get('uid')
+    message = data.get('message')
+    
+    users = load_users()
+    for user_id, user_data in users.items():
+        if user_data.get('uid') == uid:
+            if 'notifications' not in user_data:
+                user_data['notifications'] = []
+            user_data['notifications'].append({
+                'type': 'notification',
+                'message': message,
+                'time': time.strftime('%Y-%m-%d %H:%M:%S')
+            })
+            save_users(users)
+            break
+    
+    return jsonify({'success': True})
+
+# API: получить уведомления
+@app.route('/api/get_notifications/<uid>')
+def get_notifications(uid):
+    users = load_users()
+    for user_id, user_data in users.items():
+        if user_data.get('uid') == uid:
+            notifications = user_data.get('notifications', [])
+            # Не очищаем уведомления, чтобы игрок мог их видеть
+            return jsonify({'notifications': notifications})
+    return jsonify({'notifications': []})
+
+# API: очистить уведомления
+@app.route('/api/clear_notifications/<uid>', methods=['POST'])
+def clear_notifications(uid):
+    users = load_users()
+    for user_id, user_data in users.items():
+        if user_data.get('uid') == uid:
+            user_data['notifications'] = []
+            save_users(users)
+            break
+    return jsonify({'success': True})
+
+# API: проверка обновлений
+@app.route('/api/check_updates')
+def check_updates():
+    global_data = load_global_data()
+    users = load_users()
+    
+    return jsonify({
+        'has_updates': True,
+        'timestamp': time.time(),
+        'global_data': global_data,
+        'users': users
+    })
+
+# API: сброс всех данных
+@app.route('/api/reset', methods=['POST'])
+def reset():
+    if os.path.exists(DATA_FILE):
+        os.remove(DATA_FILE)
+    if os.path.exists(GLOBAL_DATA_FILE):
+        os.remove(GLOBAL_DATA_FILE)
+    return jsonify({'success': True, 'message': 'All data reset'})
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
