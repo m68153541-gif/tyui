@@ -218,7 +218,7 @@ async function syncGlobalData() {
 }
 
 // ============================================================
-//  КОНКУРС
+//  КОНКУРС (С ИСПРАВЛЕННЫМ ТАЙМЕРОМ)
 // ============================================================
 
 function startContest() {
@@ -235,6 +235,8 @@ function startContest() {
     }).then(() => {
         loadGlobalData();
         showToast('Конкурс запущен на 6 часов!');
+        // Запускаем обновление таймера
+        updateContestTimer();
     });
 }
 
@@ -274,6 +276,7 @@ function endContest() {
             }
         }
         loadGlobalData();
+        render();
     });
 }
 
@@ -281,6 +284,39 @@ function forceEndContest() {
     if (!globalData.contest_active) { showToast('Конкурс не запущен'); return; }
     endContest();
 }
+
+// Функция обновления таймера конкурса
+function updateContestTimer() {
+    const banner = document.getElementById('contestBanner');
+    if (!banner) return;
+    
+    if (!globalData.contest_active) {
+        banner.style.display = 'none';
+        return;
+    }
+    
+    const now = Date.now();
+    const remaining = globalData.contest_end_time - now;
+    
+    if (remaining <= 0) {
+        endContest();
+        return;
+    }
+    
+    const hours = Math.floor(remaining / 3600000);
+    const minutes = Math.floor((remaining % 3600000) / 60000);
+    const seconds = Math.floor((remaining % 60000) / 1000);
+    
+    const timerEl = banner.querySelector('.timer');
+    if (timerEl) {
+        timerEl.textContent = String(hours).padStart(2,'0') + ':' + 
+                              String(minutes).padStart(2,'0') + ':' + 
+                              String(seconds).padStart(2,'0');
+    }
+}
+
+// Запускаем обновление таймера каждую секунду
+setInterval(updateContestTimer, 1000);
 
 // ============================================================
 //  УВЕДОМЛЕНИЯ
@@ -512,10 +548,9 @@ function showAdminChat(uid) {
 }
 
 // ============================================================
-//  КОДЫ (ОБНОВЛЕННАЯ ЛОГИКА)
+//  КОДЫ
 // ============================================================
 
-// Создание кода на 1 использование (каждый игрок может использовать 1 раз)
 window.adminCodeSingle = function() {
     const code = generateCode(10);
     
@@ -541,7 +576,6 @@ window.adminCodeSingle = function() {
     renderAdminCodes();
 };
 
-// Создание кода на 5 использований
 window.adminCodeMulti = function() {
     const code = generateCode(10);
     
@@ -570,7 +604,6 @@ window.adminCodeMulti = function() {
     renderAdminCodes();
 };
 
-// Бустер
 window.adminBoostSingle = function() {
     const code = generateCode(16);
     
@@ -596,7 +629,6 @@ window.adminBoostSingle = function() {
     renderAdminCodes();
 };
 
-// Бустер x5
 window.adminBoostMulti = function() {
     const code = generateCode(16);
     
@@ -625,7 +657,6 @@ window.adminBoostMulti = function() {
     renderAdminCodes();
 };
 
-// Отправить код игроку
 window.adminSendCodeToPlayer = function() {
     openModal('Отправить код игроку', `
         <p>Введите UID игрока:</p>
@@ -705,7 +736,6 @@ window.sendCodeToPlayerWithType = function(type) {
     showAdminPanel();
 };
 
-// Отправить код всем игрокам
 window.adminSendCodeToAll = function() {
     openModal('Отправить код всем игрокам', `
         <p>Выберите тип кода:</p>
@@ -778,8 +808,6 @@ window.sendCodeToAllWithType = function(type) {
     showAdminPanel();
 };
 
-// ===== ФУНКЦИЯ АКТИВАЦИИ КОДА (ДЛЯ ИГРОКА) =====
-
 window.applyCode = async function() {
     const user = getCurrentUser();
     const input = document.getElementById('codeInput');
@@ -792,7 +820,6 @@ window.applyCode = async function() {
     
     let found = false;
     
-    // Проверяем бустеры
     for (const code of window.boosterCodes) {
         if (code === text) {
             window.boosterCodes.delete(code);
@@ -808,7 +835,6 @@ window.applyCode = async function() {
         }
     }
     
-    // Проверяем бустеры x5
     for (const code in window.boosterMultiCodes) {
         if (code === text) {
             if (window.boosterMultiCodes[code].usedUsers.has(user.uid)) {
@@ -832,7 +858,6 @@ window.applyCode = async function() {
         }
     }
     
-    // Проверяем одноразовые коды
     for (const code of window.oneTimeCodes) {
         if (code === text) {
             window.oneTimeCodes.delete(code);
@@ -847,7 +872,6 @@ window.applyCode = async function() {
         }
     }
     
-    // Проверяем мультикоды
     for (const code in window.multiUseCodes) {
         if (code === text) {
             if (window.multiUseCodes[code].usedUsers.has(user.uid)) {
@@ -870,7 +894,6 @@ window.applyCode = async function() {
         }
     }
     
-    // Если локально не нашли - проверяем на сервере
     if (!found) {
         try {
             const response = await fetch(SERVER_URL + '/api/use_code', {
@@ -899,8 +922,6 @@ window.applyCode = async function() {
         }
     }
 };
-
-// ===== ОБНОВЛЕННАЯ ФУНКЦИЯ ОТОБРАЖЕНИЯ КОДОВ =====
 
 function renderAdminCodes() {
     const panel = document.getElementById('codesPanel');
@@ -1010,7 +1031,7 @@ function fallbackCopyCode(text) {
 }
 
 // ============================================================
-//  АДМИН-ПАНЕЛЬ (С НОВЫМ ПАРОЛЕМ)
+//  АДМИН-ПАНЕЛЬ
 // ============================================================
 
 function handleAdmin() {
@@ -1049,7 +1070,7 @@ function showAdminPanel() {
     }
 
     const contestStatus = globalData.contest_active ? 
-        '<span style="color:#ffd700;">Активен (' + Math.floor((globalData.contest_end_time - Date.now()) / 60000) + ' мин)</span>' : 
+        '<span style="color:#ffd700;">Активен</span>' : 
         '<span style="color:#888;">Не активен</span>';
 
     openModal('Панель управления', `
@@ -1081,7 +1102,7 @@ function showAdminPanel() {
 }
 
 // ============================================================
-//  АДМИН-ОСТАЛЬНОЕ (ОБНОВЛЕННОЕ)
+//  АДМИН-ОСТАЛЬНОЕ (ИСПРАВЛЕННОЕ)
 // ============================================================
 
 window.adminReports = function() {
@@ -1177,7 +1198,7 @@ window.showPlayerInfo = function() {
     `);
 };
 
-// ===== ВЫДАЧА ЗВЕЗД =====
+// ===== ВЫДАЧА ЗВЕЗД (РАБОТАЕТ) =====
 window.adminAddStars = function(uid) {
     openModal('Добавить звёзды игроку ' + uid, `
         <input type="number" id="addStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -1203,7 +1224,7 @@ window.doAddStars = function(uid) {
             showToast(data.message);
             closeModal();
             loadFromServer();
-            loadAllUsersFromServer(); // Обновляем таблицу лидеров
+            loadAllUsersFromServer();
             render();
             setTimeout(function() { showPlayerInfo(); }, 500);
         } else {
@@ -1216,7 +1237,7 @@ window.doAddStars = function(uid) {
     });
 };
 
-// ===== КОНФИСКАЦИЯ ЗВЕЗД =====
+// ===== КОНФИСКАЦИЯ ЗВЕЗД (ИСПРАВЛЕНА) =====
 window.adminRemoveStars = function(uid) {
     openModal('Забрать звёзды у игрока ' + uid, `
         <input type="number" id="removeStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -1231,6 +1252,18 @@ window.doRemoveStars = function(uid) {
     const amount = parseInt(input.value);
     if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
     
+    // Проверяем локально, есть ли у игрока столько звёзд
+    const user = getUserByUid(uid);
+    if (!user) {
+        showToast('Игрок не найден');
+        return;
+    }
+    
+    if (user.stars < amount) {
+        showToast('Недостаточно звёзд у игрока!');
+        return;
+    }
+    
     fetch(SERVER_URL + '/api/admin_remove_stars', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1242,7 +1275,7 @@ window.doRemoveStars = function(uid) {
             showToast(data.message);
             closeModal();
             loadFromServer();
-            loadAllUsersFromServer(); // Обновляем таблицу лидеров
+            loadAllUsersFromServer();
             render();
             setTimeout(function() { showPlayerInfo(); }, 500);
         } else {
@@ -1255,64 +1288,61 @@ window.doRemoveStars = function(uid) {
     });
 };
 
-// ===== СБРОС АККАУНТА (ПОЛНЫЙ СБРОС ДО РЕГИСТРАЦИИ) =====
+// ===== ПОЛНЫЙ СБРОС АККАУНТА ДО РЕГИСТРАЦИИ (ИСПРАВЛЕН) =====
 window.adminResetPlayer = function(uid) {
     if (!confirm('Вы уверены, что хотите полностью сбросить игрока ' + uid + '? Все данные будут удалены!')) return;
     
-    fetch(SERVER_URL + '/api/admin_reset_player', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: uid })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.message);
-            closeModal();
-            // Полностью удаляем пользователя
-            const user = getUserByUid(uid);
-            if (user) {
-                // Сбрасываем все данные до состояния нового игрока
-                user.registered = false;
-                user.name = null;
-                user.gender = null;
-                user.age = null;
-                user.uid = null;
-                user.stars = 300;
-                user.bank = 0;
-                user.bankDeposit = 0;
-                user.attempts = 1;
-                user.coefficientRate = 0;
-                user.petProgress = 0;
-                user.petStage = 1;
-                user.wins = [];
-                user.clickerProgress = 0;
-                user.boosted = false;
-                user.banned = false;
-                user.banned_reason = '';
-                user.notifications = [];
-                
-                // Удаляем из uidMap
-                if (window.uidMap[uid]) {
-                    delete window.uidMap[uid];
-                }
-                
-                saveAllData();
-                saveToServer();
-                loadFromServer();
-                loadAllUsersFromServer();
-                render();
-                showToast('Аккаунт полностью сброшен до регистрации');
-            }
-            setTimeout(function() { showAdminPanel(); }, 500);
-        } else {
-            showToast('Ошибка: ' + data.message);
-        }
-    })
-    .catch(function(e) {
-        console.error('Ошибка сброса аккаунта:', e);
-        showToast('Ошибка сервера');
-    });
+    const user = getUserByUid(uid);
+    if (!user) {
+        showToast('Игрок не найден');
+        return;
+    }
+    
+    // Полностью сбрасываем все данные
+    user.registered = false;
+    user.name = null;
+    user.gender = null;
+    user.age = null;
+    user.uid = null;
+    user.stars = 300;
+    user.bank = 0;
+    user.bankDeposit = 0;
+    user.attempts = 1;
+    user.coefficientRate = 0;
+    user.petProgress = 0;
+    user.petStage = 1;
+    user.wins = [];
+    user.clickerProgress = 0;
+    user.boosted = false;
+    user.banned = false;
+    user.banned_reason = '';
+    user.notifications = [];
+    user.bankTime = Date.now();
+    user.lastPassiveTime = Date.now();
+    
+    // Удаляем из uidMap
+    if (window.uidMap[uid]) {
+        delete window.uidMap[uid];
+    }
+    
+    // Удаляем из банов
+    if (window.bannedUsers[uid]) {
+        delete window.bannedUsers[uid];
+    }
+    
+    // Сохраняем изменения
+    saveAllData();
+    saveToServer();
+    syncGlobalData();
+    
+    // Обновляем данные
+    loadFromServer();
+    loadAllUsersFromServer();
+    render();
+    
+    showToast('Аккаунт полностью сброшен до регистрации');
+    closeModal();
+    setTimeout(function() { showAdminPanel(); }, 500);
 };
 
 // ===== ВЫДАЧА ЗВЕЗД СЕБЕ =====
@@ -1418,7 +1448,6 @@ window.adminMassGive = function() {
     saveToServer();
 };
 
-// ===== ТОП-30 (ОБНОВЛЕННЫЙ С ПЕРЕЗАГРУЗКОЙ) =====
 window.adminTop = function() {
     loadAllUsersFromServer().then(() => {
         const usersList = getAllUsersList();
