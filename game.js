@@ -176,6 +176,41 @@ function getAllUsersList() {
 }
 
 // ============================================================
+//  БАНК (С ЕЖЕМИНУТНЫМ НАЧИСЛЕНИЕМ)
+// ============================================================
+
+function processBank() {
+    const user = getCurrentUser();
+    if (!user || !user.registered || user.banned) return;
+    
+    const now = Date.now();
+    const bankTime = user.bankTime || now;
+    const bankDeposit = user.bankDeposit || 0;
+    
+    if (bankDeposit > 0) {
+        // Каждую минуту +1 звезда (проверяем сколько минут прошло)
+        const minutesPassed = Math.floor((now - bankTime) / 60000);
+        
+        if (minutesPassed > 0) {
+            const earned = minutesPassed;
+            user.bank = (user.bank || 0) + earned;
+            user.bankTime = now;
+            saveAllData();
+            saveToServer();
+            
+            // Показываем уведомление раз в минуту
+            if (earned > 0) {
+                showToast('🏦 Банк: +' + earned + ' ⭐ (пассивный доход)');
+            }
+            render();
+        }
+    }
+}
+
+// Запускаем проверку банка каждые 10 секунд
+setInterval(processBank, 10000);
+
+// ============================================================
 //  ГЛОБАЛЬНАЯ СИНХРОНИЗАЦИЯ
 // ============================================================
 
@@ -1662,123 +1697,393 @@ function closeWheel() {
 }
 
 // ============================================================
-//  РЕГИСТРАЦИЯ
+//  БАНК (ОБНОВЛЕННЫЙ)
 // ============================================================
 
-function showRegistration() {
-    const uids = generateThreeUids();
-    
-    openModal('Регистрация', `
-        <p>Добро пожаловать! Давайте зарегистрируемся.</p>
-        <p>Введите ваше имя:</p>
-        <input type="text" id="regName" placeholder="Имя" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <p>Выберите пол:</p>
-        <div style="display:flex;gap:8px;margin:5px 0;">
-            <button class="btn" onclick="selectGender('Мужской')" style="flex:1;">Мужской</button>
-            <button class="btn" onclick="selectGender('Женский')" style="flex:1;">Женский</button>
-        </div>
-        <p>Введите возраст:</p>
-        <input type="number" id="regAge" placeholder="Возраст" min="1" max="120" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <p style="color:#ffd700;font-weight:bold;">Выберите ваш уникальный ID (навсегда):</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:5px 0;">
-            <button class="btn primary" onclick="selectUid('${uids[0]}')" id="uidBtn0" style="flex:1;font-weight:bold;font-size:18px;">${uids[0]}</button>
-            <button class="btn primary" onclick="selectUid('${uids[1]}')" id="uidBtn1" style="flex:1;font-weight:bold;font-size:18px;">${uids[1]}</button>
-            <button class="btn primary" onclick="selectUid('${uids[2]}')" id="uidBtn2" style="flex:1;font-weight:bold;font-size:18px;">${uids[2]}</button>
-        </div>
-        <div id="selectedUidDisplay" style="text-align:center;margin:8px 0;font-size:16px;color:#6bcbff;"></div>
-        <button class="btn primary full" id="regCompleteBtn" onclick="completeRegistration()" disabled>Завершить</button>
-    `);
-}
-
-let regData = { name: '', gender: '', age: '', uid: '' };
-let genderSelected = false;
-
-window.selectGender = function(g) {
-    genderSelected = true;
-    regData.gender = g;
-    showToast('Пол: ' + g);
-    checkRegistrationReady();
-};
-
-window.selectUid = function(uid) {
-    regData.uid = uid;
-    document.getElementById('selectedUidDisplay').textContent = 'Выбран ID: ' + uid;
-    document.getElementById('selectedUidDisplay').style.color = '#ffd700';
-    document.querySelectorAll('#modalBody .btn.primary').forEach(btn => {
-        btn.style.border = '2px solid transparent';
-        if (btn.textContent.trim() === uid) {
-            btn.style.border = '2px solid #ffd700';
-            btn.style.background = 'linear-gradient(145deg, #ffd700, #f5a623)';
-        }
-    });
-    checkRegistrationReady();
-};
-
-function checkRegistrationReady() {
-    const nameInput = document.getElementById('regName');
-    const ageInput = document.getElementById('regAge');
-    const btn = document.getElementById('regCompleteBtn');
-    if (nameInput && ageInput && btn) {
-        const name = nameInput.value.trim();
-        const age = parseInt(ageInput.value);
-        if (name.length > 0 && age > 0 && age <= 120 && genderSelected && regData.uid) {
-            btn.disabled = false;
-        } else {
-            btn.disabled = true;
-        }
-    }
-}
-
-window.completeRegistration = function() {
-    const nameInput = document.getElementById('regName');
-    const ageInput = document.getElementById('regAge');
-    if (!nameInput || !ageInput) return;
-    
-    regData.name = nameInput.value.trim();
-    regData.age = parseInt(ageInput.value);
-
-    if (!regData.name || regData.name.length === 0) {
-        showToast('Введите имя');
-        return;
-    }
-    if (!regData.age || regData.age < 1 || regData.age > 120) {
-        showToast('Введите возраст от 1 до 120');
-        return;
-    }
-    if (!regData.gender) {
-        showToast('Выберите пол');
-        return;
-    }
-    if (!regData.uid) {
-        showToast('Выберите ID');
-        return;
-    }
-
+function handleBank() {
     const user = getCurrentUser();
-    user.name = regData.name;
-    user.gender = regData.gender;
-    user.age = regData.age;
-    user.uid = regData.uid;
-    user.registered = true;
+    if (!user.registered) {
+        showToast('Сначала зарегистрируйтесь!');
+        return;
+    }
+    if (user.banned) {
+        showToast('Вы заблокированы');
+        return;
+    }
     
-    window.uidMap[regData.uid] = getUserId();
+    // Обрабатываем банк перед показом
+    processBank();
     
+    const bank = user.bank || 0;
+    const deposit = user.bankDeposit || 0;
+    
+    if (bank > 0) {
+        openModal('🏦 Банк (1⭐/мин)', `
+            <p>💰 В банке: <strong style="color:#ffd700;">${bank}</strong> ⭐</p>
+            <p>📊 Первоначальный вклад: <strong style="color:#00d4ff;">${deposit}</strong> ⭐</p>
+            <p>📈 Ставка: <strong style="color:#ffd700;">1 ⭐ в минуту</strong></p>
+            <p style="font-size:12px;color:#888;">⏱ Доход начисляется автоматически</p>
+            <button class="btn primary full" onclick="withdrawBank()">💰 Забрать все ⭐</button>
+            <button class="btn full small" onclick="closeModal();">В меню</button>
+        `);
+    } else {
+        openModal('🏦 Банк (1⭐/мин)', `
+            <p>Банк пуст.</p>
+            <p>📈 Ставка: <strong style="color:#ffd700;">1 ⭐ в минуту</strong></p>
+            <p style="font-size:12px;color:#888;">💡 Положите звёзды и они будут расти!</p>
+            <input type="number" id="bankDepositInput" placeholder="Сумма для вклада" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+            <button class="btn primary full" onclick="depositBank()">💵 Положить в банк</button>
+            <button class="btn full small" onclick="closeModal();">В меню</button>
+        `);
+    }
+}
+
+window.withdrawBank = function() {
+    const user = getCurrentUser();
+    // Обрабатываем банк перед выводом
+    processBank();
+    
+    const amount = user.bank || 0;
+    if (amount <= 0) { showToast('Банк пуст'); return; }
+    user.stars += amount;
+    user.bank = 0;
+    user.bankDeposit = 0;
+    user.bankTime = Date.now();
     closeModal();
-    showToast('Регистрация завершена! Ваш ID: ' + regData.uid);
+    showToast('Забрано ' + amount + ' ⭐ из банка');
     render();
     saveAllData();
     saveToServer();
 };
 
-function checkRegistration() {
+window.depositBank = function() {
     const user = getCurrentUser();
-    if (!user.registered) {
-        showRegistration();
-    }
-}
+    const input = document.getElementById('bankDepositInput');
+    if (!input) return;
+    const amount = parseInt(input.value);
+    if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
+    if (user.stars < amount) { showToast('Недостаточно звёзд'); return; }
+    user.stars -= amount;
+    user.bank = amount;
+    user.bankDeposit = amount;
+    user.bankTime = Date.now();
+    closeModal();
+    showToast(amount + ' ⭐ положены в банк под 1⭐/мин');
+    render();
+    saveAllData();
+    saveToServer();
+};
 
 // ============================================================
 //  ОСТАЛЬНЫЕ ИГРОВЫЕ ФУНКЦИИ
+// ============================================================
+
+function handlePlay() {
+    const user = getCurrentUser();
+    if (!user.registered) {
+        showToast('Сначала зарегистрируйтесь!');
+        return;
+    }
+    if (user.banned) {
+        showToast('Вы заблокированы. Причина: ' + (user.banned_reason || 'Нарушение правил'));
+        return;
+    }
+    if (user.attempts <= 0) {
+        showToast('Попыток нет! Купите в меню.');
+        return;
+    }
+    openWheel();
+}
+
+function handleClicker() {
+    const user = getCurrentUser();
+    if (!user.registered) {
+        showToast('Сначала зарегистрируйтесь!');
+        return;
+    }
+    if (user.banned) {
+        showToast('Вы заблокированы');
+        return;
+    }
+    const progress = user.clickerProgress || 0;
+    const remaining = 400 - progress;
+    const reward = 20;
+
+    openModal('⭐ Кликер звёзд', `
+        <div style="text-align:center;">
+            <div class="clicker-star" id="clickerStar" onclick="clickStar()">⭐</div>
+            <div class="clicker-stats">
+                <span>Прогресс: <strong id="clickerProgress">${progress}</strong> / 400</span>
+                <span>Награда: <strong id="clickerReward">${reward}</strong> ⭐</span>
+            </div>
+            <div class="clicker-progress">
+                <div class="fill" id="clickerFill" style="width: ${(progress/400)*100}%;"></div>
+            </div>
+            <p style="font-size:13px;color:#888;margin-top:8px;">
+                ${remaining > 0 ? 'Осталось кликов: ' + remaining : 'Готово! Заберите награду!'}
+            </p>
+            ${progress >= 400 ? '<button class="btn primary full" onclick="claimClickerReward()">Забрать ' + reward + ' ⭐</button>' : ''}
+            <button class="btn full small" onclick="closeModal();">В меню</button>
+        </div>
+    `);
+}
+
+window.clickStar = function() {
+    const user = getCurrentUser();
+    if (!user.registered || user.banned) return;
+    if (user.clickerProgress >= 400) {
+        showToast('Вы уже накликали 400 раз! Заберите награду!');
+        return;
+    }
+    user.clickerProgress = (user.clickerProgress || 0) + 1;
+    const progress = user.clickerProgress;
+    const star = document.getElementById('clickerStar');
+    if (star) {
+        star.classList.remove('pop');
+        void star.offsetWidth;
+        star.classList.add('pop');
+    }
+    const progressEl = document.getElementById('clickerProgress');
+    const fillEl = document.getElementById('clickerFill');
+    if (progressEl) progressEl.textContent = progress;
+    if (fillEl) fillEl.style.width = (progress/400)*100 + '%';
+    const remaining = 400 - progress;
+    const infoP = document.querySelector('.clicker-stats + p');
+    if (infoP) {
+        infoP.textContent = remaining > 0 ? 'Осталось кликов: ' + remaining : 'Готово! Заберите награду!';
+    }
+    if (progress >= 400) {
+        const btn = document.querySelector('button[onclick="claimClickerReward()"]');
+        if (!btn) {
+            const container = document.querySelector('.clicker-stats + p');
+            if (container) {
+                container.innerHTML = '<button class="btn primary full" onclick="claimClickerReward()">Забрать 20 ⭐</button>';
+            }
+        }
+        showToast('400 кликов! Заберите награду!');
+    }
+    render();
+    saveAllData();
+    saveToServer();
+};
+
+window.claimClickerReward = function() {
+    const user = getCurrentUser();
+    if (!user.registered || user.banned) return;
+    if (user.clickerProgress < 400) {
+        showToast('Нужно накликать 400 раз!');
+        return;
+    }
+    user.stars += 20;
+    user.clickerProgress = 0;
+    closeModal();
+    showToast('+20 ⭐ за клики!');
+    render();
+    saveAllData();
+    saveToServer();
+};
+
+function handleCoeff() {
+    const user = getCurrentUser();
+    if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
+    openModal('🔥 Коэффициент', `
+        <p>Введите сумму (10% станут коэффициентом):</p>
+        <input type="number" id="coeffInput" placeholder="Сумма" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn primary full" onclick="setCoeff()">Применить</button>
+        <button class="btn full small" onclick="closeModal();">В меню</button>
+    `);
+}
+
+window.setCoeff = function() {
+    const user = getCurrentUser();
+    const input = document.getElementById('coeffInput');
+    if (!input) return;
+    const amount = parseInt(input.value);
+    if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
+    if (user.stars < amount) { showToast('Недостаточно звёзд'); return; }
+    user.stars -= amount;
+    user.coefficientRate = Math.round(amount * 0.1 * 10) / 10;
+    closeModal();
+    showToast('Коэффициент: +' + user.coefficientRate + ' ⭐');
+    render();
+    saveAllData();
+    saveToServer();
+};
+
+function handlePet() {
+    const user = getCurrentUser();
+    if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
+    const stage = user.petStage || 1;
+    const progress = user.petProgress || 0;
+    const threshold = stage === 1 ? 100 : stage === 2 ? 500 : stage === 3 ? 1500 : 0;
+    const stageText = stage === 1 ? 'Малыш' : stage === 2 ? 'Подросток' : stage === 3 ? 'Взрослый' : 'Гигант';
+    const passive = { 1: 0, 2: 20, 3: 50, giant: 300 }[stage] || 0;
+
+    openModal('🪳 Питомец', `
+        <p><strong>${stageText}</strong></p>
+        <p>Прогресс: ${progress} / ${threshold} ⭐</p>
+        ${passive > 0 ? '<p>Пассивный доход: ' + passive + ' ⭐/час</p>' : ''}
+        <input type="number" id="petFeedInput" placeholder="Сколько звёзд скормить?" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn primary full" onclick="feedPet()">🍖 Покормить</button>
+        <button class="btn full small" onclick="closeModal();">В меню</button>
+    `);
+}
+
+window.feedPet = function() {
+    const user = getCurrentUser();
+    const input = document.getElementById('petFeedInput');
+    if (!input) return;
+    const amount = parseInt(input.value);
+    if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
+    if (user.stars < amount) { showToast('Недостаточно звёзд'); return; }
+    const stage = user.petStage || 1;
+    const threshold = stage === 1 ? 100 : stage === 2 ? 500 : stage === 3 ? 1500 : 0;
+    const maxFeed = threshold - user.petProgress;
+    if (amount > maxFeed && threshold > 0) {
+        showToast('Максимум ' + maxFeed + ' ⭐');
+        return;
+    }
+    user.stars -= amount;
+    user.petProgress += amount;
+
+    if (threshold > 0 && user.petProgress >= threshold) {
+        user.petProgress -= threshold;
+        if (stage === 1) {
+            user.stars += 200;
+            user.petStage = 2;
+            showToast('Стадия 2! +200 ⭐');
+        } else if (stage === 2) {
+            user.stars += 800;
+            user.petStage = 3;
+            showToast('Стадия 3! +800 ⭐');
+        } else if (stage === 3) {
+            user.stars += 1000;
+            user.petStage = 'giant';
+            showToast('Гигант! +1000 ⭐');
+        }
+    } else {
+        showToast('Прогресс: ' + user.petProgress + '/' + threshold + ' ⭐');
+    }
+    closeModal();
+    render();
+    saveAllData();
+    saveToServer();
+};
+
+function handleBuy() {
+    const user = getCurrentUser();
+    if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
+    openModal('🛒 Покупка попыток', `
+        <p>Ваш баланс: <strong>${user.stars}</strong> ⭐</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn primary" onclick="buyAttempts(1, 100)" style="flex:1;">1 попытка — 100⭐</button>
+            <button class="btn primary" onclick="buyAttempts(2, 180)" style="flex:1;">2 — 180⭐</button>
+            <button class="btn primary" onclick="buyAttempts(4, 340)" style="flex:1;">4 — 340⭐</button>
+        </div>
+        <button class="btn full small" onclick="closeModal();">В меню</button>
+    `);
+}
+
+window.buyAttempts = function(count, price) {
+    const user = getCurrentUser();
+    if (user.stars < price) { showToast('Недостаточно звёзд'); return; }
+    user.stars -= price;
+    user.attempts += count;
+    closeModal();
+    showToast('Куплено ' + count + ' попыток');
+    render();
+    saveAllData();
+    saveToServer();
+};
+
+function handleCode() {
+    const user = getCurrentUser();
+    if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
+    openModal('🎫 Ввести код', `
+        <p>Введите код для активации бонуса:</p>
+        <input type="text" id="codeInput" placeholder="Код" style="text-transform:uppercase;width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <button class="btn primary full" onclick="applyCode()">Активировать</button>
+        <button class="btn full small" onclick="closeModal();">В меню</button>
+    `);
+}
+
+function handleLeaderboard() {
+    loadAllUsersFromServer().then(() => {
+        const usersList = getAllUsersList();
+        let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>⭐</th></tr></thead><tbody>';
+        const sorted = usersList
+            .filter(u => !u.banned)
+            .sort((a, b) => (b.stars || 0) - (a.stars || 0))
+            .slice(0, 30);
+        if (sorted.length === 0) {
+            html += '<tr><td colspan="4" style="text-align:center;color:#888;">Нет игроков</td></tr>';
+        }
+        sorted.forEach((item, i) => {
+            html += '<tr><td>' + (i+1) + '</td><td>' + item.uid + '</td><td>' + item.name + '</td><td>' + item.stars + '</td></tr>';
+        });
+        html += '</tbody></table><button class="btn full small" onclick="closeModal();">В меню</button>';
+        openModal('🏆 Таблица лидеров', html);
+    });
+}
+
+function handleRules() {
+    openModal('📜 Правила', `
+        <div class="scrollable">
+            <p><strong>🎰 Колесо удачи</strong></p>
+            <p>• 1 сектор "Ничего" (60% шанс)</p>
+            <p>• 9 призовых секторов (40% шанс)</p>
+            <p>• Призы: 10⭐, 25⭐, 50⭐, 100⭐, 150⭐, 200⭐, 300⭐, 500⭐, 1000⭐</p>
+            <br>
+            <p><strong>🏦 Банк</strong></p>
+            <p>• 1 ⭐ в минуту от первоначальной суммы</p>
+            <br>
+            <p><strong>⭐ Кликер</strong></p>
+            <p>• 400 кликов → +20 ⭐</p>
+            <br>
+            <p><strong>🪳 Питомец</strong></p>
+            <p>• Растёт от кормления звёздами</p>
+            <p>• Приносит пассивный доход</p>
+            <br>
+            <p><strong>🎫 Коды</strong></p>
+            <p>• Вводите коды для бонусов</p>
+            <br>
+            <p><strong>👑 Администратор всегда прав!</strong></p>
+        </div>
+        <button class="btn full small" onclick="closeModal();">В меню</button>
+    `);
+}
+
+// ============================================================
+//  TOAST И МОДАЛКА
+// ============================================================
+
+let toastTimeout;
+
+function showToast(text, duration = 2500) {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function openModal(title, html) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalBody').innerHTML = html;
+    document.getElementById('modalOverlay').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('active');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+});
+
+// ============================================================
+//  ОСТАЛЬНЫЕ ФУНКЦИИ
 // ============================================================
 
 async function saveToServer() {
@@ -1917,374 +2222,120 @@ function renderContest() {
 }
 
 // ============================================================
-//  ОБРАБОТЧИКИ
+//  РЕГИСТРАЦИЯ
 // ============================================================
 
-function handlePlay() {
-    const user = getCurrentUser();
-    if (!user.registered) {
-        showToast('Сначала зарегистрируйтесь!');
-        return;
-    }
-    if (user.banned) {
-        showToast('Вы заблокированы. Причина: ' + (user.banned_reason || 'Нарушение правил'));
-        return;
-    }
-    if (user.attempts <= 0) {
-        showToast('Попыток нет! Купите в меню.');
-        return;
-    }
-    openWheel();
-}
-
-function handleBank() {
-    const user = getCurrentUser();
-    if (!user.registered) {
-        showToast('Сначала зарегистрируйтесь!');
-        return;
-    }
-    if (user.banned) {
-        showToast('Вы заблокированы');
-        return;
-    }
-    const bank = user.bank || 0;
-    const deposit = user.bankDeposit || 0;
-    if (bank > 0) {
-        openModal('Банк (20% в час)', `
-            <p>В банке: <strong>${bank}</strong> ⭐</p>
-            <p>Первоначальный вклад: <strong>${deposit}</strong> ⭐</p>
-            <p>Ставка: <strong style="color:#ffd700;">20% в час</strong></p>
-            <button class="btn primary full" onclick="withdrawBank()">Забрать все ⭐</button>
-            <button class="btn full small" onclick="closeModal();">В меню</button>
-        `);
-    } else {
-        openModal('Банк (20% в час)', `
-            <p>Банк пуст.</p>
-            <p>Ставка: <strong style="color:#ffd700;">20% в час</strong></p>
-            <input type="number" id="bankDepositInput" placeholder="Сумма для вклада" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-            <button class="btn primary full" onclick="depositBank()">Положить в банк</button>
-            <button class="btn full small" onclick="closeModal();">В меню</button>
-        `);
-    }
-}
-
-window.withdrawBank = function() {
-    const user = getCurrentUser();
-    const amount = user.bank || 0;
-    if (amount <= 0) { showToast('Банк пуст'); return; }
-    user.stars += amount;
-    user.bank = 0;
-    user.bankDeposit = 0;
-    closeModal();
-    showToast('Забрано ' + amount + ' ⭐ из банка');
-    render();
-    saveAllData();
-    saveToServer();
-};
-
-window.depositBank = function() {
-    const user = getCurrentUser();
-    const input = document.getElementById('bankDepositInput');
-    if (!input) return;
-    const amount = parseInt(input.value);
-    if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
-    if (user.stars < amount) { showToast('Недостаточно звёзд'); return; }
-    user.stars -= amount;
-    user.bank = amount;
-    user.bankDeposit = amount;
-    closeModal();
-    showToast(amount + ' ⭐ положены в банк под 20% в час');
-    render();
-    saveAllData();
-    saveToServer();
-};
-
-function handleClicker() {
-    const user = getCurrentUser();
-    if (!user.registered) {
-        showToast('Сначала зарегистрируйтесь!');
-        return;
-    }
-    if (user.banned) {
-        showToast('Вы заблокированы');
-        return;
-    }
-    const progress = user.clickerProgress || 0;
-    const remaining = 400 - progress;
-    const reward = 20;
-
-    openModal('Кликер звёзд', `
-        <div style="text-align:center;">
-            <div class="clicker-star" id="clickerStar" onclick="clickStar()">⭐</div>
-            <div class="clicker-stats">
-                <span>Прогресс: <strong id="clickerProgress">${progress}</strong> / 400</span>
-                <span>Награда: <strong id="clickerReward">${reward}</strong> ⭐</span>
-            </div>
-            <div class="clicker-progress">
-                <div class="fill" id="clickerFill" style="width: ${(progress/400)*100}%;"></div>
-            </div>
-            <p style="font-size:13px;color:#888;margin-top:8px;">
-                ${remaining > 0 ? 'Осталось кликов: ' + remaining : 'Готово! Заберите награду!'}
-            </p>
-            ${progress >= 400 ? '<button class="btn primary full" onclick="claimClickerReward()">Забрать ' + reward + ' ⭐</button>' : ''}
-            <button class="btn full small" onclick="closeModal();">В меню</button>
+function showRegistration() {
+    const uids = generateThreeUids();
+    
+    openModal('📝 Регистрация', `
+        <p>Добро пожаловать! Давайте зарегистрируемся.</p>
+        <p>Введите ваше имя:</p>
+        <input type="text" id="regName" placeholder="Имя" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <p>Выберите пол:</p>
+        <div style="display:flex;gap:8px;margin:5px 0;">
+            <button class="btn" onclick="selectGender('Мужской')" style="flex:1;">Мужской</button>
+            <button class="btn" onclick="selectGender('Женский')" style="flex:1;">Женский</button>
         </div>
-    `);
-}
-
-window.clickStar = function() {
-    const user = getCurrentUser();
-    if (!user.registered || user.banned) return;
-    if (user.clickerProgress >= 400) {
-        showToast('Вы уже накликали 400 раз! Заберите награду!');
-        return;
-    }
-    user.clickerProgress = (user.clickerProgress || 0) + 1;
-    const progress = user.clickerProgress;
-    const star = document.getElementById('clickerStar');
-    if (star) {
-        star.classList.remove('pop');
-        void star.offsetWidth;
-        star.classList.add('pop');
-    }
-    const progressEl = document.getElementById('clickerProgress');
-    const fillEl = document.getElementById('clickerFill');
-    if (progressEl) progressEl.textContent = progress;
-    if (fillEl) fillEl.style.width = (progress/400)*100 + '%';
-    const remaining = 400 - progress;
-    const infoP = document.querySelector('.clicker-stats + p');
-    if (infoP) {
-        infoP.textContent = remaining > 0 ? 'Осталось кликов: ' + remaining : 'Готово! Заберите награду!';
-    }
-    if (progress >= 400) {
-        const btn = document.querySelector('button[onclick="claimClickerReward()"]');
-        if (!btn) {
-            const container = document.querySelector('.clicker-stats + p');
-            if (container) {
-                container.innerHTML = '<button class="btn primary full" onclick="claimClickerReward()">Забрать 20 ⭐</button>';
-            }
-        }
-        showToast('400 кликов! Заберите награду!');
-    }
-    render();
-    saveAllData();
-    saveToServer();
-};
-
-window.claimClickerReward = function() {
-    const user = getCurrentUser();
-    if (!user.registered || user.banned) return;
-    if (user.clickerProgress < 400) {
-        showToast('Нужно накликать 400 раз!');
-        return;
-    }
-    user.stars += 20;
-    user.clickerProgress = 0;
-    closeModal();
-    showToast('+20 ⭐ за клики!');
-    render();
-    saveAllData();
-    saveToServer();
-};
-
-function handleCoeff() {
-    const user = getCurrentUser();
-    if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
-    openModal('Коэффициент', `
-        <p>Введите сумму (10% станут коэффициентом):</p>
-        <input type="number" id="coeffInput" placeholder="Сумма" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="setCoeff()">Применить</button>
-        <button class="btn full small" onclick="closeModal();">В меню</button>
-    `);
-}
-
-window.setCoeff = function() {
-    const user = getCurrentUser();
-    const input = document.getElementById('coeffInput');
-    if (!input) return;
-    const amount = parseInt(input.value);
-    if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
-    if (user.stars < amount) { showToast('Недостаточно звёзд'); return; }
-    user.stars -= amount;
-    user.coefficientRate = Math.round(amount * 0.1 * 10) / 10;
-    closeModal();
-    showToast('Коэффициент: +' + user.coefficientRate + ' ⭐');
-    render();
-    saveAllData();
-    saveToServer();
-};
-
-function handlePet() {
-    const user = getCurrentUser();
-    if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
-    const stage = user.petStage || 1;
-    const progress = user.petProgress || 0;
-    const threshold = stage === 1 ? 100 : stage === 2 ? 500 : stage === 3 ? 1500 : 0;
-    const stageText = stage === 1 ? 'Малыш' : stage === 2 ? 'Подросток' : stage === 3 ? 'Взрослый' : 'Гигант';
-    const passive = { 1: 0, 2: 20, 3: 50, giant: 300 }[stage] || 0;
-
-    openModal('Питомец', `
-        <p><strong>${stageText}</strong></p>
-        <p>Прогресс: ${progress} / ${threshold} ⭐</p>
-        ${passive > 0 ? '<p>Пассивный доход: ' + passive + ' ⭐/час</p>' : ''}
-        <input type="number" id="petFeedInput" placeholder="Сколько звёзд скормить?" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="feedPet()">Покормить</button>
-        <button class="btn full small" onclick="closeModal();">В меню</button>
-    `);
-}
-
-window.feedPet = function() {
-    const user = getCurrentUser();
-    const input = document.getElementById('petFeedInput');
-    if (!input) return;
-    const amount = parseInt(input.value);
-    if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
-    if (user.stars < amount) { showToast('Недостаточно звёзд'); return; }
-    const stage = user.petStage || 1;
-    const threshold = stage === 1 ? 100 : stage === 2 ? 500 : stage === 3 ? 1500 : 0;
-    const maxFeed = threshold - user.petProgress;
-    if (amount > maxFeed && threshold > 0) {
-        showToast('Максимум ' + maxFeed + ' ⭐');
-        return;
-    }
-    user.stars -= amount;
-    user.petProgress += amount;
-
-    if (threshold > 0 && user.petProgress >= threshold) {
-        user.petProgress -= threshold;
-        if (stage === 1) {
-            user.stars += 200;
-            user.petStage = 2;
-            showToast('Стадия 2! +200 ⭐');
-        } else if (stage === 2) {
-            user.stars += 800;
-            user.petStage = 3;
-            showToast('Стадия 3! +800 ⭐');
-        } else if (stage === 3) {
-            user.stars += 1000;
-            user.petStage = 'giant';
-            showToast('Гигант! +1000 ⭐');
-        }
-    } else {
-        showToast('Прогресс: ' + user.petProgress + '/' + threshold + ' ⭐');
-    }
-    closeModal();
-    render();
-    saveAllData();
-    saveToServer();
-};
-
-function handleBuy() {
-    const user = getCurrentUser();
-    if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
-    openModal('Покупка попыток', `
-        <p>Ваш баланс: <strong>${user.stars}</strong> ⭐</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn primary" onclick="buyAttempts(1, 100)" style="flex:1;">1 попытка — 100⭐</button>
-            <button class="btn primary" onclick="buyAttempts(2, 180)" style="flex:1;">2 — 180⭐</button>
-            <button class="btn primary" onclick="buyAttempts(4, 340)" style="flex:1;">4 — 340⭐</button>
+        <p>Введите возраст:</p>
+        <input type="number" id="regAge" placeholder="Возраст" min="1" max="120" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
+        <p style="color:#ffd700;font-weight:bold;">Выберите ваш уникальный ID (навсегда):</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:5px 0;">
+            <button class="btn primary" onclick="selectUid('${uids[0]}')" id="uidBtn0" style="flex:1;font-weight:bold;font-size:18px;">${uids[0]}</button>
+            <button class="btn primary" onclick="selectUid('${uids[1]}')" id="uidBtn1" style="flex:1;font-weight:bold;font-size:18px;">${uids[1]}</button>
+            <button class="btn primary" onclick="selectUid('${uids[2]}')" id="uidBtn2" style="flex:1;font-weight:bold;font-size:18px;">${uids[2]}</button>
         </div>
-        <button class="btn full small" onclick="closeModal();">В меню</button>
+        <div id="selectedUidDisplay" style="text-align:center;margin:8px 0;font-size:16px;color:#6bcbff;"></div>
+        <button class="btn primary full" id="regCompleteBtn" onclick="completeRegistration()" disabled>Завершить</button>
     `);
 }
 
-window.buyAttempts = function(count, price) {
-    const user = getCurrentUser();
-    if (user.stars < price) { showToast('Недостаточно звёзд'); return; }
-    user.stars -= price;
-    user.attempts += count;
-    closeModal();
-    showToast('Куплено ' + count + ' попыток');
-    render();
-    saveAllData();
-    saveToServer();
+let regData = { name: '', gender: '', age: '', uid: '' };
+let genderSelected = false;
+
+window.selectGender = function(g) {
+    genderSelected = true;
+    regData.gender = g;
+    showToast('Пол: ' + g);
+    checkRegistrationReady();
 };
 
-function handleCode() {
-    const user = getCurrentUser();
-    if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
-    openModal('Ввести код', `
-        <p>Введите код для активации бонуса:</p>
-        <input type="text" id="codeInput" placeholder="Код" style="text-transform:uppercase;width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="applyCode()">Активировать</button>
-        <button class="btn full small" onclick="closeModal();">В меню</button>
-    `);
-}
-
-function handleLeaderboard() {
-    loadAllUsersFromServer().then(() => {
-        const usersList = getAllUsersList();
-        let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>⭐</th></tr></thead><tbody>';
-        const sorted = usersList
-            .filter(u => !u.banned)
-            .sort((a, b) => (b.stars || 0) - (a.stars || 0))
-            .slice(0, 30);
-        if (sorted.length === 0) {
-            html += '<tr><td colspan="4" style="text-align:center;color:#888;">Нет игроков</td></tr>';
+window.selectUid = function(uid) {
+    regData.uid = uid;
+    document.getElementById('selectedUidDisplay').textContent = 'Выбран ID: ' + uid;
+    document.getElementById('selectedUidDisplay').style.color = '#ffd700';
+    document.querySelectorAll('#modalBody .btn.primary').forEach(btn => {
+        btn.style.border = '2px solid transparent';
+        if (btn.textContent.trim() === uid) {
+            btn.style.border = '2px solid #ffd700';
+            btn.style.background = 'linear-gradient(145deg, #ffd700, #f5a623)';
         }
-        sorted.forEach((item, i) => {
-            html += '<tr><td>' + (i+1) + '</td><td>' + item.uid + '</td><td>' + item.name + '</td><td>' + item.stars + '</td></tr>';
-        });
-        html += '</tbody></table><button class="btn full small" onclick="closeModal();">В меню</button>';
-        openModal('Таблица лидеров', html);
     });
+    checkRegistrationReady();
+};
+
+function checkRegistrationReady() {
+    const nameInput = document.getElementById('regName');
+    const ageInput = document.getElementById('regAge');
+    const btn = document.getElementById('regCompleteBtn');
+    if (nameInput && ageInput && btn) {
+        const name = nameInput.value.trim();
+        const age = parseInt(ageInput.value);
+        if (name.length > 0 && age > 0 && age <= 120 && genderSelected && regData.uid) {
+            btn.disabled = false;
+        } else {
+            btn.disabled = true;
+        }
+    }
 }
 
-function handleRules() {
-    openModal('Правила', `
-        <div class="scrollable">
-            <p><strong>Колесо удачи</strong></p>
-            <p>• 1 сектор "Ничего" (60% шанс)</p>
-            <p>• 9 призовых секторов (40% шанс)</p>
-            <p>• Призы: 10⭐, 25⭐, 50⭐, 100⭐, 150⭐, 200⭐, 300⭐, 500⭐, 1000⭐</p>
-            <br>
-            <p><strong>Банк</strong></p>
-            <p>• 20% в час от первоначальной суммы</p>
-            <br>
-            <p><strong>Кликер</strong></p>
-            <p>• 400 кликов → +20 ⭐</p>
-            <br>
-            <p><strong>Питомец</strong></p>
-            <p>• Растёт от кормления звёздами</p>
-            <p>• Приносит пассивный доход</p>
-            <br>
-            <p><strong>Коды</strong></p>
-            <p>• Вводите коды для бонусов</p>
-            <br>
-            <p><strong>Администратор всегда прав!</strong></p>
-        </div>
-        <button class="btn full small" onclick="closeModal();">В меню</button>
-    `);
+window.completeRegistration = function() {
+    const nameInput = document.getElementById('regName');
+    const ageInput = document.getElementById('regAge');
+    if (!nameInput || !ageInput) return;
+    
+    regData.name = nameInput.value.trim();
+    regData.age = parseInt(ageInput.value);
+
+    if (!regData.name || regData.name.length === 0) {
+        showToast('Введите имя');
+        return;
+    }
+    if (!regData.age || regData.age < 1 || regData.age > 120) {
+        showToast('Введите возраст от 1 до 120');
+        return;
+    }
+    if (!regData.gender) {
+        showToast('Выберите пол');
+        return;
+    }
+    if (!regData.uid) {
+        showToast('Выберите ID');
+        return;
+    }
+
+    const user = getCurrentUser();
+    user.name = regData.name;
+    user.gender = regData.gender;
+    user.age = regData.age;
+    user.uid = regData.uid;
+    user.registered = true;
+    
+    window.uidMap[regData.uid] = getUserId();
+    
+    closeModal();
+    showToast('Регистрация завершена! Ваш ID: ' + regData.uid);
+    render();
+    saveAllData();
+    saveToServer();
+};
+
+function checkRegistration() {
+    const user = getCurrentUser();
+    if (!user.registered) {
+        showRegistration();
+    }
 }
-
-// ============================================================
-//  TOAST И МОДАЛКА
-// ============================================================
-
-let toastTimeout;
-
-function showToast(text, duration = 2500) {
-    const el = document.getElementById('toast');
-    if (!el) return;
-    el.textContent = text;
-    el.classList.add('show');
-    clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => el.classList.remove('show'), duration);
-}
-
-function openModal(title, html) {
-    document.getElementById('modalTitle').textContent = title;
-    document.getElementById('modalBody').innerHTML = html;
-    document.getElementById('modalOverlay').classList.add('active');
-}
-
-function closeModal() {
-    document.getElementById('modalOverlay').classList.remove('active');
-}
-
-document.getElementById('modalOverlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeModal();
-});
 
 // ============================================================
 //  ИНИЦИАЛИЗАЦИЯ
