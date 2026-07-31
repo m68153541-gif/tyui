@@ -744,7 +744,6 @@
         function drawStars() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Градиентный фон
             const gradient = ctx.createRadialGradient(
                 canvas.width * 0.3, canvas.height * 0.2, 100,
                 canvas.width * 0.5, canvas.height * 0.5, canvas.width * 0.8
@@ -755,7 +754,6 @@
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Звёзды с мерцанием
             stars.forEach(star => {
                 const twinkle = Math.sin(Date.now() / 2000 * star.speed * 2 + star.x) * 0.3 + 0.7;
                 const opacity = star.opacity * twinkle;
@@ -764,7 +762,6 @@
                 ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
                 ctx.fill();
                 
-                // Большие звёзды с сиянием
                 if (star.radius > 1.5) {
                     ctx.shadowColor = `rgba(162, 155, 254, ${opacity * 0.2})`;
                     ctx.shadowBlur = 10;
@@ -773,7 +770,6 @@
                 }
             });
             
-            // Падающие звёзды
             if (Math.random() < 0.002) {
                 const x = Math.random() * canvas.width;
                 const y = Math.random() * canvas.height * 0.3;
@@ -901,46 +897,43 @@
             });
         }
 
-        // Ждём появления меню и загружаем game.js
-        const appObserver = new MutationObserver(async () => {
+        // Загружаем game.js сразу, но ждём появления меню для инициализации
+        loadGameScript().then(() => {
+            console.log('game.js загружен, ожидаем появления меню...');
+        }).catch(() => {
+            console.log('game.js не загружен, проверьте файл');
+        });
+
+        // Следим за появлением меню
+        const appObserver = new MutationObserver(() => {
             if (app.classList.contains('show')) {
                 appObserver.disconnect();
-                console.log('Меню появилось, загружаем game.js...');
-                try {
-                    await loadGameScript();
-                    console.log('game.js загружен, инициализация...');
-                    // Даём время на инициализацию
-                    setTimeout(() => {
-                        if (typeof render === 'function') {
-                            render();
-                        }
-                        if (typeof initWheel === 'function') {
-                            initWheel();
-                        }
-                        console.log('Игра готова!');
-                    }, 100);
-                } catch(e) {
-                    console.error('Ошибка загрузки game.js:', e);
-                }
+                console.log('Меню появилось, инициализация...');
+                setTimeout(() => {
+                    if (typeof render === 'function') {
+                        render();
+                    }
+                    if (typeof initWheel === 'function') {
+                        initWheel();
+                    }
+                    console.log('Игра готова!');
+                }, 100);
             }
         });
 
         appObserver.observe(app, { attributes: true, attributeFilter: ['class'] });
 
-        // Если загрузка game.js не удалась - используем встроенную логику
-        setTimeout(() => {
-            if (!document.querySelector('script[src="game.js"]')) {
-                console.log('game.js не загружен, пробуем ещё раз...');
-                loadGameScript().then(() => {
-                    setTimeout(() => {
-                        if (typeof render === 'function') render();
-                        if (typeof initWheel === 'function') initWheel();
-                    }, 100);
-                });
-            }
-        }, 5000);
+        // Если меню уже видно (на случай быстрой загрузки)
+        if (app.classList.contains('show')) {
+            appObserver.disconnect();
+            setTimeout(() => {
+                if (typeof render === 'function') render();
+                if (typeof initWheel === 'function') initWheel();
+                console.log('Игра готова (быстрая загрузка)!');
+            }, 100);
+        }
 
-        console.log('Готово, ожидаем загрузки game.js');
+        console.log('Готово, ожидаем загрузки');
     </script>
 </body>
 </html>
