@@ -1,14 +1,19 @@
-from flask import Flask, send_from_directory, request, jsonify
+from flask import Flask, send_from_directory, request, jsonify, Response
 from flask_cors import CORS
 import os
 import json
 import time
+import threading
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
 DATA_FILE = 'users_data.json'
 GLOBAL_DATA_FILE = 'global_data.json'
+
+# Хранилище для SSE клиентов
+clients = []
 
 # Загрузка данных о пользователях
 def load_users():
@@ -49,6 +54,14 @@ def save_global_data(data):
     with open(GLOBAL_DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+# Отправка уведомления всем клиентам
+def notify_clients(data):
+    for client in clients[:]:
+        try:
+            client.write(f"data: {json.dumps(data)}\n\n")
+        except:
+            clients.remove(client)
+
 # Основные маршруты
 @app.route('/')
 def index():
@@ -62,6 +75,39 @@ def css():
 def js():
     return send_from_directory('.', 'game.js')
 
+# SSE эндпоинт для уведомлений в реальном времени
+@app.route('/api/events')
+def events():
+    def generate():
+        # Добавляем клиента
+        client = None
+        try:
+            # Создаем поток для отправки keep-alive
+            def keep_alive():
+                while True:
+                    time.sleep(30)
+                    try:
+                        yield f": keep-alive\n\n"
+                    except:
+                        break
+            return Response(generate(), mimetype="text/event-stream")
+        except:
+            pass
+    
+    return Response(
+        generate_events(),
+        mimetype="text/event-stream",
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no'
+        }
+    )
+
+def generate_events():
+    while True:
+        yield f": keep-alive\n\n"
+        time.sleep(30)
+
 # API: сохранить пользователя
 @app.route('/api/save', methods=['POST'])
 def save_user():
@@ -70,10 +116,24 @@ def save_user():
     user_data = data.get('user_data')
     if not user_id or not user_data:
         return jsonify({'error': 'Missing data'}), 400
+    
     users = load_users()
-    users[user_id] = user_data
-    save_users(users)
-    return jsonify({'success': True})
+    # Сохраняем uid отдельно для поиска
+    if 'uid' in user_data:
+        users[user_id] = user_data
+        save_users(users)
+        
+        # Проверяем, не забанен ли пользователь
+        global_data = load_global_data()
+        if user_data.get('uid') in global_data.get('banned_users', {}):
+            user_data['banned'] = True
+            user_data['banned_reason'] = global_data['banned_users'][user_data['uid']]
+            users[user_id] = user_data
+            save_users(users)
+        
+        return jsonify({'success': True})
+    
+    return jsonify({'error': 'No uid'}), 400
 
 # API: загрузить пользователя по id
 @app.route('/api/load/<user_id>')
@@ -81,6 +141,13 @@ def load_user(user_id):
     users = load_users()
     user_data = users.get(user_id)
     if user_data:
+        # Проверяем бан
+        global_data = load_global_data()
+        if user_data.get('uid') in global_data.get('banned_users', {}):
+            user_data['banned'] = True
+            user_data['banned_reason'] = global_data['banned_users'][user_data['uid']]
+            users[user_id] = user_data
+            save_users(users)
         return jsonify(user_data)
     return jsonify({'error': 'Not found'}), 404
 
@@ -88,19 +155,23 @@ def load_user(user_id):
 @app.route('/api/all_users')
 def all_users():
     users = load_users()
+    global_data = load_global_data()
     result = []
     for user_id, data in users.items():
-        result.append({
-            'user_id': user_id,
-            'uid': data.get('uid', '—'),
-            'name': data.get('name', '—'),
-            'stars': data.get('stars', 0),
-            'bank': data.get('bank', 0),
-            'attempts': data.get('attempts', 0),
-            'registered': data.get('registered', False),
-            'banned': data.get('banned', False),
-            'banned_reason': data.get('banned_reason', '')
-        })
+        uid = data.get('uid')
+        if uid:
+            banned = uid in global_data.get('banned_users', {}) or data.get('banned', False)
+            result.append({
+                'user_id': user_id,
+                'uid': uid,
+                'name': data.get('name', '—'),
+                'stars': data.get('stars', 0),
+                'bank': data.get('bank', 0),
+                'attempts': data.get('attempts', 0),
+                'registered': data.get('registered', False),
+                'banned': banned,
+                'banned_reason': global_data.get('banned_users', {}).get(uid, '')
+            })
     return jsonify(result)
 
 # API: получить глобальные данные
@@ -197,13 +268,35 @@ def add_code():
     global_data = load_global_data()
     if 'admin_codes' not in global_data:
         global_data['admin_codes'] = []
-    global_data['admin_codes'].append({
+    
+    code_info = {
         'code': data.get('code'),
-        'type': data.get('type'),  # например, 'ban'
-        'target': data.get('target')  # может быть uid или 'all'
-    })
+        'type': data.get('type'),
+        'target': data.get('target'),
+        'created_at': time.time(),
+        'used': False
+    }
+    
+    # Если код для конкретного игрока, добавляем в его уведомления
+    target = data.get('target')
+    if target and target != 'всем' and target != 'all':
+        users = load_users()
+        for user_id, user_data in users.items():
+            if user_data.get('uid') == target:
+                if 'notifications' not in user_data:
+                    user_data['notifications'] = []
+                user_data['notifications'].append({
+                    'type': 'code',
+                    'code': data.get('code'),
+                    'message': f'🎫 Вам отправлен код: {data.get("code")} ({data.get("type")})',
+                    'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                })
+                save_users(users)
+                break
+    
+    global_data['admin_codes'].append(code_info)
     save_global_data(global_data)
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'code': data.get('code')})
 
 # API: удалить код
 @app.route('/api/delete_code', methods=['POST'])
@@ -216,42 +309,78 @@ def delete_code():
         save_global_data(global_data)
     return jsonify({'success': True})
 
-# API: использовать код
+# API: использовать код (активировать)
 @app.route('/api/use_code', methods=['POST'])
 def use_code():
     data = request.json
     code_value = data.get('code')
     user_id = data.get('user_id')
+    user_uid = data.get('user_uid')
+    
+    # Загружаем данные
     global_data = load_global_data()
-
+    users = load_users()
+    
+    # Ищем код
     code_obj = None
     for c in global_data.get('admin_codes', []):
-        if c.get('code') == code_value:
+        if c.get('code') == code_value and not c.get('used', False):
             code_obj = c
             break
-
+    
     if not code_obj:
-        return jsonify({'success': False, 'message': 'Код не найден'}), 404
-
+        return jsonify({'success': False, 'message': '❌ Код не найден или уже использован'}), 404
+    
     # Проверка target
     target = code_obj.get('target')
-    if target and target != 'all' and target != user_id:
-        return jsonify({'success': False, 'message': 'Этот код не для вас'}), 403
-
-    # Пример действия: бан пользователя
-    if code_obj.get('type') == 'ban':
-        users = load_users()
-        user = users.get(user_id)
-        if user:
-            user['banned'] = True
-            user['banned_reason'] = 'Использован код для бана'
-            save_users(users)
-            return jsonify({'success': True, 'message': 'Пользователь забанен'})
-        else:
-            return jsonify({'success': False, 'message': 'Пользователь не найден'}), 404
-
-    # Другие действия по типу
-    return jsonify({'success': True, 'message': 'Действие выполнено'})
+    if target and target != 'всем' and target != 'all':
+        if target != user_uid:
+            return jsonify({'success': False, 'message': '❌ Этот код не для вас'}), 403
+    
+    # Отмечаем код как использованный
+    code_obj['used'] = True
+    save_global_data(global_data)
+    
+    # Выполняем действие в зависимости от типа
+    user = users.get(user_id)
+    if not user:
+        return jsonify({'success': False, 'message': '❌ Пользователь не найден'}), 404
+    
+    action_result = {'success': True, 'message': '✅ Код активирован!'}
+    
+    # Разные типы кодов
+    if 'Одноразовый' in code_obj.get('type', '') or 'Код 1' in code_obj.get('type', ''):
+        user['attempts'] = user.get('attempts', 0) + 1
+        action_result['message'] = '✅ +1 попытка!'
+        
+    elif 'На 5' in code_obj.get('type', '') or 'Код 5' in code_obj.get('type', ''):
+        user['attempts'] = user.get('attempts', 0) + 5
+        action_result['message'] = '✅ +5 попыток!'
+        
+    elif 'Бустер' in code_obj.get('type', ''):
+        user['attempts'] = user.get('attempts', 0) + 1
+        user['boosted'] = True
+        action_result['message'] = '🚀 Бустер активирован! +1 попытка'
+        
+    elif 'Бустер x5' in code_obj.get('type', ''):
+        user['attempts'] = user.get('attempts', 0) + 5
+        user['boosted'] = True
+        action_result['message'] = '🚀 Бустер x5 активирован! +5 попыток'
+    
+    # Добавляем уведомление пользователю
+    if 'notifications' not in user:
+        user['notifications'] = []
+    user['notifications'].append({
+        'type': 'code_used',
+        'message': action_result['message'],
+        'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    })
+    
+    # Сохраняем
+    users[user_id] = user
+    save_users(users)
+    
+    return jsonify(action_result)
 
 # API: синхронизация банов
 @app.route('/api/sync_banned', methods=['POST'])
@@ -267,11 +396,41 @@ def sync_banned():
         if uid and uid in banned_data:
             user_data['banned'] = True
             user_data['banned_reason'] = banned_data[uid]
+            # Добавляем уведомление о бане
+            if 'notifications' not in user_data:
+                user_data['notifications'] = []
+            user_data['notifications'].append({
+                'type': 'ban',
+                'message': f'🚫 Вас заблокировали. Причина: {banned_data[uid]}',
+                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
         else:
             user_data['banned'] = False
             user_data['banned_reason'] = ''
     save_users(users)
     save_global_data(global_data)
+    return jsonify({'success': True})
+
+# API: отправить уведомление
+@app.route('/api/send_notification', methods=['POST'])
+def send_notification():
+    data = request.json
+    uid = data.get('uid')
+    message = data.get('message')
+    
+    users = load_users()
+    for user_id, user_data in users.items():
+        if user_data.get('uid') == uid:
+            if 'notifications' not in user_data:
+                user_data['notifications'] = []
+            user_data['notifications'].append({
+                'type': 'notification',
+                'message': message,
+                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+            save_users(users)
+            break
+    
     return jsonify({'success': True})
 
 # API: сброс всех данных
