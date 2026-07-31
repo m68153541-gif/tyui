@@ -6,7 +6,6 @@
 <title>⭐ Забава Игра</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="stylesheet" href="style.css" />
-
 <style>
 /* Стиль панели управления музыкой */
 #musicControl {
@@ -24,7 +23,6 @@
     font-size: 14px;
     color: #fff;
 }
-
 #musicToggle {
     cursor: pointer;
     padding: 5px 10px;
@@ -37,7 +35,6 @@
 </style>
 </head>
 <body>
-
 <!-- Панель управления музыкой -->
 <div id="musicControl">
     <button id="musicToggle">🔊 Включить музыку</button>
@@ -45,7 +42,7 @@
 
 <div id="app">
     <h1>⭐ Забава Игра</h1>
-    <!-- остальной ваш контент без изменений -->
+
     <div class="user-card" id="userCard">
         <span class="label">Имя</span><span class="value" id="userName">—</span>
         <span class="label">Пол</span><span class="value" id="userGender">—</span>
@@ -113,60 +110,56 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- ВАШ скрипт -->
 <script src="game.js"></script>
 
 <!-- Скрипт управления музыкой -->
 <script>
-    // Создаем аудиоблоки
-    const music = new Audio('audio/music.mp3'); // укажите путь к вашему файлу
-    music.loop = true;
-    music.volume = 0.2; // громкость
+const music = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+music.loop = true;
+music.volume = 0.2;
+const clickSound = new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3');
+clickSound.volume = 0.5;
 
-    const clickSound = new Audio('audio/click.mp3'); // звук клика
-    clickSound.volume = 0.5;
+let isMusicPlaying = false;
+const musicBtn = document.getElementById('musicToggle');
 
-    let isMusicPlaying = false;
-
-    const musicBtn = document.getElementById('musicToggle');
-
-    function toggleMusic() {
-        if (isMusicPlaying) {
-            music.pause();
-            isMusicPlaying = false;
-            musicBtn.textContent = '🔊 Включить музыку';
-        } else {
-            music.play().then(() => {
-                isMusicPlaying = true;
-                musicBtn.textContent = '🔇 Выключить музыку';
-            }).catch(() => {
-                console.log('Не удалось запустить музыку');
-            });
-        }
-    }
-
-    // Попытка запустить музыку при первом клике по странице
-    document.addEventListener('click', () => {
-        if (!isMusicPlaying) {
-            music.play().then(() => {
-                isMusicPlaying = true;
-                musicBtn.textContent = '🔇 Выключить музыку';
-            }).catch(() => {
-                console.log('Не удалось запустить музыку');
-            });
-        }
-    }, { once: true });
-
-    // Обработчик для кнопки интерфейса
-    document.getElementById('musicToggle').addEventListener('click', toggleMusic);
-
-    // Воспроизведение звука при клике по любой кнопке
-    document.querySelectorAll('button').forEach(btn => {
-        btn.addEventListener('click', () => {
-            clickSound.currentTime = 0;
-            clickSound.play();
+function toggleMusic() {
+    if (isMusicPlaying) {
+        music.pause();
+        isMusicPlaying = false;
+        musicBtn.textContent = '🔊 Включить музыку';
+    } else {
+        music.play().then(() => {
+            isMusicPlaying = true;
+            musicBtn.textContent = '🔇 Выключить музыку';
+        }).catch(() => {
+            console.log('Не удалось запустить музыку');
         });
+    }
+}
+
+// Попытка запустить музыку при первом клике
+document.addEventListener('click', () => {
+    if (!isMusicPlaying) {
+        music.play().then(() => {
+            isMusicPlaying = true;
+            musicBtn.textContent = '🔇 Выключить музыку';
+        }).catch(() => {
+            console.log('Не удалось запустить музыку');
+        });
+    }
+}, { once: true });
+
+// Обработка кнопки
+document.getElementById('musicToggle').addEventListener('click', toggleMusic);
+
+// Воспроизведение звука при клике по любой кнопке
+document.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        clickSound.currentTime = 0;
+        clickSound.play();
     });
+});
 </script>
 </body>
 </html>
