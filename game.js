@@ -44,9 +44,6 @@ window.boosterMultiCodes = window.boosterMultiCodes || {};
 
 const SERVER_URL = window.location.origin;
 
-// Переменная для синхронизации
-let lastSyncTimestamp = 0;
-
 function saveAllData() {
     try {
         const data = {
@@ -220,68 +217,8 @@ async function syncGlobalData() {
     } catch(e) { return false; }
 }
 
-// ===== НОВАЯ ФУНКЦИЯ СИНХРОНИЗАЦИИ С СЕРВЕРОМ =====
-async function syncWithServer() {
-    try {
-        const response = await fetch(SERVER_URL + '/api/check_updates?timestamp=' + lastSyncTimestamp);
-        if (response.ok) {
-            const data = await response.json();
-            if (data.has_updates) {
-                if (data.global_data) {
-                    window.globalData = data.global_data;
-                    if (data.global_data.banned_users) {
-                        window.bannedUsers = data.global_data.banned_users;
-                    }
-                }
-                
-                const user = getCurrentUser();
-                if (user && user.uid) {
-                    await loadFromServer();
-                }
-                
-                await checkNotifications();
-                render();
-                lastSyncTimestamp = data.timestamp;
-            }
-        }
-    } catch(e) {
-        console.error('Ошибка синхронизации:', e);
-    }
-}
-
-// ===== ФУНКЦИЯ ПРОВЕРКИ УВЕДОМЛЕНИЙ =====
-async function checkNotifications() {
-    const user = getCurrentUser();
-    if (!user || !user.uid) return;
-    
-    try {
-        const response = await fetch(SERVER_URL + '/api/get_notifications/' + user.uid);
-        if (response.ok) {
-            const data = await response.json();
-            if (data.notifications && data.notifications.length > 0) {
-                data.notifications.forEach(function(notification, index) {
-                    setTimeout(function() {
-                        showToast(notification.message);
-                    }, index * 3000);
-                });
-                
-                const banNotification = data.notifications.find(function(n) { 
-                    return n.type === 'ban'; 
-                });
-                if (banNotification) {
-                    user.banned = true;
-                    user.banned_reason = banNotification.message;
-                    render();
-                }
-            }
-        }
-    } catch(e) {
-        console.error('Ошибка проверки уведомлений:', e);
-    }
-}
-
 // ============================================================
-//  КОНКУРС (ГЛОБАЛЬНЫЙ)
+//  КОНКУРС
 // ============================================================
 
 function startContest() {
@@ -363,7 +300,7 @@ function addNotification(uid, message) {
 }
 
 // ============================================================
-//  ПОДДЕРЖКА (ГЛОБАЛЬНАЯ)
+//  ПОДДЕРЖКА
 // ============================================================
 
 function handleSupport() {
@@ -496,7 +433,7 @@ window.closeChat = function(uid) {
 };
 
 // ============================================================
-//  АДМИН-ФУНКЦИИ (ОБНОВЛЕННЫЕ)
+//  АДМИН-ФУНКЦИИ
 // ============================================================
 
 window.adminOpenChat = function(uid) {
@@ -575,65 +512,128 @@ function showAdminChat(uid) {
 }
 
 // ============================================================
-//  КОДЫ (ГЛОБАЛЬНЫЕ)
+//  КОДЫ (ОБНОВЛЕННАЯ ЛОГИКА)
 // ============================================================
 
+// Создание кода на 1 использование (каждый игрок может использовать 1 раз)
 window.adminCodeSingle = function() {
     const code = generateCode(10);
+    
+    if (!window.oneTimeCodes) {
+        window.oneTimeCodes = new Set();
+    }
     window.oneTimeCodes.add(code);
+    
     fetch(SERVER_URL + '/api/add_code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code, type: 'Одноразовый', target: null })
+        body: JSON.stringify({ 
+            code: code, 
+            type: 'Код на раз', 
+            target: null,
+            max_uses: 1,
+            used_by: []
+        })
     });
-    showToast('Код: ' + code);
+    
+    showToast('Код создан: ' + code);
     loadGlobalData();
+    renderAdminCodes();
 };
 
+// Создание кода на 5 использований
 window.adminCodeMulti = function() {
     const code = generateCode(10);
-    window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() };
+    
+    if (!window.multiUseCodes) {
+        window.multiUseCodes = {};
+    }
+    window.multiUseCodes[code] = { 
+        remaining: 5, 
+        usedUsers: new Set() 
+    };
+    
     fetch(SERVER_URL + '/api/add_code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code, type: 'На 5', target: null })
+        body: JSON.stringify({ 
+            code: code, 
+            type: 'Код на 5 раз', 
+            target: null,
+            max_uses: 5,
+            used_by: []
+        })
     });
-    showToast('Код на 5: ' + code);
+    
+    showToast('Код на 5 раз создан: ' + code);
     loadGlobalData();
+    renderAdminCodes();
 };
 
+// Бустер
 window.adminBoostSingle = function() {
     const code = generateCode(16);
+    
+    if (!window.boosterCodes) {
+        window.boosterCodes = new Set();
+    }
     window.boosterCodes.add(code);
+    
     fetch(SERVER_URL + '/api/add_code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code, type: 'Бустер', target: null })
+        body: JSON.stringify({ 
+            code: code, 
+            type: 'Бустер', 
+            target: null,
+            max_uses: 1,
+            used_by: []
+        })
     });
-    showToast('Бустер: ' + code);
+    
+    showToast('Бустер создан: ' + code);
     loadGlobalData();
+    renderAdminCodes();
 };
 
+// Бустер x5
 window.adminBoostMulti = function() {
     const code = generateCode(16);
-    window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() };
+    
+    if (!window.boosterMultiCodes) {
+        window.boosterMultiCodes = {};
+    }
+    window.boosterMultiCodes[code] = { 
+        remaining: 5, 
+        usedUsers: new Set() 
+    };
+    
     fetch(SERVER_URL + '/api/add_code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code, type: 'Бустер x5', target: null })
+        body: JSON.stringify({ 
+            code: code, 
+            type: 'Бустер x5', 
+            target: null,
+            max_uses: 5,
+            used_by: []
+        })
     });
-    showToast('Бустер на 5: ' + code);
+    
+    showToast('Бустер x5 создан: ' + code);
     loadGlobalData();
+    renderAdminCodes();
 };
 
+// Отправить код игроку
 window.adminSendCodeToPlayer = function() {
     openModal('Отправить код игроку', `
         <p>Введите UID игрока:</p>
         <input type="text" id="sendCodeUid" placeholder="UID игрока" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;text-transform:uppercase;" />
         <p>Выберите тип кода:</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn small" onclick="sendCodeToPlayerWithType('single')">Одноразовый</button>
-            <button class="btn small" onclick="sendCodeToPlayerWithType('multi')">На 5</button>
+            <button class="btn small" onclick="sendCodeToPlayerWithType('single')">Код на раз</button>
+            <button class="btn small" onclick="sendCodeToPlayerWithType('multi')">Код на 5 раз</button>
             <button class="btn small" onclick="sendCodeToPlayerWithType('boost')">Бустер</button>
             <button class="btn small" onclick="sendCodeToPlayerWithType('boostmulti')">Бустер x5</button>
         </div>
@@ -653,33 +653,65 @@ window.sendCodeToPlayerWithType = function(type) {
         return;
     }
 
-    let code, typeLabel;
+    let code, typeLabel, maxUses;
     switch(type) {
-        case 'single': code = generateCode(10); window.oneTimeCodes.add(code); typeLabel = 'Одноразовый'; break;
-        case 'multi': code = generateCode(10); window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = 'На 5'; break;
-        case 'boost': code = generateCode(16); window.boosterCodes.add(code); typeLabel = 'Бустер'; break;
-        case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = 'Бустер x5'; break;
+        case 'single': 
+            code = generateCode(10); 
+            typeLabel = 'Код на раз'; 
+            maxUses = 1;
+            if (!window.oneTimeCodes) window.oneTimeCodes = new Set();
+            window.oneTimeCodes.add(code);
+            break;
+        case 'multi': 
+            code = generateCode(10); 
+            typeLabel = 'Код на 5 раз'; 
+            maxUses = 5;
+            if (!window.multiUseCodes) window.multiUseCodes = {};
+            window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() };
+            break;
+        case 'boost': 
+            code = generateCode(16); 
+            typeLabel = 'Бустер'; 
+            maxUses = 1;
+            if (!window.boosterCodes) window.boosterCodes = new Set();
+            window.boosterCodes.add(code);
+            break;
+        case 'boostmulti': 
+            code = generateCode(16); 
+            typeLabel = 'Бустер x5'; 
+            maxUses = 5;
+            if (!window.boosterMultiCodes) window.boosterMultiCodes = {};
+            window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() };
+            break;
     }
 
     fetch(SERVER_URL + '/api/add_code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code, type: typeLabel + ' -> ' + uid, target: uid })
+        body: JSON.stringify({ 
+            code: code, 
+            type: typeLabel + ' -> ' + uid, 
+            target: uid,
+            max_uses: maxUses,
+            used_by: []
+        })
     });
 
     addNotification(uid, 'Вам отправлен код: ' + code + ' (' + typeLabel + ')');
     showToast('Код отправлен игроку ' + uid);
     closeModal();
     loadGlobalData();
+    renderAdminCodes();
     showAdminPanel();
 };
 
+// Отправить код всем игрокам
 window.adminSendCodeToAll = function() {
     openModal('Отправить код всем игрокам', `
         <p>Выберите тип кода:</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn small" onclick="sendCodeToAllWithType('single')">Одноразовый</button>
-            <button class="btn small" onclick="sendCodeToAllWithType('multi')">На 5</button>
+            <button class="btn small" onclick="sendCodeToAllWithType('single')">Код на раз</button>
+            <button class="btn small" onclick="sendCodeToAllWithType('multi')">Код на 5 раз</button>
             <button class="btn small" onclick="sendCodeToAllWithType('boost')">Бустер</button>
             <button class="btn small" onclick="sendCodeToAllWithType('boostmulti')">Бустер x5</button>
         </div>
@@ -688,18 +720,48 @@ window.adminSendCodeToAll = function() {
 };
 
 window.sendCodeToAllWithType = function(type) {
-    let code, typeLabel;
+    let code, typeLabel, maxUses;
     switch(type) {
-        case 'single': code = generateCode(10); window.oneTimeCodes.add(code); typeLabel = 'Одноразовый'; break;
-        case 'multi': code = generateCode(10); window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = 'На 5'; break;
-        case 'boost': code = generateCode(16); window.boosterCodes.add(code); typeLabel = 'Бустер'; break;
-        case 'boostmulti': code = generateCode(16); window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() }; typeLabel = 'Бустер x5'; break;
+        case 'single': 
+            code = generateCode(10); 
+            typeLabel = 'Код на раз'; 
+            maxUses = 1;
+            if (!window.oneTimeCodes) window.oneTimeCodes = new Set();
+            window.oneTimeCodes.add(code);
+            break;
+        case 'multi': 
+            code = generateCode(10); 
+            typeLabel = 'Код на 5 раз'; 
+            maxUses = 5;
+            if (!window.multiUseCodes) window.multiUseCodes = {};
+            window.multiUseCodes[code] = { remaining: 5, usedUsers: new Set() };
+            break;
+        case 'boost': 
+            code = generateCode(16); 
+            typeLabel = 'Бустер'; 
+            maxUses = 1;
+            if (!window.boosterCodes) window.boosterCodes = new Set();
+            window.boosterCodes.add(code);
+            break;
+        case 'boostmulti': 
+            code = generateCode(16); 
+            typeLabel = 'Бустер x5'; 
+            maxUses = 5;
+            if (!window.boosterMultiCodes) window.boosterMultiCodes = {};
+            window.boosterMultiCodes[code] = { remaining: 5, usedUsers: new Set() };
+            break;
     }
 
     fetch(SERVER_URL + '/api/add_code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code, type: typeLabel + ' (всем)', target: 'всем' })
+        body: JSON.stringify({ 
+            code: code, 
+            type: typeLabel + ' (всем)', 
+            target: 'всем',
+            max_uses: maxUses,
+            used_by: []
+        })
     });
 
     for (const userId in window.users) {
@@ -712,11 +774,243 @@ window.sendCodeToAllWithType = function(type) {
     showToast('Код отправлен всем игрокам');
     closeModal();
     loadGlobalData();
+    renderAdminCodes();
     showAdminPanel();
 };
 
+// ===== ФУНКЦИЯ АКТИВАЦИИ КОДА (ДЛЯ ИГРОКА) =====
+
+window.applyCode = async function() {
+    const user = getCurrentUser();
+    const input = document.getElementById('codeInput');
+    if (!input) return;
+    const text = input.value.trim().toUpperCase();
+    if (!text) { 
+        showToast('Введите код'); 
+        return; 
+    }
+    
+    let found = false;
+    
+    // Проверяем бустеры
+    for (const code of window.boosterCodes) {
+        if (code === text) {
+            window.boosterCodes.delete(code);
+            user.attempts += 1;
+            user.boosted = true;
+            found = true;
+            closeModal();
+            showToast('Бустер активирован! +1 попытка');
+            render();
+            saveAllData();
+            saveToServer();
+            return;
+        }
+    }
+    
+    // Проверяем бустеры x5
+    for (const code in window.boosterMultiCodes) {
+        if (code === text) {
+            if (window.boosterMultiCodes[code].usedUsers.has(user.uid)) {
+                showToast('Вы уже использовали этот код');
+                return;
+            }
+            user.attempts += 1;
+            user.boosted = true;
+            window.boosterMultiCodes[code].usedUsers.add(user.uid);
+            window.boosterMultiCodes[code].remaining--;
+            if (window.boosterMultiCodes[code].remaining <= 0) {
+                delete window.boosterMultiCodes[code];
+            }
+            found = true;
+            closeModal();
+            showToast('Бустер x5 активирован! +1 попытка');
+            render();
+            saveAllData();
+            saveToServer();
+            return;
+        }
+    }
+    
+    // Проверяем одноразовые коды
+    for (const code of window.oneTimeCodes) {
+        if (code === text) {
+            window.oneTimeCodes.delete(code);
+            user.attempts += 1;
+            found = true;
+            closeModal();
+            showToast('Код активирован! +1 попытка');
+            render();
+            saveAllData();
+            saveToServer();
+            return;
+        }
+    }
+    
+    // Проверяем мультикоды
+    for (const code in window.multiUseCodes) {
+        if (code === text) {
+            if (window.multiUseCodes[code].usedUsers.has(user.uid)) {
+                showToast('Вы уже использовали этот код');
+                return;
+            }
+            user.attempts += 1;
+            window.multiUseCodes[code].usedUsers.add(user.uid);
+            window.multiUseCodes[code].remaining--;
+            if (window.multiUseCodes[code].remaining <= 0) {
+                delete window.multiUseCodes[code];
+            }
+            found = true;
+            closeModal();
+            showToast('Код активирован! +1 попытка');
+            render();
+            saveAllData();
+            saveToServer();
+            return;
+        }
+    }
+    
+    // Если локально не нашли - проверяем на сервере
+    if (!found) {
+        try {
+            const response = await fetch(SERVER_URL + '/api/use_code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: text,
+                    user_id: getUserId(),
+                    user_uid: user.uid
+                })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                showToast(data.message || 'Код активирован!');
+                closeModal();
+                await loadFromServer();
+                render();
+                saveAllData();
+            } else {
+                showToast(data.message || 'Неверный код');
+            }
+        } catch(e) {
+            console.error('Ошибка активации кода:', e);
+            showToast('Ошибка сервера');
+        }
+    }
+};
+
+// ===== ОБНОВЛЕННАЯ ФУНКЦИЯ ОТОБРАЖЕНИЯ КОДОВ =====
+
+function renderAdminCodes() {
+    const panel = document.getElementById('codesPanel');
+    const list = document.getElementById('codesList');
+    if (!panel || !list) return;
+    
+    let allCodes = [];
+    
+    if (globalData.admin_codes) {
+        allCodes = allCodes.concat(globalData.admin_codes);
+    }
+    
+    if (window.oneTimeCodes) {
+        window.oneTimeCodes.forEach(code => {
+            allCodes.push({ code: code, type: 'Код на раз', target: null });
+        });
+    }
+    
+    if (window.multiUseCodes) {
+        for (const code in window.multiUseCodes) {
+            const info = window.multiUseCodes[code];
+            allCodes.push({ 
+                code: code, 
+                type: 'Код на 5 раз (осталось: ' + info.remaining + ')', 
+                target: null 
+            });
+        }
+    }
+    
+    if (window.boosterCodes) {
+        window.boosterCodes.forEach(code => {
+            allCodes.push({ code: code, type: 'Бустер', target: null });
+        });
+    }
+    
+    if (window.boosterMultiCodes) {
+        for (const code in window.boosterMultiCodes) {
+            const info = window.boosterMultiCodes[code];
+            allCodes.push({ 
+                code: code, 
+                type: 'Бустер x5 (осталось: ' + info.remaining + ')', 
+                target: null 
+            });
+        }
+    }
+    
+    if (allCodes.length === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+    
+    panel.style.display = 'block';
+    list.innerHTML = allCodes.map((item) => `
+        <div class="code-item" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin:4px 0;background:rgba(255,255,255,0.05);border-radius:8px;">
+            <span class="code-text" onclick="copyCode('${item.code}')" style="cursor:pointer;color:#ffd700;font-weight:bold;">${item.code}</span>
+            <span class="code-type" style="color:#888;font-size:12px;">${item.type} ${item.target ? '-> ' + item.target : ''}</span>
+            <span class="code-delete" onclick="deleteCodeGlobal('${item.code}')" style="cursor:pointer;color:#ff4757;font-weight:bold;">✕</span>
+        </div>
+    `).join('');
+}
+
+window.deleteCodeGlobal = function(code) {
+    if (window.oneTimeCodes) {
+        window.oneTimeCodes.delete(code);
+    }
+    if (window.multiUseCodes) {
+        delete window.multiUseCodes[code];
+    }
+    if (window.boosterCodes) {
+        window.boosterCodes.delete(code);
+    }
+    if (window.boosterMultiCodes) {
+        delete window.boosterMultiCodes[code];
+    }
+    
+    fetch(SERVER_URL + '/api/delete_code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code })
+    }).then(() => {
+        loadGlobalData();
+        renderAdminCodes();
+        showToast('Код удалён');
+    });
+};
+
+window.copyCode = function(code) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(code).then(() => {
+            showToast('Код скопирован!');
+        }).catch(() => {
+            fallbackCopyCode(code);
+        });
+    } else {
+        fallbackCopyCode(code);
+    }
+};
+
+function fallbackCopyCode(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    showToast('Код скопирован!');
+}
+
 // ============================================================
-//  АДМИН-ПАНЕЛЬ
+//  АДМИН-ПАНЕЛЬ (С НОВЫМ ПАРОЛЕМ)
 // ============================================================
 
 function handleAdmin() {
@@ -732,7 +1026,10 @@ window.adminLogin = function() {
     const input = document.getElementById('adminPassword');
     if (!input) return;
     const pass = input.value.trim();
-    if (pass !== 'Qw12') { showToast('Неверный пароль'); return; }
+    if (pass !== 'йцфы') { 
+        showToast('Неверный пароль'); 
+        return; 
+    }
     showAdminPanel();
 };
 
@@ -766,8 +1063,8 @@ function showAdminPanel() {
             ${chatList}
             <hr style="border-color:rgba(255,255,255,0.1);margin:12px 0;" />
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <button class="btn small" onclick="adminCodeSingle()">Код 1</button>
-                <button class="btn small" onclick="adminCodeMulti()">Код 5</button>
+                <button class="btn small" onclick="adminCodeSingle()">Код на раз</button>
+                <button class="btn small" onclick="adminCodeMulti()">Код на 5 раз</button>
                 <button class="btn small" onclick="adminBoostSingle()">Бустер</button>
                 <button class="btn small" onclick="adminBoostMulti()">Бустер x5</button>
                 <button class="btn small" onclick="adminSendCodeToPlayer()">Отправить код игроку</button>
@@ -830,7 +1127,6 @@ window.adminPlayerMenu = function() {
     `);
 };
 
-// ===== ОБНОВЛЕННАЯ ФУНКЦИЯ ПОКАЗА ИГРОКА =====
 window.showPlayerInfo = function() {
     const input = document.getElementById('playerUidInput');
     if (!input) return;
@@ -881,7 +1177,7 @@ window.showPlayerInfo = function() {
     `);
 };
 
-// ===== ОБНОВЛЕННАЯ ВЫДАЧА ЗВЕЗД =====
+// ===== ВЫДАЧА ЗВЕЗД =====
 window.adminAddStars = function(uid) {
     openModal('Добавить звёзды игроку ' + uid, `
         <input type="number" id="addStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -907,6 +1203,7 @@ window.doAddStars = function(uid) {
             showToast(data.message);
             closeModal();
             loadFromServer();
+            loadAllUsersFromServer(); // Обновляем таблицу лидеров
             render();
             setTimeout(function() { showPlayerInfo(); }, 500);
         } else {
@@ -919,7 +1216,7 @@ window.doAddStars = function(uid) {
     });
 };
 
-// ===== ОБНОВЛЕННАЯ КОНФИСКАЦИЯ ЗВЕЗД =====
+// ===== КОНФИСКАЦИЯ ЗВЕЗД =====
 window.adminRemoveStars = function(uid) {
     openModal('Забрать звёзды у игрока ' + uid, `
         <input type="number" id="removeStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -945,6 +1242,7 @@ window.doRemoveStars = function(uid) {
             showToast(data.message);
             closeModal();
             loadFromServer();
+            loadAllUsersFromServer(); // Обновляем таблицу лидеров
             render();
             setTimeout(function() { showPlayerInfo(); }, 500);
         } else {
@@ -957,9 +1255,9 @@ window.doRemoveStars = function(uid) {
     });
 };
 
-// ===== ОБНОВЛЕННЫЙ СБРОС АККАУНТА =====
+// ===== СБРОС АККАУНТА (ПОЛНЫЙ СБРОС ДО РЕГИСТРАЦИИ) =====
 window.adminResetPlayer = function(uid) {
-    if (!confirm('Вы уверены, что хотите сбросить игрока ' + uid + '?')) return;
+    if (!confirm('Вы уверены, что хотите полностью сбросить игрока ' + uid + '? Все данные будут удалены!')) return;
     
     fetch(SERVER_URL + '/api/admin_reset_player', {
         method: 'POST',
@@ -971,9 +1269,42 @@ window.adminResetPlayer = function(uid) {
         if (data.success) {
             showToast(data.message);
             closeModal();
-            loadFromServer();
-            render();
-            setTimeout(function() { showPlayerInfo(); }, 500);
+            // Полностью удаляем пользователя
+            const user = getUserByUid(uid);
+            if (user) {
+                // Сбрасываем все данные до состояния нового игрока
+                user.registered = false;
+                user.name = null;
+                user.gender = null;
+                user.age = null;
+                user.uid = null;
+                user.stars = 300;
+                user.bank = 0;
+                user.bankDeposit = 0;
+                user.attempts = 1;
+                user.coefficientRate = 0;
+                user.petProgress = 0;
+                user.petStage = 1;
+                user.wins = [];
+                user.clickerProgress = 0;
+                user.boosted = false;
+                user.banned = false;
+                user.banned_reason = '';
+                user.notifications = [];
+                
+                // Удаляем из uidMap
+                if (window.uidMap[uid]) {
+                    delete window.uidMap[uid];
+                }
+                
+                saveAllData();
+                saveToServer();
+                loadFromServer();
+                loadAllUsersFromServer();
+                render();
+                showToast('Аккаунт полностью сброшен до регистрации');
+            }
+            setTimeout(function() { showAdminPanel(); }, 500);
         } else {
             showToast('Ошибка: ' + data.message);
         }
@@ -1010,6 +1341,7 @@ window.doGiveSelfStars = function() {
             showToast(data.message);
             closeModal();
             loadFromServer();
+            loadAllUsersFromServer();
             render();
             setTimeout(function() { showAdminPanel(); }, 500);
         } else {
@@ -1086,21 +1418,24 @@ window.adminMassGive = function() {
     saveToServer();
 };
 
+// ===== ТОП-30 (ОБНОВЛЕННЫЙ С ПЕРЕЗАГРУЗКОЙ) =====
 window.adminTop = function() {
-    const usersList = getAllUsersList();
-    let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>Звёзды</th></tr></thead><tbody>';
-    const sorted = usersList
-        .filter(u => !u.banned)
-        .sort((a, b) => (b.stars || 0) - (a.stars || 0))
-        .slice(0, 30);
-    if (sorted.length === 0) {
-        html += '<tr><td colspan="4" style="text-align:center;color:#888;">Нет игроков</td></tr>';
-    }
-    sorted.forEach((item, i) => {
-        html += '<tr><td>' + (i+1) + '</td><td>' + item.uid + '</td><td>' + item.name + '</td><td>' + item.stars + '</td></tr>';
+    loadAllUsersFromServer().then(() => {
+        const usersList = getAllUsersList();
+        let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>ID</th><th>Имя</th><th>Звёзды</th></tr></thead><tbody>';
+        const sorted = usersList
+            .filter(u => !u.banned)
+            .sort((a, b) => (b.stars || 0) - (a.stars || 0))
+            .slice(0, 30);
+        if (sorted.length === 0) {
+            html += '<tr><td colspan="4" style="text-align:center;color:#888;">Нет игроков</td></tr>';
+        }
+        sorted.forEach((item, i) => {
+            html += '<tr><td>' + (i+1) + '</td><td>' + item.uid + '</td><td>' + item.name + '</td><td>' + item.stars + '</td></tr>';
+        });
+        html += '</tbody></table><button class="btn full small" onclick="closeModal(); showAdminPanel();">Назад</button>';
+        openModal('Топ-30', html);
     });
-    html += '</tbody></table><button class="btn full small" onclick="closeModal(); showAdminPanel();">Назад</button>';
-    openModal('Топ-30', html);
 };
 
 // ============================================================
@@ -1550,51 +1885,6 @@ function render() {
     if (wheelAttempts) wheelAttempts.textContent = user.attempts || 0;
 }
 
-function renderAdminCodes() {
-    const panel = document.getElementById('codesPanel');
-    const list = document.getElementById('codesList');
-    if (!panel || !list) return;
-    
-    const codes = globalData.admin_codes || [];
-    if (codes.length === 0) {
-        panel.style.display = 'none';
-        return;
-    }
-    panel.style.display = 'block';
-    list.innerHTML = codes.map((item, index) => `
-        <div class="code-item">
-            <span class="code-text" onclick="copyCode('${item.code}')">${item.code}</span>
-            <span class="code-type">${item.type} ${item.target ? '-> ' + item.target : ''}</span>
-            <span class="code-delete" onclick="deleteCodeGlobal('${item.code}')">✕</span>
-        </div>
-    `).join('');
-}
-
-window.deleteCodeGlobal = function(code) {
-    fetch(SERVER_URL + '/api/delete_code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code })
-    }).then(() => {
-        loadGlobalData();
-        showToast('Код удалён');
-    });
-};
-
-window.copyCode = function(code) {
-    navigator.clipboard.writeText(code).then(() => {
-        showToast('Код скопирован!');
-    }).catch(() => {
-        const textarea = document.createElement('textarea');
-        textarea.value = code;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        showToast('Код скопирован!');
-    });
-};
-
 function renderContest() {
     const banner = document.getElementById('contestBanner');
     if (!banner) return;
@@ -1919,83 +2209,6 @@ function handleCode() {
     `);
 }
 
-window.applyCode = function() {
-    const user = getCurrentUser();
-    const input = document.getElementById('codeInput');
-    if (!input) return;
-    const text = input.value.trim().toUpperCase();
-    if (!text) { showToast('Введите код'); return; }
-
-    let found = false;
-    for (const code of window.boosterCodes) {
-        if (code === text) {
-            window.boosterCodes.delete(code);
-            user.attempts += 1;
-            user.boosted = true;
-            found = true;
-            closeModal();
-            showToast('Бустер активирован!');
-            render();
-            saveAllData();
-            return;
-        }
-    }
-    for (const code in window.boosterMultiCodes) {
-        if (code === text) {
-            if (window.boosterMultiCodes[code].usedUsers.has(user.uid)) {
-                showToast('Уже использован');
-                return;
-            }
-            user.attempts += 1;
-            user.boosted = true;
-            window.boosterMultiCodes[code].usedUsers.add(user.uid);
-            window.boosterMultiCodes[code].remaining--;
-            if (window.boosterMultiCodes[code].remaining <= 0) {
-                delete window.boosterMultiCodes[code];
-            }
-            found = true;
-            closeModal();
-            showToast('Бустер активирован!');
-            render();
-            saveAllData();
-            return;
-        }
-    }
-    for (const code of window.oneTimeCodes) {
-        if (code === text) {
-            window.oneTimeCodes.delete(code);
-            user.attempts += 1;
-            found = true;
-            closeModal();
-            showToast('Код принят!');
-            render();
-            saveAllData();
-            return;
-        }
-    }
-    for (const code in window.multiUseCodes) {
-        if (code === text) {
-            if (window.multiUseCodes[code].usedUsers.has(user.uid)) {
-                showToast('Уже использован');
-                return;
-            }
-            user.attempts += 1;
-            window.multiUseCodes[code].usedUsers.add(user.uid);
-            window.multiUseCodes[code].remaining--;
-            if (window.multiUseCodes[code].remaining <= 0) {
-                delete window.multiUseCodes[code];
-            }
-            found = true;
-            closeModal();
-            showToast('Код принят!');
-            render();
-            saveAllData();
-            return;
-        }
-    }
-    if (!found) showToast('Неверный код');
-};
-
 function handleLeaderboard() {
     loadAllUsersFromServer().then(() => {
         const usersList = getAllUsersList();
@@ -2137,12 +2350,3 @@ setInterval(() => {
     loadGlobalData();
     render();
 }, 5000);
-
-// ===== ЗАПУСК СИНХРОНИЗАЦИИ =====
-setInterval(async function() {
-    await syncWithServer();
-}, 5000);
-
-setTimeout(async function() {
-    await syncWithServer();
-}, 1000);
