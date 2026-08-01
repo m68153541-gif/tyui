@@ -57,6 +57,8 @@ def css():
 def js():
     return send_from_directory('.', 'game.js')
 
+# ============= ОСНОВНЫЕ API =============
+
 @app.route('/api/save', methods=['POST'])
 def save_user():
     data = request.json
@@ -92,12 +94,6 @@ def load_user(user_id):
             user_data['banned_reason'] = global_data['banned_users'][uid]
             users[user_id] = user_data
             save_users(users)
-        else:
-            if user_data.get('banned', False):
-                user_data['banned'] = False
-                user_data['banned_reason'] = ''
-                users[user_id] = user_data
-                save_users(users)
         return jsonify(user_data)
     return jsonify({'error': 'Not found'}), 404
 
@@ -129,15 +125,138 @@ def get_global_data():
     data = load_global_data()
     return jsonify(data)
 
-@app.route('/api/set_contest', methods=['POST'])
-def set_contest():
+# ============= АДМИН: ВЫДАЧА И КОНФИСКАЦИЯ ЗВЕЗД =============
+
+@app.route('/api/admin_add_stars', methods=['POST'])
+def admin_add_stars():
     data = request.json
-    global_data = load_global_data()
-    global_data['contest_active'] = data.get('active', False)
-    global_data['contest_end_time'] = data.get('end_time')
-    global_data['contest_winner'] = data.get('winner')
-    save_global_data(global_data)
-    return jsonify({'success': True})
+    uid = data.get('uid')
+    amount = data.get('amount', 0)
+    
+    if not uid or amount <= 0:
+        return jsonify({'success': False, 'message': 'Invalid data'}), 400
+    
+    users = load_users()
+    found = False
+    
+    for user_id, user_data in users.items():
+        if user_data.get('uid') == uid:
+            user_data['stars'] = user_data.get('stars', 0) + amount
+            found = True
+            
+            if 'notifications' not in user_data:
+                user_data['notifications'] = []
+            user_data['notifications'].append({
+                'type': 'admin_action',
+                'message': 'Администратор начислил вам ' + str(amount) + ' звёзд',
+                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+            
+            save_users(users)
+            break
+    
+    if found:
+        return jsonify({'success': True, 'message': 'Звёзды добавлены'})
+    else:
+        return jsonify({'success': False, 'message': 'Игрок не найден'}), 404
+
+@app.route('/api/admin_remove_stars', methods=['POST'])
+def admin_remove_stars():
+    data = request.json
+    uid = data.get('uid')
+    amount = data.get('amount', 0)
+    
+    if not uid or amount <= 0:
+        return jsonify({'success': False, 'message': 'Invalid data'}), 400
+    
+    users = load_users()
+    found = False
+    
+    for user_id, user_data in users.items():
+        if user_data.get('uid') == uid:
+            current_stars = user_data.get('stars', 0)
+            if current_stars < amount:
+                return jsonify({'success': False, 'message': 'Недостаточно звёзд у игрока'}), 400
+            
+            user_data['stars'] = current_stars - amount
+            found = True
+            
+            if 'notifications' not in user_data:
+                user_data['notifications'] = []
+            user_data['notifications'].append({
+                'type': 'admin_action',
+                'message': 'Администратор забрал у вас ' + str(amount) + ' звёзд',
+                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+            
+            save_users(users)
+            break
+    
+    if found:
+        return jsonify({'success': True, 'message': 'Звёзды изъяты'})
+    else:
+        return jsonify({'success': False, 'message': 'Игрок не найден'}), 404
+
+@app.route('/api/admin_reset_player', methods=['POST'])
+def admin_reset_player():
+    data = request.json
+    uid = data.get('uid')
+    
+    if not uid:
+        return jsonify({'success': False, 'message': 'Invalid data'}), 400
+    
+    users = load_users()
+    found = False
+    
+    for user_id, user_data in users.items():
+        if user_data.get('uid') == uid:
+            user_data['stars'] = 300
+            user_data['bank'] = 0
+            user_data['bankDeposit'] = 0
+            user_data['attempts'] = 1
+            user_data['coefficientRate'] = 0
+            user_data['petProgress'] = 0
+            user_data['petStage'] = 1
+            user_data['wins'] = []
+            user_data['clickerProgress'] = 0
+            found = True
+            
+            if 'notifications' not in user_data:
+                user_data['notifications'] = []
+            user_data['notifications'].append({
+                'type': 'admin_action',
+                'message': 'Администратор сбросил ваш аккаунт',
+                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+            
+            save_users(users)
+            break
+    
+    if found:
+        return jsonify({'success': True, 'message': 'Аккаунт сброшен'})
+    else:
+        return jsonify({'success': False, 'message': 'Игрок не найден'}), 404
+
+@app.route('/api/admin_give_self_stars', methods=['POST'])
+def admin_give_self_stars():
+    data = request.json
+    user_id = data.get('user_id')
+    amount = data.get('amount', 0)
+    
+    if not user_id or amount <= 0:
+        return jsonify({'success': False, 'message': 'Invalid data'}), 400
+    
+    users = load_users()
+    user_data = users.get(user_id)
+    
+    if user_data:
+        user_data['stars'] = user_data.get('stars', 0) + amount
+        save_users(users)
+        return jsonify({'success': True, 'message': 'Звёзды добавлены'})
+    else:
+        return jsonify({'success': False, 'message': 'Пользователь не найден'}), 404
+
+# ============= ЧАТ И ПОДДЕРЖКА =============
 
 @app.route('/api/add_report', methods=['POST'])
 def add_report():
@@ -167,6 +286,7 @@ def add_chat_message():
     uid = data.get('uid')
     message = data.get('message')
     sender = data.get('sender', 'user')
+    time_str = data.get('time', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     
     global_data = load_global_data()
     if 'active_chats' not in global_data:
@@ -177,11 +297,25 @@ def add_chat_message():
     global_data['active_chats'][uid]['messages'].append({
         'from': sender,
         'text': message,
-        'time': data.get('time', str(time.time()))
+        'time': time_str
     })
     
     if sender == 'admin':
         global_data['active_chats'][uid]['admin'] = True
+        
+        # Отправляем уведомление игроку
+        users = load_users()
+        for user_id, user_data in users.items():
+            if user_data.get('uid') == uid:
+                if 'notifications' not in user_data:
+                    user_data['notifications'] = []
+                user_data['notifications'].append({
+                    'type': 'chat',
+                    'message': 'Новое сообщение от администратора: ' + message,
+                    'time': time_str
+                })
+                save_users(users)
+                break
     
     save_global_data(global_data)
     return jsonify({'success': True})
@@ -204,146 +338,50 @@ def close_chat():
         save_global_data(global_data)
     return jsonify({'success': True})
 
-# ===== АДМИН ФУНКЦИИ ДЛЯ ЗВЕЗД =====
+# ============= УВЕДОМЛЕНИЯ =============
 
-# API: выдача звёзд игроку
-@app.route('/api/admin_add_stars', methods=['POST'])
-def admin_add_stars():
+@app.route('/api/send_notification', methods=['POST'])
+def send_notification():
     data = request.json
     uid = data.get('uid')
-    amount = data.get('amount', 0)
-    
-    if not uid or amount <= 0:
-        return jsonify({'success': False, 'message': 'Invalid data'}), 400
+    message = data.get('message')
+    time_str = data.get('time', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     
     users = load_users()
-    found = False
-    
     for user_id, user_data in users.items():
         if user_data.get('uid') == uid:
-            user_data['stars'] = user_data.get('stars', 0) + amount
-            found = True
-            
-            # Добавляем уведомление
             if 'notifications' not in user_data:
                 user_data['notifications'] = []
             user_data['notifications'].append({
-                'type': 'admin_action',
-                'message': 'Администратор начислил вам ' + str(amount) + ' звёзд',
-                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                'type': 'notification',
+                'message': message,
+                'time': time_str
             })
-            
             save_users(users)
             break
     
-    if found:
-        return jsonify({'success': True, 'message': 'Звёзды добавлены'})
-    else:
-        return jsonify({'success': False, 'message': 'Игрок не найден'}), 404
+    return jsonify({'success': True})
 
-# API: конфискация звёзд у игрока
-@app.route('/api/admin_remove_stars', methods=['POST'])
-def admin_remove_stars():
-    data = request.json
-    uid = data.get('uid')
-    amount = data.get('amount', 0)
-    
-    if not uid or amount <= 0:
-        return jsonify({'success': False, 'message': 'Invalid data'}), 400
-    
+@app.route('/api/get_notifications/<uid>')
+def get_notifications(uid):
     users = load_users()
-    found = False
-    
     for user_id, user_data in users.items():
         if user_data.get('uid') == uid:
-            current_stars = user_data.get('stars', 0)
-            if current_stars < amount:
-                return jsonify({'success': False, 'message': 'Недостаточно звёзд у игрока'}), 400
-            
-            user_data['stars'] = current_stars - amount
-            found = True
-            
-            # Добавляем уведомление
-            if 'notifications' not in user_data:
-                user_data['notifications'] = []
-            user_data['notifications'].append({
-                'type': 'admin_action',
-                'message': 'Администратор забрал у вас ' + str(amount) + ' звёзд',
-                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            })
-            
-            save_users(users)
-            break
-    
-    if found:
-        return jsonify({'success': True, 'message': 'Звёзды изъяты'})
-    else:
-        return jsonify({'success': False, 'message': 'Игрок не найден'}), 404
+            notifications = user_data.get('notifications', [])
+            return jsonify({'notifications': notifications})
+    return jsonify({'notifications': []})
 
-# API: сброс аккаунта игрока
-@app.route('/api/admin_reset_player', methods=['POST'])
-def admin_reset_player():
-    data = request.json
-    uid = data.get('uid')
-    
-    if not uid:
-        return jsonify({'success': False, 'message': 'Invalid data'}), 400
-    
+@app.route('/api/clear_notifications/<uid>', methods=['POST'])
+def clear_notifications(uid):
     users = load_users()
-    found = False
-    
     for user_id, user_data in users.items():
         if user_data.get('uid') == uid:
-            # Сбрасываем данные
-            user_data['stars'] = 300
-            user_data['bank'] = 0
-            user_data['bankDeposit'] = 0
-            user_data['attempts'] = 1
-            user_data['coefficientRate'] = 0
-            user_data['petProgress'] = 0
-            user_data['petStage'] = 1
-            user_data['wins'] = []
-            user_data['clickerProgress'] = 0
-            found = True
-            
-            # Добавляем уведомление
-            if 'notifications' not in user_data:
-                user_data['notifications'] = []
-            user_data['notifications'].append({
-                'type': 'admin_action',
-                'message': 'Администратор сбросил ваш аккаунт',
-                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            })
-            
+            user_data['notifications'] = []
             save_users(users)
             break
-    
-    if found:
-        return jsonify({'success': True, 'message': 'Аккаунт сброшен'})
-    else:
-        return jsonify({'success': False, 'message': 'Игрок не найден'}), 404
+    return jsonify({'success': True})
 
-# API: выдача звёзд себе (администратору)
-@app.route('/api/admin_give_self_stars', methods=['POST'])
-def admin_give_self_stars():
-    data = request.json
-    user_id = data.get('user_id')
-    amount = data.get('amount', 0)
-    
-    if not user_id or amount <= 0:
-        return jsonify({'success': False, 'message': 'Invalid data'}), 400
-    
-    users = load_users()
-    user_data = users.get(user_id)
-    
-    if user_data:
-        user_data['stars'] = user_data.get('stars', 0) + amount
-        save_users(users)
-        return jsonify({'success': True, 'message': 'Звёзды добавлены'})
-    else:
-        return jsonify({'success': False, 'message': 'Пользователь не найден'}), 404
-
-# ===== КОДЫ =====
+# ============= КОДЫ =============
 
 @app.route('/api/add_code', methods=['POST'])
 def add_code():
@@ -478,6 +516,8 @@ def use_code():
     
     return jsonify({'success': True, 'message': message})
 
+# ============= БАНЫ =============
+
 @app.route('/api/sync_banned', methods=['POST'])
 def sync_banned():
     try:
@@ -512,45 +552,19 @@ def sync_banned():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/send_notification', methods=['POST'])
-def send_notification():
+# ============= КОНКУРС =============
+
+@app.route('/api/set_contest', methods=['POST'])
+def set_contest():
     data = request.json
-    uid = data.get('uid')
-    message = data.get('message')
-    
-    users = load_users()
-    for user_id, user_data in users.items():
-        if user_data.get('uid') == uid:
-            if 'notifications' not in user_data:
-                user_data['notifications'] = []
-            user_data['notifications'].append({
-                'type': 'notification',
-                'message': message,
-                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            })
-            save_users(users)
-            break
-    
+    global_data = load_global_data()
+    global_data['contest_active'] = data.get('active', False)
+    global_data['contest_end_time'] = data.get('end_time')
+    global_data['contest_winner'] = data.get('winner')
+    save_global_data(global_data)
     return jsonify({'success': True})
 
-@app.route('/api/get_notifications/<uid>')
-def get_notifications(uid):
-    users = load_users()
-    for user_id, user_data in users.items():
-        if user_data.get('uid') == uid:
-            notifications = user_data.get('notifications', [])
-            return jsonify({'notifications': notifications})
-    return jsonify({'notifications': []})
-
-@app.route('/api/clear_notifications/<uid>', methods=['POST'])
-def clear_notifications(uid):
-    users = load_users()
-    for user_id, user_data in users.items():
-        if user_data.get('uid') == uid:
-            user_data['notifications'] = []
-            save_users(users)
-            break
-    return jsonify({'success': True})
+# ============= ПРОВЕРКА ОБНОВЛЕНИЙ =============
 
 @app.route('/api/check_updates')
 def check_updates():
@@ -563,6 +577,8 @@ def check_updates():
         'global_data': global_data,
         'users': users
     })
+
+# ============= СБРОС =============
 
 @app.route('/api/reset', methods=['POST'])
 def reset():
