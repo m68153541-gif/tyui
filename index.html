@@ -991,12 +991,6 @@
                 script1.onload = function() {
                     console.log('✅ game.js загружен');
                     setTimeout(addHeroButton, 500);
-                    // После загрузки game.js проверяем регистрацию
-                    setTimeout(function() {
-                        if (typeof checkRegistration === 'function') {
-                            checkRegistration();
-                        }
-                    }, 1000);
                 };
                 script1.onerror = function() {
                     console.error('❌ Ошибка загрузки game.js');
@@ -1032,17 +1026,6 @@
             heroBtn.textContent = '🦸‍♂️ Спасители звёзд';
             heroBtn.onclick = function() {
                 console.log('🦸‍♂️ Нажата кнопка!');
-                // Проверяем регистрацию
-                if (typeof getCurrentUser === 'function') {
-                    const user = getCurrentUser();
-                    if (!user || !user.registered) {
-                        showToast('❌ Сначала зарегистрируйтесь!');
-                        if (typeof checkRegistration === 'function') {
-                            checkRegistration();
-                        }
-                        return;
-                    }
-                }
                 openHeroesMenu();
             };
             
@@ -1077,24 +1060,8 @@
         function openHeroesMenu() {
             console.log('🦸‍♂️ Открываем меню героев');
             
-            // Проверяем регистрацию
-            if (typeof getCurrentUser === 'function') {
-                const user = getCurrentUser();
-                if (!user || !user.registered) {
-                    showToast('❌ Сначала зарегистрируйтесь!');
-                    if (typeof checkRegistration === 'function') {
-                        checkRegistration();
-                    }
-                    return;
-                }
-            }
-            
             const oldOverlay = document.getElementById('heroesOverlay');
             if (oldOverlay) oldOverlay.remove();
-            
-            // Удаляем старую игру если есть
-            const oldGame = document.getElementById('elinGameOverlay');
-            if (oldGame) oldGame.remove();
             
             const overlay = document.createElement('div');
             overlay.id = 'heroesOverlay';
@@ -1168,16 +1135,14 @@
                         console.log('🔄 Нажали на героя:', hero.id);
                         if (hero.id === 'elin') {
                             console.log('🔄 Запускаем игру Элин...');
-                            // Закрываем меню героев
                             const overlayEl = document.getElementById('heroesOverlay');
                             if (overlayEl) overlayEl.remove();
-                            // Удаляем стили
                             const styleEl2 = document.getElementById('heroesStyle');
                             if (styleEl2) styleEl2.remove();
-                            // Запускаем игру с задержкой
+                            // ЗАПУСКАЕМ ИГРУ С ЗАДЕРЖКОЙ
                             setTimeout(function() {
                                 startElinGame();
-                            }, 100);
+                            }, 200);
                         } else {
                             showToast('🔄 В разработке!');
                         }
@@ -1207,7 +1172,7 @@
         }
 
         // ============================================================
-        //  ИГРА ЭЛИН (ПОЛНОСТЬЮ ПЕРЕПИСАНА)
+        //  ИГРА ЭЛИН - АВТОНОМНАЯ ВЕРСИЯ (НЕ ЗАВИСИТ ОТ GAME.JS)
         // ============================================================
         let elinGameInterval = null;
         let elinStars = [];
@@ -1215,18 +1180,19 @@
         let elinTimeLeft = 180;
         let elinGameActive = false;
         let elinStarCreationInterval = null;
+        let elinGameOverlay = null;
 
         function startElinGame() {
-            console.log('🌟 ЗАПУСКАЕМ ИГРУ ЭЛИН!');
+            console.log('🌟 ЗАПУСКАЕМ ИГРУ ЭЛИН! (автономная версия)');
             
             // Удаляем старую игру если есть
             const oldGame = document.getElementById('elinGameOverlay');
             if (oldGame) oldGame.remove();
             
             // Создаём игровое поле
-            const gameOverlay = document.createElement('div');
-            gameOverlay.id = 'elinGameOverlay';
-            gameOverlay.style.cssText = `
+            elinGameOverlay = document.createElement('div');
+            elinGameOverlay.id = 'elinGameOverlay';
+            elinGameOverlay.style.cssText = `
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;
                 background: linear-gradient(135deg, #0a0515, #1a0e3e, #0a0515);
                 background-size: 300% 300%;
@@ -1239,7 +1205,7 @@
                 const star = document.createElement('div');
                 star.textContent = '✦';
                 star.style.cssText = `position: absolute; color: rgba(255,255,255,0.1); font-size: ${Math.random()*20+10}px; top: ${Math.random()*100}%; left: ${Math.random()*100}%; animation: sparkleFall ${Math.random()*20+10}s linear infinite; animation-delay: ${Math.random()*10}s; pointer-events: none;`;
-                gameOverlay.appendChild(star);
+                elinGameOverlay.appendChild(star);
             }
             
             // Верхняя панель
@@ -1250,7 +1216,7 @@
                 <div style="color:#ffd93d;font-weight:700;font-size:20px;">⭐ <span id="elinCollected">0</span> / 150</div>
                 <button id="elinBackBtn" style="padding: 8px 16px; border: none; border-radius: 12px; background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-size: 14px; border: 1px solid rgba(255,255,255,0.1);">✖</button>
             `;
-            gameOverlay.appendChild(topPanel);
+            elinGameOverlay.appendChild(topPanel);
             
             // Контейнер для звёзд
             const starsContainer = document.createElement('div');
@@ -1262,26 +1228,29 @@
             startBtn.id = 'elinStartBtn';
             startBtn.textContent = '🌟 НАЧАТЬ';
             startBtn.style.cssText = `position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 50px; border: none; border-radius: 30px; background: linear-gradient(135deg, #ff6b9d, #ff2e63); color: #ffffff; font-size: 24px; font-weight: 700; cursor: pointer; z-index: 10; box-shadow: 0 0 60px rgba(255,105,180,0.3); animation: pulseBtn 2s ease-in-out infinite;`;
-            startBtn.onclick = function() { startElinGameplay(); };
+            startBtn.onclick = function() { 
+                console.log('🔄 Кнопка НАЧАТЬ нажата!');
+                startElinGameplay(); 
+            };
             starsContainer.appendChild(startBtn);
-            gameOverlay.appendChild(starsContainer);
+            elinGameOverlay.appendChild(starsContainer);
             
             // Кнопка назад
             document.getElementById('elinBackBtn').onclick = function() {
                 if (elinGameActive) {
                     if (confirm('Вы уверены, что хотите выйти? Прогресс будет потерян!')) {
                         stopElinGame();
-                        gameOverlay.remove();
+                        if (elinGameOverlay) elinGameOverlay.remove();
                         openHeroesMenu();
                     }
                 } else {
-                    gameOverlay.remove();
+                    if (elinGameOverlay) elinGameOverlay.remove();
                     openHeroesMenu();
                 }
             };
             
-            document.body.appendChild(gameOverlay);
-            console.log('✅ Игра Элин создана!');
+            document.body.appendChild(elinGameOverlay);
+            console.log('✅ Игра Элин создана! Нажмите "НАЧАТЬ"');
         }
 
         function startElinGameplay() {
@@ -1415,6 +1384,7 @@
                 heroesProgress.elin = true;
                 saveHeroesProgress();
                 
+                // Пытаемся начислить награду через game.js, если доступно
                 try {
                     if (typeof getCurrentUser === 'function') {
                         const user = getCurrentUser();
@@ -1426,7 +1396,7 @@
                         }
                     }
                 } catch(e) {
-                    console.error('Ошибка начисления награды:', e);
+                    console.log('⚠️ Не удалось начислить награду через game.js, но победа сохранена');
                 }
                 
                 resultDiv.innerHTML = `
@@ -1438,8 +1408,7 @@
                 `;
                 
                 document.getElementById('elinResultBtn').onclick = function() {
-                    const overlayEl = document.getElementById('elinGameOverlay');
-                    if (overlayEl) overlayEl.remove();
+                    if (elinGameOverlay) elinGameOverlay.remove();
                     openHeroesMenu();
                     showToast('🎉 Вы прошли миссию Элин! +50 звёзд!');
                 };
@@ -1458,14 +1427,12 @@
                 `;
                 
                 document.getElementById('elinResultBtn').onclick = function() {
-                    const overlayEl = document.getElementById('elinGameOverlay');
-                    if (overlayEl) overlayEl.remove();
+                    if (elinGameOverlay) elinGameOverlay.remove();
                     startElinGame();
                 };
                 
                 document.getElementById('elinExitBtn').onclick = function() {
-                    const overlayEl = document.getElementById('elinGameOverlay');
-                    if (overlayEl) overlayEl.remove();
+                    if (elinGameOverlay) elinGameOverlay.remove();
                     openHeroesMenu();
                 };
                 
@@ -1493,8 +1460,8 @@
         
         console.log('🦄 Забава Игра готова!');
         console.log('🦸‍♂️ Спасители звёзд активированы!');
-        console.log('🔍 Проверка: startElinGame =', typeof startElinGame);
-        console.log('🔍 Проверка: openHeroesMenu =', typeof openHeroesMenu);
+        console.log('🔍 startElinGame доступна:', typeof startElinGame === 'function');
+        console.log('🔍 openHeroesMenu доступна:', typeof openHeroesMenu === 'function');
     </script>
 </body>
 </html>
