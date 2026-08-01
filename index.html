@@ -32,7 +32,6 @@
             100% { background-position: 0% 50%; }
         }
 
-        /* Блёстки на фоне */
         .sparkle {
             position: fixed;
             pointer-events: none;
@@ -48,7 +47,6 @@
             100% { transform: translateY(110vh) translateX(50px) rotate(720deg); opacity: 0; }
         }
 
-        /* ===== ЭКРАН ЗАГРУЗКИ С АНИМАЦИЕЙ ===== */
         #loadingScreen {
             position: fixed;
             top: 0;
@@ -72,7 +70,6 @@
             pointer-events: none;
         }
 
-        /* Анимированные звёзды и единороги на загрузке */
         .loading-animation {
             position: relative;
             width: 300px;
@@ -205,7 +202,6 @@
             color: #ffd93d;
         }
 
-        /* ===== ОСНОВНОЕ ПРИЛОЖЕНИЕ ===== */
         #app {
             position: relative;
             z-index: 1;
@@ -399,7 +395,6 @@
             pointer-events: none;
         }
 
-        /* ===== ОСТАЛЬНЫЕ СТИЛИ ===== */
         .wheel-overlay {
             display: none;
             position: fixed;
@@ -904,7 +899,7 @@
                     loadingScreen.classList.add('hidden');
                     setTimeout(() => {
                         app.classList.add('show');
-                        loadGameScript();
+                        loadGameScripts();
                     }, 300);
                 }, 500);
             }
@@ -983,23 +978,42 @@
             window._toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
         };
 
-        function loadGameScript() {
-            if (document.querySelector('script[src="game.js"]')) {
-                console.log('game.js уже загружен');
-                return;
+        function loadGameScripts() {
+            // Загружаем основной game.js
+            if (!document.querySelector('script[src="game.js"]')) {
+                console.log('Загружаем game.js...');
+                const script1 = document.createElement('script');
+                script1.src = 'game.js';
+                script1.onload = function() {
+                    console.log('game.js загружен успешно!');
+                    // После загрузки game.js загружаем updates.js
+                    loadUpdatesScript();
+                };
+                script1.onerror = function() {
+                    console.error('Ошибка загрузки game.js');
+                    setTimeout(loadGameScripts, 2000);
+                };
+                document.head.appendChild(script1);
+            } else {
+                loadUpdatesScript();
             }
+        }
 
-            console.log('Загружаем game.js...');
-            const script = document.createElement('script');
-            script.src = 'game.js';
-            script.onload = function() {
-                console.log('game.js загружен успешно!');
-            };
-            script.onerror = function() {
-                console.error('Ошибка загрузки game.js');
-                setTimeout(loadGameScript, 2000);
-            };
-            document.head.appendChild(script);
+        function loadUpdatesScript() {
+            // Загружаем updates.js после game.js
+            if (!document.querySelector('script[src="updates.js"]')) {
+                console.log('Загружаем updates.js...');
+                const script2 = document.createElement('script');
+                script2.src = 'updates.js';
+                script2.onload = function() {
+                    console.log('updates.js загружен успешно!');
+                    console.log('🦸‍♂️ Спасители звёзд активированы!');
+                };
+                script2.onerror = function() {
+                    console.warn('updates.js не найден, продолжаем без обновлений');
+                };
+                document.head.appendChild(script2);
+            }
         }
 
         console.log('🦄 Добро пожаловать в розовую сказку!');
