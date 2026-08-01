@@ -47,6 +47,161 @@
             100% { transform: translateY(110vh) translateX(50px) rotate(720deg); opacity: 0; }
         }
 
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #ff6b9d, #ff2e63, #ff6b9d);
+            background-size: 200% 200%;
+            animation: bgGradient 4s ease-in-out infinite;
+            transition: opacity 0.8s ease;
+            overflow: hidden;
+        }
+
+        #loadingScreen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-animation {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin-bottom: 30px;
+        }
+
+        .loading-animation .unicorn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            animation: unicornFloat 3s ease-in-out infinite;
+            z-index: 2;
+        }
+
+        @keyframes unicornFloat {
+            0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(-5deg); }
+            50% { transform: translate(-50%, -60%) scale(1.1) rotate(5deg); }
+        }
+
+        .loading-animation .orbit-star {
+            position: absolute;
+            font-size: 30px;
+            animation: orbitStar 8s linear infinite;
+        }
+
+        .loading-animation .orbit-star:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; font-size: 25px; }
+        .loading-animation .orbit-star:nth-child(2) { top: 5%; right: 15%; animation-delay: 1.5s; font-size: 20px; }
+        .loading-animation .orbit-star:nth-child(3) { bottom: 15%; left: 5%; animation-delay: 3s; font-size: 28px; }
+        .loading-animation .orbit-star:nth-child(4) { bottom: 10%; right: 10%; animation-delay: 4.5s; font-size: 22px; }
+        .loading-animation .orbit-star:nth-child(5) { top: 20%; left: 50%; animation-delay: 6s; font-size: 18px; }
+        .loading-animation .orbit-star:nth-child(6) { bottom: 20%; left: 50%; animation-delay: 7.5s; font-size: 24px; }
+        .loading-animation .orbit-star:nth-child(7) { top: 50%; left: 5%; animation-delay: 2s; font-size: 20px; }
+        .loading-animation .orbit-star:nth-child(8) { top: 50%; right: 5%; animation-delay: 5.5s; font-size: 20px; }
+
+        @keyframes orbitStar {
+            0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 0.3; }
+            25% { transform: translate(30px, -40px) scale(1.3) rotate(90deg); opacity: 1; }
+            50% { transform: translate(60px, 0) scale(1) rotate(180deg); opacity: 0.8; }
+            75% { transform: translate(30px, 40px) scale(1.2) rotate(270deg); opacity: 1; }
+            100% { transform: translate(0, 0) scale(1) rotate(360deg); opacity: 0.3; }
+        }
+
+        .loading-animation .sparkle-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: ringPulse 3s ease-in-out infinite;
+        }
+
+        .loading-animation .sparkle-ring:nth-child(9) {
+            width: 200px;
+            height: 200px;
+            animation-delay: 0.5s;
+            border-color: rgba(255, 217, 61, 0.2);
+        }
+
+        .loading-animation .sparkle-ring:nth-child(10) {
+            width: 150px;
+            height: 150px;
+            animation-delay: 1s;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        @keyframes ringPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+        }
+
+        #loadingScreen h2 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 0 0 40px rgba(255, 105, 180, 0.5);
+            margin-bottom: 20px;
+            animation: shimmer 2s ease-in-out infinite;
+            z-index: 3;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .loading-bar-container {
+            width: 300px;
+            max-width: 80%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 3;
+        }
+
+        .loading-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff6b9d, #ff2e63, #ffd93d, #ff6b9d);
+            background-size: 300% 100%;
+            animation: loadingGradient 2s linear infinite;
+            border-radius: 20px;
+            transition: width 0.3s ease;
+        }
+
+        @keyframes loadingGradient {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 300% 0%; }
+        }
+
+        .loading-text {
+            margin-top: 12px;
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+            letter-spacing: 1px;
+            z-index: 3;
+        }
+
+        .loading-percent {
+            font-weight: 700;
+            color: #ffd93d;
+        }
+
         #app {
             position: relative;
             z-index: 1;
@@ -59,6 +214,15 @@
             padding: 24px 20px 30px;
             box-shadow: 0 20px 60px rgba(255, 105, 180, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.15);
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            margin-bottom: 80px;
+        }
+
+        #app.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
         }
 
         h1 {
@@ -231,6 +395,7 @@
             pointer-events: none;
         }
 
+        /* Стиль для кнопки героев */
         #btnHeroes {
             background: linear-gradient(135deg, #ff6b9d, #ff2e63, #ff6b9d) !important;
             background-size: 200% 200% !important;
@@ -554,6 +719,38 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.03);
         }
 
+        .admin-panel .btn {
+            font-size: 13px;
+            padding: 10px 6px;
+        }
+
+        .code-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin: 4px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .code-text {
+            cursor: pointer;
+            color: #ffd93d;
+            font-weight: bold;
+        }
+
+        .code-type {
+            color: rgba(255,255,255,0.5);
+            font-size: 12px;
+        }
+
+        .code-delete {
+            cursor: pointer;
+            color: #ff4757;
+            font-weight: bold;
+        }
+
         @media (max-width: 420px) {
             .btn-grid { gap: 10px; }
             .btn { font-size: 13px; padding: 14px 6px; }
@@ -566,6 +763,11 @@
                 bottom: 12px;
                 right: 12px;
             }
+            .loading-animation { width: 200px; height: 200px; }
+            .loading-animation .unicorn { font-size: 60px; }
+            .loading-animation .sparkle-ring { width: 180px; height: 180px; }
+            .loading-animation .sparkle-ring:nth-child(9) { width: 140px; height: 140px; }
+            .loading-animation .sparkle-ring:nth-child(10) { width: 100px; height: 100px; }
         }
     </style>
 </head>
@@ -573,6 +775,32 @@
     <!-- Блёстки -->
     <div id="sparklesContainer"></div>
 
+    <!-- Экран загрузки -->
+    <div id="loadingScreen">
+        <div class="loading-animation">
+            <div class="sparkle-ring"></div>
+            <div class="sparkle-ring"></div>
+            <div class="sparkle-ring"></div>
+            <div class="orbit-star">✨</div>
+            <div class="orbit-star">⭐</div>
+            <div class="orbit-star">🌟</div>
+            <div class="orbit-star">💖</div>
+            <div class="orbit-star">✨</div>
+            <div class="orbit-star">⭐</div>
+            <div class="orbit-star">🌟</div>
+            <div class="orbit-star">💖</div>
+            <div class="unicorn">🦄</div>
+        </div>
+        <h2>✨ Забава Игра ✨</h2>
+        <div class="loading-bar-container">
+            <div class="loading-bar" id="loadingBar"></div>
+        </div>
+        <div class="loading-text">
+            Загрузка... <span class="loading-percent" id="loadingPercent">0%</span>
+        </div>
+    </div>
+
+    <!-- Основное приложение -->
     <div id="app">
         <h1>🦄 Забава Игра</h1>
 
@@ -616,6 +844,7 @@
         </div>
     </div>
 
+    <!-- Колесо -->
     <div class="wheel-overlay" id="wheelOverlay">
         <div class="wheel-container">
             <h2>🎰 Колесо удачи</h2>
@@ -632,6 +861,7 @@
         </div>
     </div>
 
+    <!-- Модалка -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal" id="modalContent">
             <h2 id="modalTitle">Заголовок</h2>
@@ -639,9 +869,17 @@
         </div>
     </div>
 
+    <!-- Toast -->
     <div id="toast"></div>
 
+    <!-- Кнопка музыки -->
     <button id="musicBtn" title="Вкл/Выкл музыку">🎵</button>
+
+    <!-- ============================================================ -->
+    <!--  ПОДКЛЮЧАЕМ СКРИПТЫ: СНАЧАЛА GAME.JS, ПОТОМ HEROES.JS        -->
+    <!-- ============================================================ -->
+    <script src="game.js"></script>
+    <script src="heroes.js"></script>
 
     <script>
         // ============================================================
@@ -659,6 +897,38 @@
             sparkle.style.opacity = Math.random() * 0.5 + 0.3;
             sparklesContainer.appendChild(sparkle);
         }
+
+        // ============================================================
+        //  ЗАГРУЗКА
+        // ============================================================
+        const loadingScreen = document.getElementById('loadingScreen');
+        const loadingBar = document.getElementById('loadingBar');
+        const loadingPercent = document.getElementById('loadingPercent');
+        const app = document.getElementById('app');
+        
+        let progress = 0;
+        const totalTime = 10000;
+        const startTime = Date.now();
+        
+        function updateLoading() {
+            const elapsed = Date.now() - startTime;
+            progress = Math.min((elapsed / totalTime) * 100, 100);
+            
+            loadingBar.style.width = progress + '%';
+            loadingPercent.textContent = Math.floor(progress) + '%';
+            
+            if (progress < 100) {
+                setTimeout(updateLoading, 50);
+            } else {
+                setTimeout(() => {
+                    loadingScreen.classList.add('hidden');
+                    setTimeout(() => {
+                        app.classList.add('show');
+                    }, 300);
+                }, 500);
+            }
+        }
+        setTimeout(updateLoading, 100);
 
         // ============================================================
         //  МУЗЫКА
@@ -730,518 +1000,8 @@
             window._toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
         };
 
-        // ============================================================
-        //  КНОПКА "СПАСИТЕЛИ ЗВЁЗД"
-        // ============================================================
-        function addHeroButton() {
-            const btnGrid = document.getElementById('btnGrid');
-            if (!btnGrid) {
-                setTimeout(addHeroButton, 500);
-                return;
-            }
-
-            if (document.getElementById('btnHeroes')) return;
-
-            const heroBtn = document.createElement('button');
-            heroBtn.id = 'btnHeroes';
-            heroBtn.className = 'btn full small';
-            heroBtn.textContent = '🦸‍♂️ Спасители звёзд';
-            heroBtn.onclick = function() {
-                if (typeof openHeroesMenu === 'function') {
-                    openHeroesMenu();
-                } else {
-                    showToast('⚠️ Меню героев загружается...');
-                    // Пробуем вызвать через секунду
-                    setTimeout(function() {
-                        if (typeof openHeroesMenu === 'function') {
-                            openHeroesMenu();
-                        }
-                    }, 1000);
-                }
-            };
-
-            const adminBtn = document.getElementById('btnAdmin');
-            if (adminBtn) {
-                btnGrid.insertBefore(heroBtn, adminBtn);
-            } else {
-                btnGrid.appendChild(heroBtn);
-            }
-        }
-
-        // ============================================================
-        //  ГЕРОИ - ВСЯ ЛОГИКА ЗДЕСЬ
-        // ============================================================
-        let heroesProgress = { elin: false, mark: false, comics: false, evna: false };
-
-        function loadHeroesProgress() {
-            try {
-                const saved = localStorage.getItem('heroesProgress');
-                if (saved) heroesProgress = JSON.parse(saved);
-            } catch(e) {}
-        }
-        function saveHeroesProgress() {
-            try {
-                localStorage.setItem('heroesProgress', JSON.stringify(heroesProgress));
-            } catch(e) {}
-        }
-        loadHeroesProgress();
-
-        // ============================================================
-        //  ОТКРЫТИЕ МЕНЮ ГЕРОЕВ
-        // ============================================================
-        function openHeroesMenu() {
-            console.log('🦸‍♂️ Открываем меню героев...');
-
-            // Проверяем регистрацию
-            if (typeof getCurrentUser === 'function') {
-                const user = getCurrentUser();
-                if (!user || !user.registered) {
-                    showToast('❌ Сначала зарегистрируйтесь!');
-                    if (typeof checkRegistration === 'function') {
-                        checkRegistration();
-                    }
-                    return;
-                }
-            }
-
-            // Удаляем старые overlay
-            const oldOverlay = document.getElementById('heroesOverlay');
-            if (oldOverlay) oldOverlay.remove();
-
-            const overlay = document.createElement('div');
-            overlay.id = 'heroesOverlay';
-            overlay.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9998;
-                background: linear-gradient(135deg, #ff0844, #ffb199, #ff0844);
-                background-size: 300% 300%;
-                animation: heroBgGradient 4s ease-in-out infinite;
-                display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto;
-            `;
-
-            // Стили для меню
-            let styleEl = document.getElementById('heroesStyle');
-            if (!styleEl) {
-                styleEl = document.createElement('style');
-                styleEl.id = 'heroesStyle';
-                styleEl.textContent = `
-                    @keyframes heroBgGradient {
-                        0% { background-position: 0% 50%; }
-                        50% { background-position: 100% 50%; }
-                        100% { background-position: 0% 50%; }
-                    }
-                    .hero-card {
-                        background: rgba(255,255,255,0.1);
-                        backdrop-filter: blur(20px);
-                        border-radius: 30px;
-                        padding: 20px 25px;
-                        margin: 10px 0;
-                        border: 1px solid rgba(255,255,255,0.2);
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        cursor: pointer;
-                        transition: all 0.3s ease;
-                    }
-                    .hero-card:hover {
-                        background: rgba(255,255,255,0.2);
-                        transform: scale(1.02);
-                    }
-                    .hero-card.locked {
-                        opacity: 0.5;
-                        filter: grayscale(0.5);
-                        cursor: not-allowed;
-                    }
-                    .hero-card .status-done { color: #ffd93d; }
-                    .hero-card .status-locked { color: #ff4757; }
-                    .hero-card .status-available { color: #7ed6df; }
-                    @keyframes elinFall {
-                        0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
-                        100% { transform: translateY(calc(100% + 50px)) rotate(720deg); opacity: 0; }
-                    }
-                    @keyframes elinCatch {
-                        0% { transform: scale(1); opacity: 1; }
-                        100% { transform: scale(2); opacity: 0; }
-                    }
-                    @keyframes pulseBtn {
-                        0%, 100% { box-shadow: 0 0 60px rgba(255,105,180,0.3); }
-                        50% { box-shadow: 0 0 80px rgba(255,105,180,0.6); }
-                    }
-                    @keyframes sparkleFall {
-                        0% { transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0.8; }
-                        100% { transform: translateY(110vh) translateX(50px) rotate(720deg); opacity: 0; }
-                    }
-                `;
-                document.head.appendChild(styleEl);
-            }
-
-            const container = document.createElement('div');
-            container.style.cssText = `max-width: 500px; width: 100%; padding: 20px;`;
-
-            const title = document.createElement('h2');
-            title.textContent = '🦸‍♂️ Наши герои';
-            title.style.cssText = `text-align: center; color: #fff; font-size: 32px; margin-bottom: 25px;`;
-            container.appendChild(title);
-
-            const heroes = [
-                { id: 'elin', name: 'Элин', emoji: '👩‍🚀', desc: 'Собери 150 звёзд за 3 минуты' },
-                { id: 'mark', name: 'Марк', emoji: '🧑‍🚀', desc: 'В разработке...' },
-                { id: 'comics', name: 'Комикс', emoji: '🦸', desc: 'В разработке...' },
-                { id: 'evna', name: 'Евна', emoji: '👩‍💻', desc: 'В разработке...' }
-            ];
-
-            heroes.forEach(function(hero) {
-                const isUnlocked = hero.id === 'elin' || heroesProgress[hero.id] || 
-                                  (hero.id !== 'elin' && heroesProgress['elin']);
-                const isDone = heroesProgress[hero.id];
-
-                let statusText = '🔒 Заблокирован';
-                let statusClass = 'status-locked';
-                if (isDone) { statusText = '✅ Пройдено!'; statusClass = 'status-done'; }
-                else if (isUnlocked) { statusText = '▶️ Доступно'; statusClass = 'status-available'; }
-
-                const card = document.createElement('div');
-                card.className = 'hero-card' + (isUnlocked && !isDone ? '' : ' locked');
-
-                card.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:15px;">
-                        <span style="font-size:40px;">${hero.emoji}</span>
-                        <div>
-                            <div style="font-size:20px;font-weight:700;color:#fff;">${hero.name}</div>
-                            <div style="font-size:13px;color:rgba(255,255,255,0.6);">${hero.desc}</div>
-                            <div class="${statusClass}" style="font-size:13px;">${statusText}</div>
-                        </div>
-                    </div>
-                    <span style="font-size:24px;color:rgba(255,255,255,0.3);">${isDone ? '✅' : (isUnlocked ? '▶️' : '🔒')}</span>
-                `;
-
-                if (isUnlocked && !isDone) {
-                    card.onclick = function() {
-                        if (hero.id === 'elin') {
-                            const overlayEl = document.getElementById('heroesOverlay');
-                            if (overlayEl) overlayEl.remove();
-                            // Запускаем игру через небольшую задержку
-                            setTimeout(function() {
-                                startElinGame();
-                            }, 200);
-                        } else {
-                            showToast('🔄 В разработке!');
-                        }
-                    };
-                } else if (isDone) {
-                    card.onclick = function() { showToast('✅ Уже пройдено!'); };
-                } else {
-                    card.onclick = function() { showToast('🔒 Сначала пройдите предыдущего героя!'); };
-                }
-                container.appendChild(card);
-            });
-
-            const backBtn = document.createElement('button');
-            backBtn.textContent = '⬅️ Назад';
-            backBtn.style.cssText = `
-                width: 100%; padding: 16px; border: none; border-radius: 20px;
-                background: rgba(255,255,255,0.15); color: #fff; font-size: 18px;
-                font-weight: 700; cursor: pointer; margin-top: 20px;
-            `;
-            backBtn.onclick = function() {
-                const overlayEl = document.getElementById('heroesOverlay');
-                if (overlayEl) overlayEl.remove();
-                showToast('⬅️ Возврат в главное меню');
-            };
-            container.appendChild(backBtn);
-
-            overlay.appendChild(container);
-            document.body.appendChild(overlay);
-        }
-
-        // ============================================================
-        //  ИГРА ЭЛИН
-        // ============================================================
-        let elinGameInterval = null;
-        let elinStars = [];
-        let elinCollected = 0;
-        let elinTimeLeft = 180;
-        let elinGameActive = false;
-        let elinStarCreationInterval = null;
-        let elinGameOverlay = null;
-
-        function startElinGame() {
-            console.log('🌟 Запускаем игру Элин...');
-
-            // Удаляем старую игру
-            const oldGame = document.getElementById('elinGameOverlay');
-            if (oldGame) oldGame.remove();
-
-            const gameOverlay = document.createElement('div');
-            gameOverlay.id = 'elinGameOverlay';
-            gameOverlay.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;
-                background: linear-gradient(135deg, #0a0515, #1a0e3e, #0a0515);
-                background-size: 300% 300%;
-                animation: heroBgGradient 6s ease-in-out infinite;
-                display: flex; flex-direction: column; align-items: center; padding: 20px; overflow: hidden;
-            `;
-
-            // Звёздный фон
-            for (let i = 0; i < 50; i++) {
-                const star = document.createElement('div');
-                star.textContent = '✦';
-                star.style.cssText = `
-                    position: absolute; color: rgba(255,255,255,0.1);
-                    font-size: ${Math.random()*20+10}px; top: ${Math.random()*100}%;
-                    left: ${Math.random()*100}%; animation: sparkleFall ${Math.random()*20+10}s linear infinite;
-                    animation-delay: ${Math.random()*10}s; pointer-events: none;
-                `;
-                gameOverlay.appendChild(star);
-            }
-
-            // Верхняя панель
-            const topPanel = document.createElement('div');
-            topPanel.style.cssText = `
-                width: 100%; max-width: 500px; display: flex; justify-content: space-between;
-                align-items: center; padding: 15px 20px; background: rgba(255,255,255,0.05);
-                border-radius: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
-                z-index: 2; margin-bottom: 15px;
-            `;
-            topPanel.innerHTML = `
-                <div style="color:#fff;font-weight:700;">⏱️ <span id="elinTimer">03:00</span></div>
-                <div style="color:#ffd93d;font-weight:700;font-size:20px;">⭐ <span id="elinCollected">0</span> / 150</div>
-                <button id="elinBackBtn" style="padding:8px 16px;border:none;border-radius:12px;background:rgba(255,255,255,0.1);color:#fff;cursor:pointer;font-size:14px;border:1px solid rgba(255,255,255,0.1);">✖</button>
-            `;
-            gameOverlay.appendChild(topPanel);
-
-            // Контейнер для звёзд
-            const starsContainer = document.createElement('div');
-            starsContainer.id = 'elinStarsContainer';
-            starsContainer.style.cssText = `
-                width: 100%; max-width: 500px; flex: 1; position: relative;
-                border-radius: 30px; overflow: hidden; background: rgba(0,0,0,0.3);
-                border: 1px solid rgba(255,255,255,0.05);
-            `;
-
-            // Кнопка "Начать"
-            const startBtn = document.createElement('button');
-            startBtn.id = 'elinStartBtn';
-            startBtn.textContent = '🌟 НАЧАТЬ';
-            startBtn.style.cssText = `
-                position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                padding: 20px 50px; border: none; border-radius: 30px;
-                background: linear-gradient(135deg, #ff6b9d, #ff2e63); color: #fff;
-                font-size: 24px; font-weight: 700; cursor: pointer; z-index: 10;
-                box-shadow: 0 0 60px rgba(255,105,180,0.3); animation: pulseBtn 2s ease-in-out infinite;
-            `;
-            startBtn.onclick = function() { startElinGameplay(); };
-            starsContainer.appendChild(startBtn);
-            gameOverlay.appendChild(starsContainer);
-
-            document.getElementById('elinBackBtn').onclick = function() {
-                if (elinGameActive) {
-                    if (confirm('Вы уверены, что хотите выйти? Прогресс будет потерян!')) {
-                        stopElinGame();
-                        gameOverlay.remove();
-                        openHeroesMenu();
-                    }
-                } else {
-                    gameOverlay.remove();
-                    openHeroesMenu();
-                }
-            };
-
-            document.body.appendChild(gameOverlay);
-            elinGameOverlay = gameOverlay;
-            console.log('✅ Игра Элин создана!');
-        }
-
-        function startElinGameplay() {
-            console.log('🎮 Начинаем игру!');
-            const startBtn = document.getElementById('elinStartBtn');
-            if (startBtn) startBtn.remove();
-
-            elinCollected = 0;
-            elinTimeLeft = 180;
-            elinGameActive = true;
-            elinStars = [];
-
-            document.getElementById('elinCollected').textContent = '0';
-            updateElinTimer();
-
-            if (elinGameInterval) clearInterval(elinGameInterval);
-            elinGameInterval = setInterval(function() {
-                elinTimeLeft--;
-                updateElinTimer();
-                if (elinTimeLeft <= 0) endElinGame(false);
-            }, 1000);
-
-            if (elinStarCreationInterval) clearInterval(elinStarCreationInterval);
-            elinStarCreationInterval = setInterval(function() {
-                if (elinGameActive) createElinStar();
-            }, 400);
-
-            for (let i = 0; i < 20; i++) {
-                setTimeout(function() { createElinStar(); }, i * 150);
-            }
-            showToast('🌟 Собирайте звёзды! Нужно 150 за 3 минуты!');
-        }
-
-        function createElinStar() {
-            if (!elinGameActive) return;
-            const container = document.getElementById('elinStarsContainer');
-            if (!container) return;
-
-            const existingStars = container.querySelectorAll('.elin-falling-star');
-            if (existingStars.length > 40) return;
-
-            const star = document.createElement('div');
-            star.className = 'elin-falling-star';
-            const emojis = ['⭐', '🌟', '✨', '💫'];
-            star.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-            star.style.cssText = `
-                position: absolute; left: ${Math.random()*90+5}%; top: -30px;
-                font-size: ${Math.random()*20+20}px; cursor: pointer; z-index: 1;
-                user-select: none; text-shadow: 0 0 20px rgba(255,215,0,0.5);
-                animation: elinFall ${Math.random()*3+2}s linear forwards;
-            `;
-            star.dataset.caught = 'false';
-
-            star.onclick = function(e) {
-                e.stopPropagation();
-                if (this.dataset.caught === 'true') return;
-                if (!elinGameActive) return;
-
-                this.dataset.caught = 'true';
-                this.style.animation = 'elinCatch 0.3s ease forwards';
-                elinCollected++;
-                document.getElementById('elinCollected').textContent = elinCollected;
-                this.style.color = '#ffd93d';
-                this.style.textShadow = '0 0 40px rgba(255,215,0,0.8)';
-
-                setTimeout(function() { if (this && this.parentNode) this.remove(); }, 300);
-                if (elinCollected >= 150) endElinGame(true);
-            };
-
-            container.appendChild(star);
-            elinStars.push(star);
-
-            setTimeout(function() {
-                if (star.parentNode && star.dataset.caught === 'false') {
-                    star.remove();
-                    const index = elinStars.indexOf(star);
-                    if (index > -1) elinStars.splice(index, 1);
-                }
-            }, 5000);
-        }
-
-        function updateElinTimer() {
-            const timerEl = document.getElementById('elinTimer');
-            if (!timerEl) return;
-            const minutes = Math.floor(elinTimeLeft / 60);
-            const seconds = elinTimeLeft % 60;
-            timerEl.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-            timerEl.style.color = elinTimeLeft < 30 ? '#ff4757' : '#ffffff';
-        }
-
-        function endElinGame(won) {
-            console.log('🏁 Игра закончена. Победа:', won);
-            if (!elinGameActive) return;
-            elinGameActive = false;
-
-            if (elinGameInterval) { clearInterval(elinGameInterval); elinGameInterval = null; }
-            if (elinStarCreationInterval) { clearInterval(elinStarCreationInterval); elinStarCreationInterval = null; }
-
-            document.querySelectorAll('.elin-falling-star').forEach(function(star) { star.remove(); });
-            elinStars = [];
-
-            const container = document.getElementById('elinStarsContainer');
-            if (!container) return;
-
-            const resultDiv = document.createElement('div');
-            resultDiv.className = 'elin-result';
-            resultDiv.style.cssText = `
-                position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                text-align: center; z-index: 10; background: rgba(0,0,0,0.7); padding: 40px;
-                border-radius: 30px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
-                min-width: 280px;
-            `;
-
-            if (won) {
-                heroesProgress.elin = true;
-                saveHeroesProgress();
-
-                // Награда
-                try {
-                    if (typeof getCurrentUser === 'function') {
-                        const user = getCurrentUser();
-                        if (user) {
-                            user.stars = (user.stars || 0) + 50;
-                            if (typeof saveAllData === 'function') saveAllData();
-                            if (typeof saveToServer === 'function') saveToServer();
-                            console.log('🎁 Награда: +50 звёзд игроку', user.name);
-                        }
-                    }
-                } catch(e) {}
-
-                resultDiv.innerHTML = `
-                    <div style="font-size:60px;margin-bottom:15px;">🎉</div>
-                    <div style="font-size:28px;font-weight:700;color:#ffd93d;">ПОБЕДА!</div>
-                    <div style="font-size:18px;color:rgba(255,255,255,0.8);margin:10px 0;">Вы собрали ${elinCollected} ⭐ за 3 минуты!</div>
-                    <div style="font-size:16px;color:#7ed6df;margin:10px 0;">🎁 Награда: +50 звёзд на аккаунт!</div>
-                    <button id="elinResultBtn" style="margin-top:15px;padding:12px 40px;border:none;border-radius:20px;background:linear-gradient(135deg,#ffd93d,#f0932b);color:#1a1a2e;font-size:18px;font-weight:700;cursor:pointer;">✅ Отлично!</button>
-                `;
-                document.getElementById('elinResultBtn').onclick = function() {
-                    if (elinGameOverlay) elinGameOverlay.remove();
-                    openHeroesMenu();
-                    showToast('🎉 Вы прошли миссию Элин! +50 звёзд!');
-                };
-                showToast('🎉 ПОБЕДА!');
-            } else {
-                resultDiv.innerHTML = `
-                    <div style="font-size:60px;margin-bottom:15px;">😢</div>
-                    <div style="font-size:28px;font-weight:700;color:#ff4757;">ВРЕМЯ ВЫШЛО!</div>
-                    <div style="font-size:18px;color:rgba(255,255,255,0.8);margin:10px 0;">Вы собрали ${elinCollected} ⭐ из 150</div>
-                    <div style="font-size:16px;color:#ff6b9d;margin:10px 0;">Попробуйте ещё раз!</div>
-                    <div>
-                        <button id="elinResultBtn" style="margin-top:15px;padding:12px 40px;border:none;border-radius:20px;background:linear-gradient(135deg,#ff6b9d,#ff2e63);color:#fff;font-size:18px;font-weight:700;cursor:pointer;">🔄 Попробовать снова</button>
-                        <button id="elinExitBtn" style="margin-top:15px;padding:12px 30px;border:none;border-radius:20px;background:rgba(255,255,255,0.1);color:#fff;font-size:16px;cursor:pointer;margin-left:10px;">🏠 Выйти</button>
-                    </div>
-                `;
-                document.getElementById('elinResultBtn').onclick = function() {
-                    if (elinGameOverlay) elinGameOverlay.remove();
-                    startElinGame();
-                };
-                document.getElementById('elinExitBtn').onclick = function() {
-                    if (elinGameOverlay) elinGameOverlay.remove();
-                    openHeroesMenu();
-                };
-                showToast('⏰ Время вышло! Попробуйте ещё раз!');
-            }
-            container.appendChild(resultDiv);
-        }
-
-        function stopElinGame() {
-            elinGameActive = false;
-            if (elinGameInterval) { clearInterval(elinGameInterval); elinGameInterval = null; }
-            if (elinStarCreationInterval) { clearInterval(elinStarCreationInterval); elinStarCreationInterval = null; }
-            elinStars = [];
-        }
-
-        // ============================================================
-        //  ДЕЛАЕМ ФУНКЦИИ ГЛОБАЛЬНЫМИ
-        // ============================================================
-        window.openHeroesMenu = openHeroesMenu;
-        window.startElinGame = startElinGame;
-
-        // ============================================================
-        //  ЗАПУСК
-        // ============================================================
-        // Добавляем кнопку
-        setTimeout(addHeroButton, 1000);
-        setTimeout(addHeroButton, 3000);
-        setTimeout(addHeroButton, 5000);
-
-        console.log('🦄 Забава Игра готова!');
-        console.log('🦸‍♂️ Спасители звёзд активированы!');
-        console.log('🔍 openHeroesMenu доступна:', typeof openHeroesMenu === 'function');
-        console.log('🔍 startElinGame доступна:', typeof startElinGame === 'function');
+        console.log('🦄 Забава Игра загружена!');
+        console.log('🦸‍♂️ Ожидаем загрузку heroes.js...');
     </script>
-    <script src="game.js"></script>
 </body>
 </html>
