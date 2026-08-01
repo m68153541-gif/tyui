@@ -395,7 +395,6 @@
             pointer-events: none;
         }
 
-        /* Стиль для кнопки героев */
         #btnHeroes {
             background: linear-gradient(135deg, #ff6b9d, #ff2e63, #ff6b9d) !important;
             background-size: 200% 200% !important;
@@ -1020,7 +1019,6 @@
         loadHeroesProgress();
 
         function addHeroButton() {
-            console.log('🔄 Добавляем кнопку героев...');
             const btnGrid = document.getElementById('btnGrid');
             if (!btnGrid) {
                 setTimeout(addHeroButton, 500);
@@ -1049,7 +1047,6 @@
                 transition: all 0.3s ease !important;
             `;
             heroBtn.onclick = function() {
-                console.log('🦸‍♂️ Нажата кнопка!');
                 openHeroesMenu();
             };
 
@@ -1059,12 +1056,10 @@
             } else {
                 btnGrid.appendChild(heroBtn);
             }
-            console.log('✅ Кнопка героев добавлена!');
         }
 
         function openHeroesMenu() {
-            console.log('🦸‍♂️ Открываем меню героев...');
-
+            // Проверяем регистрацию
             if (typeof getCurrentUser === 'function') {
                 const user = getCurrentUser();
                 if (!user || !user.registered) {
@@ -1074,6 +1069,7 @@
                 }
             }
 
+            // Удаляем старый overlay
             const oldOverlay = document.getElementById('heroesOverlay');
             if (oldOverlay) oldOverlay.remove();
 
@@ -1093,7 +1089,7 @@
                 styleEl.id = 'heroesStyle';
                 styleEl.textContent = `
                     @keyframes heroBgGradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-                    .hero-card { background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); border-radius: 30px; padding: 20px 25px; margin: 10px 0; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+                    .hero-card { background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); border-radius: 30px; padding: 20px 25px; margin: 10px 0; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.3s ease; }
                     .hero-card:hover { background: rgba(255,255,255,0.2); transform: scale(1.02); }
                     .hero-card.locked { opacity: 0.5; filter: grayscale(0.5); cursor: not-allowed; }
                     .hero-card .status-done { color: #ffd93d; }
@@ -1147,8 +1143,8 @@
                         if (hero.id === 'elin') {
                             const overlayEl = document.getElementById('heroesOverlay');
                             if (overlayEl) overlayEl.remove();
-                            // Открываем мини-игру
-                            window.open('elin_game.html', '_blank', 'width=420,height=650');
+                            // ОТКРЫВАЕМ МИНИ-ИГРУ (правильный путь)
+                            window.open(window.location.origin + '/elin_game.html', '_blank', 'width=420,height=650');
                         } else {
                             showToast('🔄 В разработке!');
                         }
@@ -1178,8 +1174,9 @@
         // Делаем функции глобальными
         window.openHeroesMenu = openHeroesMenu;
 
-        // Дополнительные попытки добавить кнопку
-        setTimeout(addHeroButton, 1000);
+        // Добавляем кнопку несколько раз для надёжности
+        setTimeout(addHeroButton, 500);
+        setTimeout(addHeroButton, 1500);
         setTimeout(addHeroButton, 3000);
         setTimeout(addHeroButton, 5000);
 
