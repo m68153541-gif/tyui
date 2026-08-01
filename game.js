@@ -176,7 +176,7 @@ function getAllUsersList() {
 }
 
 // ============================================================
-//  БАНК (С ЕЖЕМИНУТНЫМ НАЧИСЛЕНИЕМ)
+//  БАНК
 // ============================================================
 
 function processBank() {
@@ -198,14 +198,13 @@ function processBank() {
             saveToServer();
             
             if (earned > 0) {
-                showToast('🏦 Банк: +' + earned + ' ⭐ (пассивный доход)');
+                showToast('Банк: +' + earned + ' звезд (пассивный доход)');
             }
             render();
         }
     }
 }
 
-// Запускаем проверку банка каждые 10 секунд
 setInterval(processBank, 10000);
 
 // ============================================================
@@ -366,7 +365,7 @@ function addNotification(uid, message) {
 }
 
 // ============================================================
-//  ПОДДЕРЖКА
+//  ЧАТ / ПОДДЕРЖКА
 // ============================================================
 
 function handleSupport() {
@@ -378,7 +377,7 @@ function handleSupport() {
         return;
     }
 
-    openModal('Поддержка', `
+    openModal('Жалобы', `
         <p>Опишите вашу проблему:</p>
         <input type="text" id="supportInput" placeholder="Ваше сообщение..." style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
         <button class="btn primary full" onclick="sendSupport()">Отправить</button>
@@ -1005,10 +1004,10 @@ function renderAdminCodes() {
     
     panel.style.display = 'block';
     list.innerHTML = allCodes.map((item) => `
-        <div class="code-item" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin:4px 0;background:rgba(255,255,255,0.05);border-radius:8px;">
-            <span class="code-text" onclick="copyCode('${item.code}')" style="cursor:pointer;color:#ffd700;font-weight:bold;">${item.code}</span>
-            <span class="code-type" style="color:#888;font-size:12px;">${item.type} ${item.target ? '-> ' + item.target : ''}</span>
-            <span class="code-delete" onclick="deleteCodeGlobal('${item.code}')" style="cursor:pointer;color:#ff4757;font-weight:bold;">✕</span>
+        <div class="code-item">
+            <span class="code-text" onclick="copyCode('${item.code}')">${item.code}</span>
+            <span class="code-type">${item.type} ${item.target ? '-> ' + item.target : ''}</span>
+            <span class="code-delete" onclick="deleteCodeGlobal('${item.code}')">✕</span>
         </div>
     `).join('');
 }
@@ -1132,7 +1131,7 @@ function showAdminPanel() {
 }
 
 // ============================================================
-//  АДМИН-ОСТАЛЬНОЕ (РАБОТАЕТ ЛОКАЛЬНО)
+//  АДМИН-ОСТАЛЬНОЕ (С ИСПРАВЛЕННОЙ ВЫДАЧЕЙ ЗВЕЗД)
 // ============================================================
 
 window.adminReports = function() {
@@ -1228,7 +1227,7 @@ window.showPlayerInfo = function() {
     `);
 };
 
-// ===== ВЫДАЧА ЗВЕЗД (РАБОТАЕТ ЛОКАЛЬНО) =====
+// ===== ВЫДАЧА ЗВЕЗД (ИСПРАВЛЕНО) =====
 window.adminAddStars = function(uid) {
     openModal('Добавить звёзды игроку ' + uid, `
         <input type="number" id="addStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -1249,8 +1248,10 @@ window.doAddStars = function(uid) {
         return;
     }
     
+    // Добавляем звёзды
     user.stars = (user.stars || 0) + amount;
     
+    // Добавляем уведомление игроку
     if (!user.notifications) user.notifications = [];
     user.notifications.push({
         type: 'admin_action',
@@ -1258,16 +1259,21 @@ window.doAddStars = function(uid) {
         time: new Date().toLocaleString()
     });
     
+    // Сохраняем
     saveAllData();
     saveToServer();
+    
+    // Обновляем данные на сервере для всех
     loadAllUsersFromServer();
+    loadFromServer();
     render();
+    
     showToast('+' + amount + ' звёзд игроку ' + uid);
     closeModal();
     setTimeout(function() { showPlayerInfo(); }, 500);
 };
 
-// ===== КОНФИСКАЦИЯ ЗВЕЗД (РАБОТАЕТ ЛОКАЛЬНО) =====
+// ===== КОНФИСКАЦИЯ ЗВЕЗД (ИСПРАВЛЕНО) =====
 window.adminRemoveStars = function(uid) {
     openModal('Забрать звёзды у игрока ' + uid, `
         <input type="number" id="removeStarsInput" placeholder="Количество" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -1293,8 +1299,10 @@ window.doRemoveStars = function(uid) {
         return;
     }
     
+    // Забираем звёзды
     user.stars = (user.stars || 0) - amount;
     
+    // Добавляем уведомление игроку
     if (!user.notifications) user.notifications = [];
     user.notifications.push({
         type: 'admin_action',
@@ -1302,16 +1310,21 @@ window.doRemoveStars = function(uid) {
         time: new Date().toLocaleString()
     });
     
+    // Сохраняем
     saveAllData();
     saveToServer();
+    
+    // Обновляем данные на сервере для всех
     loadAllUsersFromServer();
+    loadFromServer();
     render();
+    
     showToast('-' + amount + ' звёзд у игрока ' + uid);
     closeModal();
     setTimeout(function() { showPlayerInfo(); }, 500);
 };
 
-// ===== ПОЛНЫЙ СБРОС АККАУНТА (РАБОТАЕТ ЛОКАЛЬНО) =====
+// ===== ПОЛНЫЙ СБРОС АККАУНТА =====
 window.adminResetPlayer = function(uid) {
     if (!confirm('Вы уверены, что хотите полностью сбросить игрока ' + uid + '? Все данные будут удалены!')) return;
     
@@ -1321,7 +1334,6 @@ window.adminResetPlayer = function(uid) {
         return;
     }
     
-    // Полностью сбрасываем все данные
     user.registered = false;
     user.name = null;
     user.gender = null;
@@ -1363,7 +1375,7 @@ window.adminResetPlayer = function(uid) {
     setTimeout(function() { showAdminPanel(); }, 500);
 };
 
-// ===== ВЫДАЧА ЗВЕЗД СЕБЕ (РАБОТАЕТ ЛОКАЛЬНО) =====
+// ===== ВЫДАЧА ЗВЕЗД СЕБЕ =====
 window.adminGiveSelfStars = function() {
     openModal('Начислить звёзды себе', `
         <input type="number" id="selfStarsInput" placeholder="Сумма" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -1474,7 +1486,7 @@ window.adminTop = function() {
 };
 
 // ============================================================
-//  КОЛЕСО УДАЧИ И ОСТАЛЬНЫЕ ИГРОВЫЕ ФУНКЦИИ
+//  КОЛЕСО УДАЧИ
 // ============================================================
 
 const SEGMENTS = [
@@ -1490,7 +1502,6 @@ const SEGMENTS = [
     { label: '1000 ⭐', icon: '👑', value: 1000 }
 ];
 
-// Переименовал, чтобы избежать конфликта с canvas ctx
 let wheelCtx = null;
 let wheelSegments = [];
 let currentAngle = 0;
@@ -1499,10 +1510,7 @@ let winIndex = 0;
 
 function initWheel() {
     const canvas = document.getElementById('wheelCanvas');
-    if (!canvas) {
-        console.log('wheelCanvas не найден');
-        return;
-    }
+    if (!canvas) return;
     wheelCtx = canvas.getContext('2d');
     wheelSegments = SEGMENTS.map(s => ({ ...s }));
     drawWheel();
@@ -1588,14 +1596,6 @@ function drawWheel(highlightIndex = -1) {
     wheelCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
     wheelCtx.lineWidth = 2;
     wheelCtx.stroke();
-
-    const grad = wheelCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-    grad.addColorStop(0, 'rgba(255,215,0,0.02)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    wheelCtx.beginPath();
-    wheelCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    wheelCtx.fillStyle = grad;
-    wheelCtx.fill();
 }
 
 function spinWheel() {
@@ -1720,21 +1720,21 @@ function handleBank() {
     const deposit = user.bankDeposit || 0;
     
     if (bank > 0) {
-        openModal('🏦 Банк (1⭐/мин)', `
-            <p>💰 В банке: <strong style="color:#ffd700;">${bank}</strong> ⭐</p>
-            <p>📊 Первоначальный вклад: <strong style="color:#00d4ff;">${deposit}</strong> ⭐</p>
-            <p>📈 Ставка: <strong style="color:#ffd700;">1 ⭐ в минуту</strong></p>
-            <p style="font-size:12px;color:#888;">⏱ Доход начисляется автоматически</p>
-            <button class="btn primary full" onclick="withdrawBank()">💰 Забрать все ⭐</button>
+        openModal('Банк (1⭐/мин)', `
+            <p>В банке: <strong style="color:#ffd700;">${bank}</strong> ⭐</p>
+            <p>Первоначальный вклад: <strong style="color:#00d4ff;">${deposit}</strong> ⭐</p>
+            <p>Ставка: <strong style="color:#ffd700;">1 ⭐ в минуту</strong></p>
+            <p style="font-size:12px;color:#888;">Доход начисляется автоматически</p>
+            <button class="btn primary full" onclick="withdrawBank()">Забрать все ⭐</button>
             <button class="btn full small" onclick="closeModal();">В меню</button>
         `);
     } else {
-        openModal('🏦 Банк (1⭐/мин)', `
+        openModal('Банк (1⭐/мин)', `
             <p>Банк пуст.</p>
-            <p>📈 Ставка: <strong style="color:#ffd700;">1 ⭐ в минуту</strong></p>
-            <p style="font-size:12px;color:#888;">💡 Положите звёзды и они будут расти!</p>
+            <p>Ставка: <strong style="color:#ffd700;">1 ⭐ в минуту</strong></p>
+            <p style="font-size:12px;color:#888;">Положите звёзды и они будут расти!</p>
             <input type="number" id="bankDepositInput" placeholder="Сумма для вклада" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-            <button class="btn primary full" onclick="depositBank()">💵 Положить в банк</button>
+            <button class="btn primary full" onclick="depositBank()">Положить в банк</button>
             <button class="btn full small" onclick="closeModal();">В меню</button>
         `);
     }
@@ -1810,7 +1810,7 @@ function handleClicker() {
     const remaining = 400 - progress;
     const reward = 20;
 
-    openModal('⭐ Кликер звёзд', `
+    openModal('Кликер звёзд', `
         <div style="text-align:center;">
             <div class="clicker-star" id="clickerStar" onclick="clickStar()">⭐</div>
             <div class="clicker-stats">
@@ -1887,7 +1887,7 @@ window.claimClickerReward = function() {
 function handleCoeff() {
     const user = getCurrentUser();
     if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
-    openModal('🔥 Коэффициент', `
+    openModal('Коэффициент', `
         <p>Введите сумму (10% станут коэффициентом):</p>
         <input type="number" id="coeffInput" placeholder="Сумма" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
         <button class="btn primary full" onclick="setCoeff()">Применить</button>
@@ -1920,12 +1920,12 @@ function handlePet() {
     const stageText = stage === 1 ? 'Малыш' : stage === 2 ? 'Подросток' : stage === 3 ? 'Взрослый' : 'Гигант';
     const passive = { 1: 0, 2: 20, 3: 50, giant: 300 }[stage] || 0;
 
-    openModal('🪳 Питомец', `
+    openModal('Питомец', `
         <p><strong>${stageText}</strong></p>
         <p>Прогресс: ${progress} / ${threshold} ⭐</p>
         ${passive > 0 ? '<p>Пассивный доход: ' + passive + ' ⭐/час</p>' : ''}
         <input type="number" id="petFeedInput" placeholder="Сколько звёзд скормить?" min="1" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
-        <button class="btn primary full" onclick="feedPet()">🍖 Покормить</button>
+        <button class="btn primary full" onclick="feedPet()">Покормить</button>
         <button class="btn full small" onclick="closeModal();">В меню</button>
     `);
 }
@@ -1974,7 +1974,7 @@ window.feedPet = function() {
 function handleBuy() {
     const user = getCurrentUser();
     if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
-    openModal('🛒 Покупка попыток', `
+    openModal('Покупка попыток', `
         <p>Ваш баланс: <strong>${user.stars}</strong> ⭐</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn primary" onclick="buyAttempts(1, 100)" style="flex:1;">1 попытка — 100⭐</button>
@@ -2000,7 +2000,7 @@ window.buyAttempts = function(count, price) {
 function handleCode() {
     const user = getCurrentUser();
     if (!user.registered || user.banned) { showToast('Сначала зарегистрируйтесь!'); return; }
-    openModal('🎫 Ввести код', `
+    openModal('Ввести код', `
         <p>Введите код для активации бонуса:</p>
         <input type="text" id="codeInput" placeholder="Код" style="text-transform:uppercase;width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
         <button class="btn primary full" onclick="applyCode()">Активировать</button>
@@ -2023,32 +2023,32 @@ function handleLeaderboard() {
             html += '<tr><td>' + (i+1) + '</td><td>' + item.uid + '</td><td>' + item.name + '</td><td>' + item.stars + '</td></tr>';
         });
         html += '</tbody></table><button class="btn full small" onclick="closeModal();">В меню</button>';
-        openModal('🏆 Таблица лидеров', html);
+        openModal('Таблица лидеров', html);
     });
 }
 
 function handleRules() {
-    openModal('📜 Правила', `
+    openModal('Правила', `
         <div class="scrollable">
-            <p><strong>🎰 Колесо удачи</strong></p>
+            <p><strong>Колесо удачи</strong></p>
             <p>• 1 сектор "Ничего" (60% шанс)</p>
             <p>• 9 призовых секторов (40% шанс)</p>
             <p>• Призы: 10⭐, 25⭐, 50⭐, 100⭐, 150⭐, 200⭐, 300⭐, 500⭐, 1000⭐</p>
             <br>
-            <p><strong>🏦 Банк</strong></p>
+            <p><strong>Банк</strong></p>
             <p>• 1 ⭐ в минуту от первоначальной суммы</p>
             <br>
-            <p><strong>⭐ Кликер</strong></p>
+            <p><strong>Кликер</strong></p>
             <p>• 400 кликов → +20 ⭐</p>
             <br>
-            <p><strong>🪳 Питомец</strong></p>
+            <p><strong>Питомец</strong></p>
             <p>• Растёт от кормления звёздами</p>
             <p>• Приносит пассивный доход</p>
             <br>
-            <p><strong>🎫 Коды</strong></p>
+            <p><strong>Коды</strong></p>
             <p>• Вводите коды для бонусов</p>
             <br>
-            <p><strong>👑 Администратор всегда прав!</strong></p>
+            <p><strong>Администратор всегда прав!</strong></p>
         </div>
         <button class="btn full small" onclick="closeModal();">В меню</button>
     `);
@@ -2241,7 +2241,7 @@ function renderContest() {
 function showRegistration() {
     const uids = generateThreeUids();
     
-    openModal('📝 Регистрация', `
+    openModal('Регистрация', `
         <p>Добро пожаловать! Давайте зарегистрируемся.</p>
         <p>Введите ваше имя:</p>
         <input type="text" id="regName" placeholder="Имя" style="width:100%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #444;background:#222;color:#fff;" />
@@ -2356,7 +2356,6 @@ function checkRegistration() {
 
 console.log('game.js загружен, инициализация...');
 
-// Ждём DOM для инициализации
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initGame);
 } else {
@@ -2381,23 +2380,7 @@ function initGame() {
     const wheelCloseBtn = document.getElementById('wheelCloseBtn');
     const wheelCanvas = document.getElementById('wheelCanvas');
     
-    if (btnPlay) btnPlay.addEventListener('click', function() {
-        const user = getCurrentUser();
-        if (!user.registered) {
-            showToast('Сначала зарегистрируйтесь!');
-            return;
-        }
-        if (user.banned) {
-            showToast('Вы заблокированы. Причина: ' + (user.banned_reason || 'Нарушение правил'));
-            return;
-        }
-        if (user.attempts <= 0) {
-            showToast('Попыток нет! Купите в меню.');
-            return;
-        }
-        openWheel();
-    });
-    
+    if (btnPlay) btnPlay.addEventListener('click', handlePlay);
     if (btnBank) btnBank.addEventListener('click', handleBank);
     if (btnClicker) btnClicker.addEventListener('click', handleClicker);
     if (btnCoeff) btnCoeff.addEventListener('click', handleCoeff);
@@ -2413,7 +2396,6 @@ function initGame() {
     if (wheelCloseBtn) wheelCloseBtn.addEventListener('click', closeWheel);
     if (wheelCanvas) wheelCanvas.addEventListener('click', spinWheel);
     
-    // Загружаем данные
     render();
     initWheel();
     
