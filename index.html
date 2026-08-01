@@ -441,7 +441,6 @@
             100% { background-position: 0% 50%; }
         }
 
-        /* Украшения - парящие сердечки и звёздочки */
         .floating-decoration {
             position: absolute;
             pointer-events: none;
@@ -466,7 +465,6 @@
             75% { transform: translateY(-15px) rotate(5deg); opacity: 0.4; }
         }
 
-        /* Сияющие звёзды на фоне */
         .bg-star-elin {
             position: absolute;
             color: rgba(255, 255, 255, 0.05);
@@ -482,7 +480,7 @@
 
         @keyframes elinFall {
             0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
-            100% { transform: translateY(calc(100% + 100px)) rotate(720deg); opacity: 0.6; }
+            100% { transform: translateY(calc(100% + 150px)) rotate(720deg); opacity: 0.3; }
         }
 
         @keyframes elinCatch {
@@ -494,14 +492,6 @@
         @keyframes pulseBtn {
             0%, 100% { box-shadow: 0 0 60px rgba(255,105,180,0.3); }
             50% { box-shadow: 0 0 80px rgba(255,105,180,0.6); }
-        }
-
-        .bg-star {
-            position: absolute;
-            color: rgba(255, 255, 255, 0.05);
-            font-size: 20px;
-            animation: sparkleElin linear infinite;
-            pointer-events: none;
         }
 
         #elinTopPanel {
@@ -540,7 +530,7 @@
             z-index: 1;
             user-select: none;
             text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-            animation: elinFall 5s linear forwards;
+            animation: elinFall 3s linear forwards;
             transition: transform 0.1s;
             font-size: 30px;
         }
@@ -1089,8 +1079,8 @@
         <div class="floating-decoration">🌺</div>
 
         <div id="elinTopPanel">
-            <div class="timer">⏱️ <span id="elinTimer">03:00</span></div>
-            <div class="score">⭐ <span id="elinScore">0</span> / 150</div>
+            <div class="timer">⏱️ <span id="elinTimer">02:00</span></div>
+            <div class="score">⭐ <span id="elinScore">0</span> / 200</div>
             <button id="elinBackBtn">✖</button>
         </div>
         <div id="elinStarsContainer">
@@ -1363,7 +1353,7 @@
             container.appendChild(title);
 
             const heroes = [
-                { id: 'elin', name: 'Элин', emoji: '👩‍🚀', desc: 'Собери 150 звёзд за 3 минуты' },
+                { id: 'elin', name: 'Элин', emoji: '👩‍🚀', desc: 'Собери 200 звёзд за 2 минуты' },
                 { id: 'mark', name: 'Марк', emoji: '🧑‍🚀', desc: 'В разработке...' },
                 { id: 'comics', name: 'Комикс', emoji: '🦸', desc: 'В разработке...' },
                 { id: 'evna', name: 'Евна', emoji: '👩‍💻', desc: 'В разработке...' }
@@ -1425,15 +1415,16 @@
         }
 
         // ============================================================
-        //  ИГРА ЭЛИН - ОБНОВЛЕННАЯ
+        //  ИГРА ЭЛИН - ОБНОВЛЕННАЯ (2 МИНУТЫ, 200 ЗВЁЗД)
         // ============================================================
         let elinInterval = null;
         let elinStarInt = null;
         let elinStars = [];
         let elinCollected = 0;
-        let elinTimeLeft = 180;
+        let elinTimeLeft = 120; // 2 минуты
         let elinActive = false;
         let elinOver = false;
+        let totalStarsSpawned = 0;
 
         function startElinGame() {
             const overlay = document.getElementById('elinGameOverlay');
@@ -1457,10 +1448,11 @@
 
             // Сброс
             elinCollected = 0;
-            elinTimeLeft = 180;
+            elinTimeLeft = 120;
             elinActive = false;
             elinOver = false;
             elinStars = [];
+            totalStarsSpawned = 0;
 
             document.getElementById('elinScore').textContent = '0';
             updateElinTimer();
@@ -1483,15 +1475,16 @@
             startBtn.style.display = 'none';
 
             elinCollected = 0;
-            elinTimeLeft = 180;
+            elinTimeLeft = 120;
             elinActive = true;
             elinOver = false;
             elinStars = [];
+            totalStarsSpawned = 0;
 
             document.getElementById('elinScore').textContent = '0';
             updateElinTimer();
 
-            // Таймер
+            // Таймер (2 минуты)
             if (elinInterval) clearInterval(elinInterval);
             elinInterval = setInterval(function() {
                 elinTimeLeft--;
@@ -1501,18 +1494,26 @@
                 }
             }, 1000);
 
-            // Создание звёзд (чаще)
+            // Создание звёзд - реже, но быстрее (каждые 350мс)
             if (elinStarInt) clearInterval(elinStarInt);
             elinStarInt = setInterval(function() {
-                if (elinActive && !elinOver) createElinStar();
-            }, 300);
+                if (elinActive && !elinOver) {
+                    createElinStar();
+                    totalStarsSpawned++;
+                }
+            }, 350);
 
-            // Начальные звёзды (больше)
-            for (let i = 0; i < 25; i++) {
-                setTimeout(function() { createElinStar(); }, i * 150);
+            // Начальные звёзды
+            for (let i = 0; i < 10; i++) {
+                setTimeout(function() { 
+                    if (elinActive && !elinOver) {
+                        createElinStar();
+                        totalStarsSpawned++;
+                    }
+                }, i * 200);
             }
 
-            showToast('🌟 Собирайте звёзды! Нужно 150 за 3 минуты!');
+            showToast('🌟 Собирайте звёзды! Нужно 200 за 2 минуты!');
         }
 
         function createElinStar() {
@@ -1521,8 +1522,9 @@
             const container = document.getElementById('elinStarsContainer');
             if (!container) return;
 
+            // Ограничиваем количество звёзд на экране
             const existing = container.querySelectorAll('.elin-falling-star');
-            if (existing.length > 50) return;
+            if (existing.length > 30) return;
 
             const star = document.createElement('div');
             star.className = 'elin-falling-star';
@@ -1531,7 +1533,7 @@
             star.style.left = (Math.random() * 90 + 5) + '%';
             star.style.top = '-50px';
             star.style.fontSize = (Math.random() * 20 + 25) + 'px';
-            star.style.animationDuration = (Math.random() * 3 + 4) + 's'; // 4-7 секунд
+            star.style.animationDuration = (Math.random() * 2 + 2.5) + 's'; // 2.5-4.5 секунды
             star.dataset.caught = 'false';
 
             star.onclick = function(e) {
@@ -1547,24 +1549,9 @@
                 this.style.color = '#ffd93d';
                 this.style.textShadow = '0 0 40px rgba(255,215,0,0.8)';
 
-                // Эффект при клике
-                const clickEffect = document.createElement('div');
-                clickEffect.textContent = '✨';
-                clickEffect.style.cssText = `
-                    position: absolute;
-                    pointer-events: none;
-                    font-size: 30px;
-                    left: ${this.style.left};
-                    top: ${this.style.top};
-                    animation: elinCatch 0.5s ease forwards;
-                    z-index: 5;
-                `;
-                container.appendChild(clickEffect);
-                setTimeout(() => clickEffect.remove(), 500);
-
                 setTimeout(function() { if (this && this.parentNode) this.remove(); }, 400);
 
-                if (elinCollected >= 150) {
+                if (elinCollected >= 200) {
                     endElinGame(true);
                 }
             };
@@ -1572,14 +1559,14 @@
             container.appendChild(star);
             elinStars.push(star);
 
-            // Автоудаление если звезда упала
+            // Автоудаление если звезда упала за экран
             setTimeout(function() {
                 if (star.parentNode && star.dataset.caught === 'false') {
                     star.remove();
                     const index = elinStars.indexOf(star);
                     if (index > -1) elinStars.splice(index, 1);
                 }
-            }, 7000);
+            }, 5000);
         }
 
         function updateElinTimer() {
@@ -1629,7 +1616,7 @@
                 resultDiv.innerHTML = `
                     <div class="big">🎉</div>
                     <div class="title win">ПОБЕДА!</div>
-                    <div class="desc">Вы собрали ${elinCollected} ⭐ за 3 минуты!</div>
+                    <div class="desc">Вы собрали ${elinCollected} ⭐ за 2 минуты!</div>
                     <div class="reward">🎁 Награда: +50 звёзд на аккаунт!</div>
                     <button class="btn-result win" onclick="closeElinGame(true)">✅ Отлично!</button>
                 `;
@@ -1637,7 +1624,7 @@
                 resultDiv.innerHTML = `
                     <div class="big">😢</div>
                     <div class="title lose">ВРЕМЯ ВЫШЛО!</div>
-                    <div class="desc">Вы собрали ${elinCollected} ⭐ из 150</div>
+                    <div class="desc">Вы собрали ${elinCollected} ⭐ из 200</div>
                     <div class="reward">Попробуйте ещё раз!</div>
                     <button class="btn-result retry" onclick="retryElinGame()" style="margin-right:10px;">🔄 Попробовать снова</button>
                     <button class="btn-result exit" onclick="closeElinGame(false)">🏠 Выйти</button>
