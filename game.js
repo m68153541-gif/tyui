@@ -1,4 +1,4 @@
-console.log('🦄 Забава Игра v2.0');
+console.log('🦄 Забава Игра v2.1');
 
 // ============================================================
 //  ID (НОВЫЙ - 5 ЦИФР)
@@ -45,7 +45,7 @@ function getUserId() {
 window.users = window.users || {};
 window.uidMap = window.uidMap || {};
 window.bannedUsers = window.bannedUsers || {};
-window.codes = window.codes || {}; // {code: {used_by: [], type: 'attempts'}}
+window.codes = window.codes || {};
 
 const SERVER_URL = window.location.origin;
 
@@ -189,7 +189,7 @@ function addAttemptsPerHour() {
     }
 }
 
-setInterval(addAttemptsPerHour, 60000); // Проверяем каждую минуту
+setInterval(addAttemptsPerHour, 60000);
 
 // ============================================================
 //  БАНК (10 ЗВЕЗД В МИНУТУ)
@@ -223,6 +223,37 @@ function processBank() {
 setInterval(processBank, 10000);
 
 // ============================================================
+//  ПИТОМЕЦ (С ПАССИВНЫМ ДОХОДОМ)
+// ============================================================
+
+function processPetPassive() {
+    const user = getCurrentUser();
+    if (!user || !user.registered || user.banned) return;
+    
+    const now = Date.now();
+    const lastTime = user.lastPassiveTime || now;
+    const hoursPassed = Math.floor((now - lastTime) / 3600000);
+    
+    if (hoursPassed > 0) {
+        const stage = user.petStage || 1;
+        const passiveRates = { 1: 0, 2: 20, 3: 50, 4: 100 };
+        const rate = passiveRates[stage] || 0;
+        
+        if (rate > 0) {
+            const earned = rate * hoursPassed;
+            user.stars = (user.stars || 0) + earned;
+            user.lastPassiveTime = now;
+            saveAllData();
+            saveToServer();
+            showToast('🦄 Питомец: +' + earned + ' ⭐ (пассивный доход)');
+            render();
+        }
+    }
+}
+
+setInterval(processPetPassive, 60000);
+
+// ============================================================
 //  КОЭФФИЦИЕНТ (15%)
 // ============================================================
 
@@ -254,35 +285,8 @@ window.setCoeff = function() {
 };
 
 // ============================================================
-//  ПИТОМЕЦ (С ПАССИВНЫМ ДОХОДОМ)
+//  ПИТОМЕЦ
 // ============================================================
-
-function processPetPassive() {
-    const user = getCurrentUser();
-    if (!user || !user.registered || user.banned) return;
-    
-    const now = Date.now();
-    const lastTime = user.lastPassiveTime || now;
-    const hoursPassed = Math.floor((now - lastTime) / 3600000);
-    
-    if (hoursPassed > 0) {
-        const stage = user.petStage || 1;
-        const passiveRates = { 1: 0, 2: 20, 3: 50, 4: 100 };
-        const rate = passiveRates[stage] || 0;
-        
-        if (rate > 0) {
-            const earned = rate * hoursPassed;
-            user.stars = (user.stars || 0) + earned;
-            user.lastPassiveTime = now;
-            saveAllData();
-            saveToServer();
-            showToast('🦄 Питомец: +' + earned + ' ⭐ (пассивный доход)');
-            render();
-        }
-    }
-}
-
-setInterval(processPetPassive, 60000);
 
 function handlePet() {
     const user = getCurrentUser();
@@ -606,7 +610,7 @@ window.adminSendMessage = function(uid) {
 
     // Уведомление игроку
     const user = getUserByUid(uid);
-    addNotification(uid, '📩 Новое сообщение от администратора', 'chat');
+    addNotification(uid, '📩 Новое сообщение от администратора: ' + text, 'chat');
 
     showToast('Сообщение отправлено игроку');
     closeModal();
@@ -651,7 +655,7 @@ function showAdminChat(uid) {
 }
 
 // ============================================================
-//  АДМИН-ПАНЕЛЬ (ОБНОВЛЕННАЯ)
+//  АДМИН-ПАНЕЛЬ
 // ============================================================
 
 function handleAdmin() {
@@ -861,7 +865,7 @@ function fallbackCopyCode(text) {
 }
 
 // ============================================================
-//  АДМИН: ИГРОКИ
+//  АДМИН: ИГРОКИ (ИСПРАВЛЕНО)
 // ============================================================
 
 window.adminPlayerMenu = function() {
@@ -873,7 +877,7 @@ window.adminPlayerMenu = function() {
     `);
 };
 
-window.showPlayerInfo = function() {
+window.showPlayerInfo = async function() {
     const input = document.getElementById('playerUidInput');
     if (!input) return;
     const uid = input.value.trim();
@@ -882,56 +886,58 @@ window.showPlayerInfo = function() {
         return; 
     }
     
-    // Загружаем свежие данные
-    loadAllUsersFromServer().then(() => {
-        const user = getUserByUid(uid);
-        if (!user) { 
-            showToast('Игрок с таким UID не найден!');
-            return;
-        }
+    // Загружаем свежие данные с сервера
+    await loadAllUsersFromServer();
+    await loadFromServer();
+    
+    const user = getUserByUid(uid);
+    if (!user) { 
+        showToast('Игрок с таким UID не найден!');
+        return;
+    }
 
-        const isBanned = user.banned || window.bannedUsers[uid] !== undefined;
-        const banReason = user.banned_reason || window.bannedUsers[uid] || '—';
-        const name = user.name || '—';
-        const gender = user.gender || '—';
-        const age = user.age || '—';
-        const stars = user.stars || 0;
-        const bank = user.bank || 0;
-        const attempts = user.attempts || 0;
-        const coeff = user.coefficientRate || 0;
-        const clickerProgress = user.clickerProgress || 0;
-        const regDate = user.registrationDate ? new Date(user.registrationDate).toLocaleDateString() : '—';
+    // Проверяем бан из глобальных данных
+    const isBanned = user.banned || window.bannedUsers[uid] !== undefined;
+    const banReason = user.banned_reason || window.bannedUsers[uid] || '—';
+    const name = user.name || '—';
+    const gender = user.gender || '—';
+    const age = user.age || '—';
+    const stars = user.stars || 0;
+    const bank = user.bank || 0;
+    const attempts = user.attempts || 0;
+    const coeff = user.coefficientRate || 0;
+    const clickerProgress = user.clickerProgress || 0;
+    const regDate = user.registrationDate ? new Date(user.registrationDate).toLocaleDateString() : '—';
 
-        openModal('👤 Игрок: ' + name + ' (' + uid + ')', `
-            <p><strong>📊 Статистика:</strong></p>
-            <p>👤 Имя: ${name}</p>
-            <p>⚧ Пол: ${gender}</p>
-            <p>🎂 Возраст: ${age}</p>
-            <p>📅 Дата регистрации: ${regDate}</p>
-            <p>⭐ Звёзды: <strong style="color:#ffd93d;">${stars}</strong></p>
-            <p>🏦 Банк: <strong style="color:#7ed6df;">${bank}</strong></p>
-            <p>🎮 Попытки: ${attempts}</p>
-            <p>🔥 Коэффициент: +${coeff}</p>
-            <p>🦄 Кликер: ${clickerProgress}/400</p>
-            <p>🚫 Статус: ${isBanned ? '❌ ЗАБЛОКИРОВАН' : '✅ Активен'}</p>
-            ${isBanned ? '<p style="color:#ff4757;">📝 Причина: ' + banReason + '</p>' : ''}
-            <hr />
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <button class="btn small" onclick="adminAddStars('${uid}')">⭐ + Звёзды</button>
-                <button class="btn small danger" onclick="adminRemoveStars('${uid}')">⭐ - Звёзды</button>
-                ${isBanned ? 
-                    '<button class="btn small" onclick="adminUnbanUserByUid(\'' + uid + '\')">✅ Разбан</button>' :
-                    '<button class="btn small danger" onclick="adminBanUserByUid(\'' + uid + '\')">🚫 Бан</button>'
-                }
-                <button class="btn small" onclick="adminOpenChat(' + "'" + uid + "'" + ')">💬 Чат</button>
-            </div>
-            <button class="btn full small" onclick="closeModal(); showAdminPanel();">Назад</button>
-        `);
-    });
+    openModal('👤 Игрок: ' + name + ' (' + uid + ')', `
+        <p><strong>📊 Статистика:</strong></p>
+        <p>👤 Имя: ${name}</p>
+        <p>⚧ Пол: ${gender}</p>
+        <p>🎂 Возраст: ${age}</p>
+        <p>📅 Дата регистрации: ${regDate}</p>
+        <p>⭐ Звёзды: <strong style="color:#ffd93d;">${stars}</strong></p>
+        <p>🏦 Банк: <strong style="color:#7ed6df;">${bank}</strong></p>
+        <p>🎮 Попытки: ${attempts}</p>
+        <p>🔥 Коэффициент: +${coeff}</p>
+        <p>🦄 Кликер: ${clickerProgress}/400</p>
+        <p>🚫 Статус: ${isBanned ? '❌ ЗАБЛОКИРОВАН' : '✅ Активен'}</p>
+        ${isBanned ? '<p style="color:#ff4757;">📝 Причина: ' + banReason + '</p>' : ''}
+        <hr />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button class="btn small" onclick="adminAddStars('${uid}')">⭐ + Звёзды</button>
+            <button class="btn small danger" onclick="adminRemoveStars('${uid}')">⭐ - Звёзды</button>
+            ${isBanned ? 
+                '<button class="btn small" onclick="adminUnbanUserByUid(\'' + uid + '\')">✅ Разбан</button>' :
+                '<button class="btn small danger" onclick="adminBanUserByUid(\'' + uid + '\')">🚫 Бан</button>'
+            }
+            <button class="btn small" onclick="adminOpenChat(' + "'" + uid + "'" + ')">💬 Чат</button>
+        </div>
+        <button class="btn full small" onclick="closeModal(); showAdminPanel();">Назад</button>
+    `);
 };
 
 // ============================================================
-//  АДМИН: ВЫДАЧА/КОНФИСКАЦИЯ ЗВЕЗД
+//  АДМИН: ВЫДАЧА ЗВЕЗД (ИСПРАВЛЕНО)
 // ============================================================
 
 window.adminAddStars = function(uid) {
@@ -949,20 +955,46 @@ window.doAddStars = async function(uid) {
     const amount = parseInt(input.value);
     if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
     
-    const user = getUserByUid(uid);
-    if (!user) { showToast('Игрок не найден'); return; }
-    
-    user.stars = (user.stars || 0) + amount;
-    addNotification(uid, '⭐ Администратор начислил вам ' + amount + ' звёзд', 'admin_action');
-    
-    saveAllData();
-    saveToServer();
-    loadAllUsersFromServer();
-    render();
-    showToast('+' + amount + ' звёзд игроку ' + uid);
-    closeModal();
-    setTimeout(() => showPlayerInfo(), 500);
+    try {
+        // 1. Отправляем запрос на сервер
+        const response = await fetch(SERVER_URL + '/api/admin_add_stars', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uid: uid, amount: amount })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            // 2. Обновляем локальные данные
+            const user = getUserByUid(uid);
+            if (user) {
+                user.stars = (user.stars || 0) + amount;
+                // Добавляем уведомление игроку
+                addNotification(uid, '⭐ Администратор начислил вам ' + amount + ' звёзд', 'admin_action');
+                saveAllData();
+                saveToServer();
+            }
+            
+            // 3. Обновляем отображение
+            await loadAllUsersFromServer();
+            await loadFromServer();
+            render();
+            
+            showToast('✅ +' + amount + ' звёзд игроку ' + uid);
+            closeModal();
+            setTimeout(() => showPlayerInfo(), 500);
+        } else {
+            showToast('❌ Ошибка: ' + data.message);
+        }
+    } catch(e) {
+        console.error('Ошибка выдачи звёзд:', e);
+        showToast('❌ Ошибка сервера');
+    }
 };
+
+// ============================================================
+//  АДМИН: КОНФИСКАЦИЯ ЗВЕЗД (ИСПРАВЛЕНО)
+// ============================================================
 
 window.adminRemoveStars = function(uid) {
     openModal('⭐ Забрать звёзды у игрока', `
@@ -979,28 +1011,56 @@ window.doRemoveStars = async function(uid) {
     const amount = parseInt(input.value);
     if (!amount || amount <= 0) { showToast('Введите сумму'); return; }
     
-    const user = getUserByUid(uid);
-    if (!user) { showToast('Игрок не найден'); return; }
-    
-    if ((user.stars || 0) < amount) {
-        showToast('Недостаточно звёзд у игрока!');
-        return;
+    try {
+        // 1. Проверяем наличие звёзд у игрока
+        const user = getUserByUid(uid);
+        if (!user) {
+            showToast('Игрок не найден');
+            return;
+        }
+        
+        if ((user.stars || 0) < amount) {
+            showToast('❌ Недостаточно звёзд у игрока!');
+            return;
+        }
+        
+        // 2. Отправляем запрос на сервер
+        const response = await fetch(SERVER_URL + '/api/admin_remove_stars', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uid: uid, amount: amount })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            // 3. Обновляем локальные данные
+            if (user) {
+                user.stars = (user.stars || 0) - amount;
+                // Добавляем уведомление игроку
+                addNotification(uid, '⭐ Администратор забрал у вас ' + amount + ' звёзд', 'admin_action');
+                saveAllData();
+                saveToServer();
+            }
+            
+            // 4. Обновляем отображение
+            await loadAllUsersFromServer();
+            await loadFromServer();
+            render();
+            
+            showToast('✅ -' + amount + ' звёзд у игрока ' + uid);
+            closeModal();
+            setTimeout(() => showPlayerInfo(), 500);
+        } else {
+            showToast('❌ Ошибка: ' + data.message);
+        }
+    } catch(e) {
+        console.error('Ошибка конфискации звёзд:', e);
+        showToast('❌ Ошибка сервера');
     }
-    
-    user.stars = (user.stars || 0) - amount;
-    addNotification(uid, '⭐ Администратор забрал у вас ' + amount + ' звёзд', 'admin_action');
-    
-    saveAllData();
-    saveToServer();
-    loadAllUsersFromServer();
-    render();
-    showToast('-' + amount + ' звёзд у игрока ' + uid);
-    closeModal();
-    setTimeout(() => showPlayerInfo(), 500);
 };
 
 // ============================================================
-//  АДМИН: БАН / РАЗБАН
+//  АДМИН: БАН / РАЗБАН (ИСПРАВЛЕНО)
 // ============================================================
 
 window.adminBanUserByUid = function(uid) {
@@ -1018,39 +1078,62 @@ window.doBanUser = async function(uid) {
     if (!input) return;
     const reason = input.value.trim() || 'Нарушение правил';
     
-    window.bannedUsers[uid] = reason;
-    const user = getUserByUid(uid);
-    if (user) {
-        user.banned = true;
-        user.banned_reason = reason;
-        // Блокируем все кнопки, кроме поддержки
-        addNotification(uid, '🚫 Вас заблокировали. Причина: ' + reason, 'ban');
+    try {
+        // 1. Обновляем локальные данные
+        window.bannedUsers[uid] = reason;
+        const user = getUserByUid(uid);
+        if (user) {
+            user.banned = true;
+            user.banned_reason = reason;
+            addNotification(uid, '🚫 Вас заблокировали. Причина: ' + reason, 'ban');
+            saveAllData();
+        }
+        
+        // 2. Синхронизируем с сервером
+        await syncGlobalData();
+        
+        // 3. Обновляем отображение
+        await loadAllUsersFromServer();
+        await loadFromServer();
+        render();
+        
+        showToast('✅ ' + uid + ' заблокирован. Причина: ' + reason);
+        closeModal();
+        setTimeout(() => showPlayerInfo(), 500);
+    } catch(e) {
+        console.error('Ошибка бана:', e);
+        showToast('❌ Ошибка сервера');
     }
-    saveAllData();
-    await syncGlobalData();
-    showToast(uid + ' заблокирован. Причина: ' + reason);
-    closeModal();
-    render();
-    saveAllData();
-    setTimeout(() => showPlayerInfo(), 500);
 };
 
 window.adminUnbanUserByUid = async function(uid) {
-    if (window.bannedUsers[uid]) {
-        delete window.bannedUsers[uid];
+    try {
+        // 1. Обновляем локальные данные
+        if (window.bannedUsers[uid]) {
+            delete window.bannedUsers[uid];
+        }
         const user = getUserByUid(uid);
         if (user) {
             user.banned = false;
             user.banned_reason = '';
             addNotification(uid, '✅ Вас разблокировали!', 'admin_action');
+            saveAllData();
         }
-        saveAllData();
+        
+        // 2. Синхронизируем с сервером
         await syncGlobalData();
-        showToast(uid + ' разблокирован');
-        closeModal();
+        
+        // 3. Обновляем отображение
+        await loadAllUsersFromServer();
+        await loadFromServer();
         render();
-        saveAllData();
+        
+        showToast('✅ ' + uid + ' разблокирован');
+        closeModal();
         setTimeout(() => showPlayerInfo(), 500);
+    } catch(e) {
+        console.error('Ошибка разбана:', e);
+        showToast('❌ Ошибка сервера');
     }
 };
 
@@ -1125,7 +1208,7 @@ window.adminTop = function() {
 };
 
 // ============================================================
-//  КОЛЕСО УДАЧИ (НЕ ТРОГАЕМ)
+//  КОЛЕСО УДАЧИ
 // ============================================================
 
 const SEGMENTS = [
@@ -1612,14 +1695,12 @@ function handleRules() {
 }
 
 // ============================================================
-//  РЕГИСТРАЦИЯ (ОБНОВЛЕННАЯ)
+//  РЕГИСТРАЦИЯ
 // ============================================================
 
 function showRegistration() {
     const user = getCurrentUser();
-    // Генерируем новый UID
     let newUid = generateNewUid();
-    // Проверяем, что такой UID не занят
     while (window.uidMap[newUid]) {
         newUid = generateNewUid();
     }
@@ -1669,7 +1750,6 @@ function checkRegistrationReady() {
     }
 }
 
-// Добавляем обработчики для проверки ввода
 document.addEventListener('DOMContentLoaded', function() {
     const nameInput = document.getElementById('regName');
     const ageInput = document.getElementById('regAge');
@@ -1719,7 +1799,6 @@ function checkRegistration() {
     if (!user.registered) {
         showRegistration();
     } else if (!user.uid || !window.uidMap[user.uid]) {
-        // Если UID потерялся - восстанавливаем
         const newUid = generateNewUid();
         user.uid = newUid;
         window.uidMap[newUid] = getUserId();
@@ -1856,7 +1935,6 @@ function render() {
         if (user.banned) {
             statusEl.textContent = '🚫 ЗАБЛОКИРОВАН: ' + (user.banned_reason || 'Нарушение правил');
             statusEl.style.color = '#ff4757';
-            // Блокируем все кнопки кроме поддержки
             document.querySelectorAll('.btn-grid .btn').forEach(btn => {
                 if (btn.id !== 'btnSupport') {
                     btn.style.opacity = '0.3';
@@ -1889,10 +1967,8 @@ function render() {
     // Проверяем непрочитанные уведомления
     const unread = getUnreadNotifications(user.uid);
     if (unread.length > 0) {
-        // Показываем первое непрочитанное уведомление
         const notif = unread[0];
         showToast('🔔 ' + notif.message, 5000);
-        // Отмечаем как прочитанное
         notif.read = true;
         saveAllData();
         saveToServer();
@@ -1933,7 +2009,7 @@ function renderContest() {
 //  ИНИЦИАЛИЗАЦИЯ
 // ============================================================
 
-console.log('🦄 game.js v2.0 загружен, инициализация...');
+console.log('🦄 game.js v2.1 загружен, инициализация...');
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initGame);
@@ -2003,4 +2079,4 @@ setInterval(() => {
     render();
 }, 5000);
 
-console.log('🦄 Забава Игра v2.0 готова!');
+console.log('🦄 Забава Игра v2.1 готова!');
