@@ -412,7 +412,7 @@
             100% { background-position: 0% 50%; }
         }
 
-        /* Стили для игры Элин внутри модалки */
+        /* Стили для игры Элин */
         #elinGameOverlay {
             position: fixed;
             top: 0;
@@ -1344,7 +1344,6 @@
                         if (hero.id === 'elin') {
                             const overlayEl = document.getElementById('heroesOverlay');
                             if (overlayEl) overlayEl.remove();
-                            // ЗАПУСКАЕМ ИГРУ ВНУТРИ
                             startElinGame();
                         } else {
                             showToast('🔄 В разработке!');
@@ -1373,81 +1372,59 @@
         }
 
         // ============================================================
-        //  ИГРА ЭЛИН (ВНУТРИ)
+        //  ИГРА ЭЛИН - ПЕРЕПИСАНА
         // ============================================================
-        let elinGameInterval = null;
-        let elinStarInterval = null;
+        let elinInterval = null;
+        let elinStarInt = null;
         let elinStars = [];
         let elinCollected = 0;
         let elinTimeLeft = 180;
-        let elinGameActive = false;
-        let elinGameOver = false;
+        let elinActive = false;
+        let elinOver = false;
 
         function startElinGame() {
             const overlay = document.getElementById('elinGameOverlay');
             overlay.classList.add('active');
             
-            // Сбрасываем состояние
+            // Сброс
             elinCollected = 0;
             elinTimeLeft = 180;
-            elinGameActive = false;
-            elinGameOver = false;
+            elinActive = false;
+            elinOver = false;
             elinStars = [];
             
             document.getElementById('elinScore').textContent = '0';
             updateElinTimer();
             
-            // Удаляем старые звёзды
+            // Удаляем старые звёзды и результаты
             document.querySelectorAll('.elin-falling-star').forEach(s => s.remove());
-            
-            // Удаляем старые результаты
             const oldResult = document.getElementById('elinStarsContainer').querySelector('.elin-result');
             if (oldResult) oldResult.remove();
             
             // Показываем кнопку "Начать"
-            let startBtn = document.getElementById('elinStartBtn');
-            if (!startBtn) {
-                startBtn = document.createElement('button');
-                startBtn.id = 'elinStartBtn';
-                startBtn.textContent = '🌟 НАЧАТЬ';
-                startBtn.style.cssText = `
-                    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                    padding: 20px 50px; border: none; border-radius: 30px;
-                    background: linear-gradient(135deg, #ff6b9d, #ff2e63); color: #ffffff;
-                    font-size: 24px; font-weight: 700; cursor: pointer; z-index: 10;
-                    box-shadow: 0 0 60px rgba(255,105,180,0.3); animation: pulseBtn 2s ease-in-out infinite;
-                    transition: transform 0.3s;
-                `;
-                startBtn.onmouseover = function() {
-                    this.style.transform = 'translate(-50%, -50%) scale(1.05)';
-                };
-                startBtn.onmouseout = function() {
-                    this.style.transform = 'translate(-50%, -50%) scale(1)';
-                };
-                startBtn.onclick = function() {
-                    startElinGameplay();
-                };
-                document.getElementById('elinStarsContainer').appendChild(startBtn);
-            }
+            const startBtn = document.getElementById('elinStartBtn');
             startBtn.style.display = 'block';
+            startBtn.onclick = function() {
+                startElinGameplay();
+            };
         }
 
         function startElinGameplay() {
             const startBtn = document.getElementById('elinStartBtn');
-            if (startBtn) startBtn.style.display = 'none';
+            startBtn.style.display = 'none';
             
             elinCollected = 0;
             elinTimeLeft = 180;
-            elinGameActive = true;
-            elinGameOver = false;
+            elinActive = true;
+            elinOver = false;
             elinStars = [];
             
             document.getElementById('elinScore').textContent = '0';
             updateElinTimer();
             
             // Таймер
-            if (elinGameInterval) clearInterval(elinGameInterval);
-            elinGameInterval = setInterval(function() {
+            if (elinInterval) clearInterval(elinInterval);
+            elinInterval = setInterval(function() {
                 elinTimeLeft--;
                 updateElinTimer();
                 if (elinTimeLeft <= 0) {
@@ -1456,12 +1433,11 @@
             }, 1000);
             
             // Создание звёзд
-            if (elinStarInterval) clearInterval(elinStarInterval);
-            elinStarInterval = setInterval(function() {
-                if (elinGameActive && !elinGameOver) createElinStar();
+            if (elinStarInt) clearInterval(elinStarInt);
+            elinStarInt = setInterval(function() {
+                if (elinActive && !elinOver) createElinStar();
             }, 400);
             
-            // Начальные звёзды
             for (let i = 0; i < 15; i++) {
                 setTimeout(function() { createElinStar(); }, i * 200);
             }
@@ -1470,7 +1446,7 @@
         }
 
         function createElinStar() {
-            if (!elinGameActive || elinGameOver) return;
+            if (!elinActive || elinOver) return;
             
             const container = document.getElementById('elinStarsContainer');
             if (!container) return;
@@ -1491,7 +1467,7 @@
             star.onclick = function(e) {
                 e.stopPropagation();
                 if (this.dataset.caught === 'true') return;
-                if (!elinGameActive || elinGameOver) return;
+                if (!elinActive || elinOver) return;
                 
                 this.dataset.caught = 'true';
                 this.classList.add('caught');
@@ -1530,12 +1506,12 @@
         }
 
         function endElinGame(won) {
-            if (elinGameOver) return;
-            elinGameOver = true;
-            elinGameActive = false;
+            if (elinOver) return;
+            elinOver = true;
+            elinActive = false;
             
-            if (elinGameInterval) { clearInterval(elinGameInterval); elinGameInterval = null; }
-            if (elinStarInterval) { clearInterval(elinStarInterval); elinStarInterval = null; }
+            if (elinInterval) { clearInterval(elinInterval); elinInterval = null; }
+            if (elinStarInt) { clearInterval(elinStarInt); elinStarInt = null; }
             
             document.querySelectorAll('.elin-falling-star').forEach(function(s) { s.remove(); });
             elinStars = [];
@@ -1600,12 +1576,12 @@
 
         // Кнопка назад в игре
         document.getElementById('elinBackBtn').onclick = function() {
-            if (elinGameActive) {
+            if (elinActive) {
                 if (confirm('Вы уверены, что хотите выйти? Прогресс будет потерян!')) {
-                    elinGameActive = false;
-                    elinGameOver = true;
-                    if (elinGameInterval) { clearInterval(elinGameInterval); elinGameInterval = null; }
-                    if (elinStarInterval) { clearInterval(elinStarInterval); elinStarInterval = null; }
+                    elinActive = false;
+                    elinOver = true;
+                    if (elinInterval) { clearInterval(elinInterval); elinInterval = null; }
+                    if (elinStarInt) { clearInterval(elinStarInt); elinStarInt = null; }
                     document.getElementById('elinGameOverlay').classList.remove('active');
                     openHeroesMenu();
                 }
