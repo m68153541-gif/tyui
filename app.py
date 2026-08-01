@@ -116,7 +116,8 @@ def all_users():
                 'attempts': data.get('attempts', 0),
                 'registered': data.get('registered', False),
                 'banned': is_banned,
-                'banned_reason': banned_reason
+                'banned_reason': banned_reason,
+                'registrationDate': data.get('registrationDate', '')
             })
     return jsonify(result)
 
@@ -148,8 +149,9 @@ def admin_add_stars():
                 user_data['notifications'] = []
             user_data['notifications'].append({
                 'type': 'admin_action',
-                'message': 'Администратор начислил вам ' + str(amount) + ' звёзд',
-                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                'message': '⭐ Администратор начислил вам ' + str(amount) + ' звёзд',
+                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'read': False
             })
             
             save_users(users)
@@ -185,8 +187,9 @@ def admin_remove_stars():
                 user_data['notifications'] = []
             user_data['notifications'].append({
                 'type': 'admin_action',
-                'message': 'Администратор забрал у вас ' + str(amount) + ' звёзд',
-                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                'message': '⭐ Администратор забрал у вас ' + str(amount) + ' звёзд',
+                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'read': False
             })
             
             save_users(users)
@@ -196,65 +199,6 @@ def admin_remove_stars():
         return jsonify({'success': True, 'message': 'Звёзды изъяты'})
     else:
         return jsonify({'success': False, 'message': 'Игрок не найден'}), 404
-
-@app.route('/api/admin_reset_player', methods=['POST'])
-def admin_reset_player():
-    data = request.json
-    uid = data.get('uid')
-    
-    if not uid:
-        return jsonify({'success': False, 'message': 'Invalid data'}), 400
-    
-    users = load_users()
-    found = False
-    
-    for user_id, user_data in users.items():
-        if user_data.get('uid') == uid:
-            user_data['stars'] = 300
-            user_data['bank'] = 0
-            user_data['bankDeposit'] = 0
-            user_data['attempts'] = 1
-            user_data['coefficientRate'] = 0
-            user_data['petProgress'] = 0
-            user_data['petStage'] = 1
-            user_data['wins'] = []
-            user_data['clickerProgress'] = 0
-            found = True
-            
-            if 'notifications' not in user_data:
-                user_data['notifications'] = []
-            user_data['notifications'].append({
-                'type': 'admin_action',
-                'message': 'Администратор сбросил ваш аккаунт',
-                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            })
-            
-            save_users(users)
-            break
-    
-    if found:
-        return jsonify({'success': True, 'message': 'Аккаунт сброшен'})
-    else:
-        return jsonify({'success': False, 'message': 'Игрок не найден'}), 404
-
-@app.route('/api/admin_give_self_stars', methods=['POST'])
-def admin_give_self_stars():
-    data = request.json
-    user_id = data.get('user_id')
-    amount = data.get('amount', 0)
-    
-    if not user_id or amount <= 0:
-        return jsonify({'success': False, 'message': 'Invalid data'}), 400
-    
-    users = load_users()
-    user_data = users.get(user_id)
-    
-    if user_data:
-        user_data['stars'] = user_data.get('stars', 0) + amount
-        save_users(users)
-        return jsonify({'success': True, 'message': 'Звёзды добавлены'})
-    else:
-        return jsonify({'success': False, 'message': 'Пользователь не найден'}), 404
 
 # ============= ЧАТ И ПОДДЕРЖКА =============
 
@@ -311,8 +255,9 @@ def add_chat_message():
                     user_data['notifications'] = []
                 user_data['notifications'].append({
                     'type': 'chat',
-                    'message': 'Новое сообщение от администратора: ' + message,
-                    'time': time_str
+                    'message': '📩 Новое сообщение от администратора: ' + message,
+                    'time': time_str,
+                    'read': False
                 })
                 save_users(users)
                 break
@@ -355,7 +300,8 @@ def send_notification():
             user_data['notifications'].append({
                 'type': 'notification',
                 'message': message,
-                'time': time_str
+                'time': time_str,
+                'read': False
             })
             save_users(users)
             break
@@ -409,8 +355,9 @@ def add_code():
                 user_data['notifications'].append({
                     'type': 'code',
                     'code': data.get('code'),
-                    'message': 'Вам отправлен код: ' + data.get('code'),
-                    'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    'message': '🎫 Вам отправлен код: ' + data.get('code'),
+                    'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'read': False
                 })
                 save_users(users)
                 break
@@ -442,20 +389,21 @@ def use_code():
     global_data = load_global_data()
     users = load_users()
     
+    # Проверяем в локальном хранилище кодов
     code_obj = None
-    code_index = -1
-    for i, c in enumerate(global_data.get('admin_codes', [])):
+    for c in global_data.get('admin_codes', []):
         if c.get('code') == code_value and not c.get('used', False):
             code_obj = c
-            code_index = i
             break
     
     if not code_obj:
         return jsonify({'success': False, 'message': 'Код не найден или уже использован'}), 404
     
+    # Проверяем, не использовал ли уже игрок этот код
     if user_uid in code_obj.get('used_by', []):
         return jsonify({'success': False, 'message': 'Вы уже использовали этот код'}), 403
     
+    # Проверяем target
     target = code_obj.get('target')
     if target and target != 'всем' and target != 'all':
         if '→' in target:
@@ -466,55 +414,31 @@ def use_code():
         if target_uid != user_uid:
             return jsonify({'success': False, 'message': 'Этот код не для вас'}), 403
     
+    # Получаем пользователя
     user = users.get(user_id)
     if not user:
         return jsonify({'success': False, 'message': 'Пользователь не найден'}), 404
     
-    code_type = code_obj.get('type', '')
-    message = 'Код активирован!'
-    
-    if 'Одноразовый' in code_type or 'Код 1' in code_type or 'single' in code_type:
-        user['attempts'] = user.get('attempts', 0) + 1
-        message = '+1 попытка!'
-    elif 'На 5' in code_type or 'Код 5' in code_type or 'multi' in code_type:
-        user['attempts'] = user.get('attempts', 0) + 5
-        message = '+5 попыток!'
-    elif 'Бустер' in code_type and 'x5' not in code_type:
-        user['attempts'] = user.get('attempts', 0) + 1
-        user['boosted'] = True
-        message = 'Бустер активирован! +1 попытка'
-    elif 'Бустер x5' in code_type or 'boostmulti' in code_type:
-        user['attempts'] = user.get('attempts', 0) + 5
-        user['boosted'] = True
-        message = 'Бустер x5 активирован! +5 попыток'
-    else:
-        user['attempts'] = user.get('attempts', 0) + 1
-        message = 'Код активирован! +1 попытка'
-    
+    # Активируем код
+    user['attempts'] = user.get('attempts', 0) + 1
     code_obj['used_by'].append(user_uid)
     
-    if 'Одноразовый' in code_type or 'single' in code_type:
-        code_obj['used'] = True
-    
-    if 'На 5' in code_type or 'multi' in code_type:
-        if len(code_obj['used_by']) >= 5:
-            code_obj['used'] = True
-    
-    global_data['admin_codes'][code_index] = code_obj
-    save_global_data(global_data)
-    
+    # Добавляем уведомление
     if 'notifications' not in user:
         user['notifications'] = []
     user['notifications'].append({
         'type': 'code_used',
-        'message': message,
-        'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        'message': '🎫 Код активирован! +1 попытка',
+        'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'read': False
     })
     
+    # Сохраняем
     users[user_id] = user
     save_users(users)
+    save_global_data(global_data)
     
-    return jsonify({'success': True, 'message': message})
+    return jsonify({'success': True, 'message': '🎫 Код активирован! +1 попытка'})
 
 # ============= БАНЫ =============
 
@@ -539,8 +463,9 @@ def sync_banned():
                         user_data['notifications'] = []
                     user_data['notifications'].append({
                         'type': 'ban',
-                        'message': 'Вы заблокированы. Причина: ' + banned_data[uid],
-                        'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        'message': '🚫 Вы заблокированы. Причина: ' + banned_data[uid],
+                        'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'read': False
                     })
                 else:
                     user_data['banned'] = False
