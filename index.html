@@ -6,6 +6,7 @@
     <title>🦄 Забава Игра</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* ===== ОСНОВНЫЕ СТИЛИ ===== */
         * {
             margin: 0;
             padding: 0;
@@ -412,7 +413,7 @@
             100% { background-position: 0% 50%; }
         }
 
-        /* Стили для игры Элин */
+        /* ===== СТИЛИ ДЛЯ ИГРЫ ЭЛИН ===== */
         #elinGameOverlay {
             position: fixed;
             top: 0;
@@ -440,14 +441,54 @@
             100% { background-position: 0% 50%; }
         }
 
+        /* Украшения - парящие сердечки и звёздочки */
+        .floating-decoration {
+            position: absolute;
+            pointer-events: none;
+            font-size: 20px;
+            opacity: 0.3;
+            animation: floatDecoration 8s ease-in-out infinite;
+        }
+
+        .floating-decoration:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; font-size: 25px; }
+        .floating-decoration:nth-child(2) { top: 20%; right: 8%; animation-delay: 1.5s; font-size: 18px; }
+        .floating-decoration:nth-child(3) { bottom: 30%; left: 3%; animation-delay: 3s; font-size: 22px; }
+        .floating-decoration:nth-child(4) { bottom: 15%; right: 5%; animation-delay: 4.5s; font-size: 20px; }
+        .floating-decoration:nth-child(5) { top: 50%; left: 2%; animation-delay: 2s; font-size: 16px; }
+        .floating-decoration:nth-child(6) { top: 40%; right: 3%; animation-delay: 5.5s; font-size: 24px; }
+        .floating-decoration:nth-child(7) { top: 5%; left: 50%; animation-delay: 6.5s; font-size: 15px; }
+        .floating-decoration:nth-child(8) { bottom: 5%; left: 50%; animation-delay: 0.5s; font-size: 15px; }
+
+        @keyframes floatDecoration {
+            0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.2; }
+            25% { transform: translateY(-15px) rotate(10deg); opacity: 0.4; }
+            50% { transform: translateY(-30px) rotate(-5deg); opacity: 0.3; }
+            75% { transform: translateY(-15px) rotate(5deg); opacity: 0.4; }
+        }
+
+        /* Сияющие звёзды на фоне */
+        .bg-star-elin {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.05);
+            font-size: 20px;
+            animation: sparkleElin linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes sparkleElin {
+            0% { transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0.8; }
+            100% { transform: translateY(110vh) translateX(50px) rotate(720deg); opacity: 0; }
+        }
+
         @keyframes elinFall {
             0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
-            100% { transform: translateY(calc(100% + 50px)) rotate(720deg); opacity: 0; }
+            100% { transform: translateY(calc(100% + 100px)) rotate(720deg); opacity: 0.6; }
         }
 
         @keyframes elinCatch {
             0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(2); opacity: 0; }
+            50% { transform: scale(2) rotate(180deg); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
         }
 
         @keyframes pulseBtn {
@@ -459,7 +500,7 @@
             position: absolute;
             color: rgba(255, 255, 255, 0.05);
             font-size: 20px;
-            animation: sparkleFall linear infinite;
+            animation: sparkleElin linear infinite;
             pointer-events: none;
         }
 
@@ -499,13 +540,17 @@
             z-index: 1;
             user-select: none;
             text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-            animation: elinFall 3s linear forwards;
+            animation: elinFall 5s linear forwards;
             transition: transform 0.1s;
             font-size: 30px;
         }
 
+        .elin-falling-star:hover {
+            transform: scale(1.2) !important;
+        }
+
         .elin-falling-star.caught {
-            animation: elinCatch 0.3s ease forwards;
+            animation: elinCatch 0.4s ease forwards;
         }
 
         #elinStartBtn {
@@ -538,12 +583,13 @@
             transform: translate(-50%, -50%);
             text-align: center;
             z-index: 10;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             padding: 40px;
             border-radius: 30px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             min-width: 280px;
+            animation: scaleUp 0.3s ease;
         }
 
         .elin-result .big { font-size: 60px; margin-bottom: 15px; }
@@ -579,7 +625,7 @@
         }
 
         .btn-result.exit {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.15);
             color: #fff;
         }
 
@@ -592,6 +638,7 @@
             cursor: pointer;
             font-size: 14px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
         }
 
         #elinBackBtn:hover {
@@ -1029,8 +1076,18 @@
         </div>
     </div>
 
-    <!-- Игра Элин (внутри) -->
+    <!-- Игра Элин -->
     <div id="elinGameOverlay">
+        <!-- Украшения -->
+        <div class="floating-decoration">🌸</div>
+        <div class="floating-decoration">✨</div>
+        <div class="floating-decoration">💖</div>
+        <div class="floating-decoration">🌟</div>
+        <div class="floating-decoration">🌈</div>
+        <div class="floating-decoration">🦋</div>
+        <div class="floating-decoration">💫</div>
+        <div class="floating-decoration">🌺</div>
+
         <div id="elinTopPanel">
             <div class="timer">⏱️ <span id="elinTimer">03:00</span></div>
             <div class="score">⭐ <span id="elinScore">0</span> / 150</div>
@@ -1072,11 +1129,7 @@
     <!-- Кнопка музыки -->
     <button id="musicBtn" title="Вкл/Выкл музыку">🎵</button>
 
-    <!-- ============================================================ -->
-    <!--  ПОДКЛЮЧАЕМ GAME.JS                                          -->
-    <!-- ============================================================ -->
     <script src="game.js"></script>
-
     <script>
         // ============================================================
         //  БЛЁСТКИ
@@ -1101,18 +1154,18 @@
         const loadingBar = document.getElementById('loadingBar');
         const loadingPercent = document.getElementById('loadingPercent');
         const app = document.getElementById('app');
-        
+
         let progress = 0;
         const totalTime = 10000;
         const startTime = Date.now();
-        
+
         function updateLoading() {
             const elapsed = Date.now() - startTime;
             progress = Math.min((elapsed / totalTime) * 100, 100);
-            
+
             loadingBar.style.width = progress + '%';
             loadingPercent.textContent = Math.floor(progress) + '%';
-            
+
             if (progress < 100) {
                 setTimeout(updateLoading, 50);
             } else {
@@ -1208,6 +1261,7 @@
                 if (saved) heroesProgress = JSON.parse(saved);
             } catch(e) {}
         }
+
         function saveHeroesProgress() {
             try {
                 localStorage.setItem('heroesProgress', JSON.stringify(heroesProgress));
@@ -1321,8 +1375,7 @@
 
                 let statusText = '🔒 Заблокирован';
                 let statusClass = 'status-locked';
-                if (isDone) { statusText = '✅ Пройдено!'; statusClass = 'status-done'; }
-                else if (isUnlocked) { statusText = '▶️ Доступно'; statusClass = 'status-available'; }
+                if (isDone) { statusText = '✅ Пройдено!'; statusClass = 'status-done'; } else if (isUnlocked) { statusText = '▶️ Доступно'; statusClass = 'status-available'; }
 
                 const card = document.createElement('div');
                 card.className = 'hero-card' + (isUnlocked && !isDone ? '' : ' locked');
@@ -1372,7 +1425,7 @@
         }
 
         // ============================================================
-        //  ИГРА ЭЛИН - ПЕРЕПИСАНА
+        //  ИГРА ЭЛИН - ОБНОВЛЕННАЯ
         // ============================================================
         let elinInterval = null;
         let elinStarInt = null;
@@ -1385,22 +1438,38 @@
         function startElinGame() {
             const overlay = document.getElementById('elinGameOverlay');
             overlay.classList.add('active');
-            
+
+            // Добавляем фоновые звёзды
+            const container = document.getElementById('elinStarsContainer');
+            const existingBg = container.querySelectorAll('.bg-star-elin');
+            existingBg.forEach(s => s.remove());
+            for (let i = 0; i < 30; i++) {
+                const star = document.createElement('div');
+                star.className = 'bg-star-elin';
+                star.textContent = '✦';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.fontSize = (Math.random() * 15 + 10) + 'px';
+                star.style.animationDuration = (Math.random() * 20 + 15) + 's';
+                star.style.animationDelay = (Math.random() * 10) + 's';
+                container.appendChild(star);
+            }
+
             // Сброс
             elinCollected = 0;
             elinTimeLeft = 180;
             elinActive = false;
             elinOver = false;
             elinStars = [];
-            
+
             document.getElementById('elinScore').textContent = '0';
             updateElinTimer();
-            
+
             // Удаляем старые звёзды и результаты
             document.querySelectorAll('.elin-falling-star').forEach(s => s.remove());
-            const oldResult = document.getElementById('elinStarsContainer').querySelector('.elin-result');
+            const oldResult = document.querySelector('.elin-result');
             if (oldResult) oldResult.remove();
-            
+
             // Показываем кнопку "Начать"
             const startBtn = document.getElementById('elinStartBtn');
             startBtn.style.display = 'block';
@@ -1412,16 +1481,16 @@
         function startElinGameplay() {
             const startBtn = document.getElementById('elinStartBtn');
             startBtn.style.display = 'none';
-            
+
             elinCollected = 0;
             elinTimeLeft = 180;
             elinActive = true;
             elinOver = false;
             elinStars = [];
-            
+
             document.getElementById('elinScore').textContent = '0';
             updateElinTimer();
-            
+
             // Таймер
             if (elinInterval) clearInterval(elinInterval);
             elinInterval = setInterval(function() {
@@ -1431,69 +1500,86 @@
                     endElinGame(false);
                 }
             }, 1000);
-            
-            // Создание звёзд
+
+            // Создание звёзд (чаще)
             if (elinStarInt) clearInterval(elinStarInt);
             elinStarInt = setInterval(function() {
                 if (elinActive && !elinOver) createElinStar();
-            }, 400);
-            
-            for (let i = 0; i < 15; i++) {
-                setTimeout(function() { createElinStar(); }, i * 200);
+            }, 300);
+
+            // Начальные звёзды (больше)
+            for (let i = 0; i < 25; i++) {
+                setTimeout(function() { createElinStar(); }, i * 150);
             }
-            
+
             showToast('🌟 Собирайте звёзды! Нужно 150 за 3 минуты!');
         }
 
         function createElinStar() {
             if (!elinActive || elinOver) return;
-            
+
             const container = document.getElementById('elinStarsContainer');
             if (!container) return;
-            
+
             const existing = container.querySelectorAll('.elin-falling-star');
-            if (existing.length > 40) return;
-            
+            if (existing.length > 50) return;
+
             const star = document.createElement('div');
             star.className = 'elin-falling-star';
             const emojis = ['⭐', '🌟', '✨', '💫'];
             star.textContent = emojis[Math.floor(Math.random() * emojis.length)];
             star.style.left = (Math.random() * 90 + 5) + '%';
-            star.style.top = '-30px';
-            star.style.fontSize = (Math.random() * 20 + 20) + 'px';
-            star.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            star.style.top = '-50px';
+            star.style.fontSize = (Math.random() * 20 + 25) + 'px';
+            star.style.animationDuration = (Math.random() * 3 + 4) + 's'; // 4-7 секунд
             star.dataset.caught = 'false';
-            
+
             star.onclick = function(e) {
                 e.stopPropagation();
                 if (this.dataset.caught === 'true') return;
                 if (!elinActive || elinOver) return;
-                
+
                 this.dataset.caught = 'true';
                 this.classList.add('caught');
                 elinCollected++;
                 document.getElementById('elinScore').textContent = elinCollected;
-                
+
                 this.style.color = '#ffd93d';
                 this.style.textShadow = '0 0 40px rgba(255,215,0,0.8)';
-                
-                setTimeout(function() { if (this && this.parentNode) this.remove(); }, 300);
-                
+
+                // Эффект при клике
+                const clickEffect = document.createElement('div');
+                clickEffect.textContent = '✨';
+                clickEffect.style.cssText = `
+                    position: absolute;
+                    pointer-events: none;
+                    font-size: 30px;
+                    left: ${this.style.left};
+                    top: ${this.style.top};
+                    animation: elinCatch 0.5s ease forwards;
+                    z-index: 5;
+                `;
+                container.appendChild(clickEffect);
+                setTimeout(() => clickEffect.remove(), 500);
+
+                setTimeout(function() { if (this && this.parentNode) this.remove(); }, 400);
+
                 if (elinCollected >= 150) {
                     endElinGame(true);
                 }
             };
-            
+
             container.appendChild(star);
             elinStars.push(star);
-            
+
+            // Автоудаление если звезда упала
             setTimeout(function() {
                 if (star.parentNode && star.dataset.caught === 'false') {
                     star.remove();
                     const index = elinStars.indexOf(star);
                     if (index > -1) elinStars.splice(index, 1);
                 }
-            }, 5000);
+            }, 7000);
         }
 
         function updateElinTimer() {
@@ -1509,24 +1595,26 @@
             if (elinOver) return;
             elinOver = true;
             elinActive = false;
-            
-            if (elinInterval) { clearInterval(elinInterval); elinInterval = null; }
-            if (elinStarInt) { clearInterval(elinStarInt); elinStarInt = null; }
-            
+
+            if (elinInterval) { clearInterval(elinInterval);
+                elinInterval = null; }
+            if (elinStarInt) { clearInterval(elinStarInt);
+                elinStarInt = null; }
+
             document.querySelectorAll('.elin-falling-star').forEach(function(s) { s.remove(); });
             elinStars = [];
-            
+
             const container = document.getElementById('elinStarsContainer');
             const oldResult = container.querySelector('.elin-result');
             if (oldResult) oldResult.remove();
-            
+
             const resultDiv = document.createElement('div');
             resultDiv.className = 'elin-result';
-            
+
             if (won) {
                 heroesProgress.elin = true;
                 saveHeroesProgress();
-                
+
                 try {
                     if (typeof getCurrentUser === 'function') {
                         const user = getCurrentUser();
@@ -1537,7 +1625,7 @@
                         }
                     }
                 } catch(e) {}
-                
+
                 resultDiv.innerHTML = `
                     <div class="big">🎉</div>
                     <div class="title win">ПОБЕДА!</div>
@@ -1555,7 +1643,7 @@
                     <button class="btn-result exit" onclick="closeElinGame(false)">🏠 Выйти</button>
                 `;
             }
-            
+
             container.appendChild(resultDiv);
         }
 
@@ -1580,8 +1668,10 @@
                 if (confirm('Вы уверены, что хотите выйти? Прогресс будет потерян!')) {
                     elinActive = false;
                     elinOver = true;
-                    if (elinInterval) { clearInterval(elinInterval); elinInterval = null; }
-                    if (elinStarInt) { clearInterval(elinStarInt); elinStarInt = null; }
+                    if (elinInterval) { clearInterval(elinInterval);
+                        elinInterval = null; }
+                    if (elinStarInt) { clearInterval(elinStarInt);
+                        elinStarInt = null; }
                     document.getElementById('elinGameOverlay').classList.remove('active');
                     openHeroesMenu();
                 }
