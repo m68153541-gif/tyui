@@ -2,7 +2,7 @@
 //  HEROES.JS - ЛОГИКА ГЕРОЕВ "СПАСИТЕЛИ ЗВЁЗД"
 // ============================================================
 
-console.log('🦸‍♂️ Heroes.js загружен!');
+console.log('🦸‍♂️ Heroes.js загружается...');
 
 // ============================================================
 //  ПРОГРЕСС ГЕРОЕВ
@@ -18,11 +18,13 @@ function loadHeroesProgress() {
     try {
         const saved = localStorage.getItem('heroesProgress');
         if (saved) heroesProgress = JSON.parse(saved);
+        console.log('📂 Прогресс загружен:', heroesProgress);
     } catch(e) {}
 }
 function saveHeroesProgress() {
     try {
         localStorage.setItem('heroesProgress', JSON.stringify(heroesProgress));
+        console.log('💾 Прогресс сохранён:', heroesProgress);
     } catch(e) {}
 }
 loadHeroesProgress();
@@ -31,14 +33,22 @@ loadHeroesProgress();
 //  ДОБАВЛЕНИЕ КНОПКИ "СПАСИТЕЛИ ЗВЁЗД"
 // ============================================================
 function addHeroButton() {
+    console.log('🔄 Пытаемся добавить кнопку...');
+    
     const btnGrid = document.getElementById('btnGrid');
     if (!btnGrid) {
+        console.log('⏳ btnGrid не найден, повтор через 500мс');
         setTimeout(addHeroButton, 500);
         return;
     }
 
-    if (document.getElementById('btnHeroes')) return;
+    if (document.getElementById('btnHeroes')) {
+        console.log('✅ Кнопка уже существует');
+        return;
+    }
 
+    console.log('🦸‍♂️ Добавляем кнопку "Спасители звёзд"');
+    
     const heroBtn = document.createElement('button');
     heroBtn.id = 'btnHeroes';
     heroBtn.className = 'btn full small';
@@ -65,10 +75,14 @@ function addHeroButton() {
         this.style.transform = 'scale(1)';
     };
     heroBtn.onclick = function() {
+        console.log('🦸‍♂️ Нажата кнопка!');
         if (typeof openHeroesMenu === 'function') {
             openHeroesMenu();
         } else {
-            showToast('⚠️ Меню героев загружается...');
+            console.error('❌ openHeroesMenu не найдена!');
+            if (typeof showToast === 'function') {
+                showToast('⚠️ Меню героев загружается...');
+            }
         }
     };
 
@@ -88,6 +102,7 @@ function addHeroButton() {
 function openHeroesMenu() {
     console.log('🦸‍♂️ Открываем меню героев...');
 
+    // Проверяем регистрацию через game.js
     if (typeof getCurrentUser === 'function') {
         const user = getCurrentUser();
         if (!user || !user.registered) {
@@ -101,6 +116,7 @@ function openHeroesMenu() {
         }
     }
 
+    // Удаляем старые overlay
     const oldOverlay = document.getElementById('heroesOverlay');
     if (oldOverlay) oldOverlay.remove();
 
@@ -114,6 +130,7 @@ function openHeroesMenu() {
         display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto;
     `;
 
+    // Стили для меню
     let styleEl = document.getElementById('heroesStyle');
     if (!styleEl) {
         styleEl = document.createElement('style');
@@ -196,9 +213,10 @@ function openHeroesMenu() {
         if (isUnlocked && !isDone) {
             card.onclick = function() {
                 if (hero.id === 'elin') {
+                    console.log('🌟 Открываем игру Элин...');
                     const overlayEl = document.getElementById('heroesOverlay');
                     if (overlayEl) overlayEl.remove();
-                    // ОТКРЫВАЕМ МИНИ-ИГРУ
+                    // ОТКРЫВАЕМ МИНИ-ИГРУ В НОВОМ ОКНЕ
                     window.open('elin_game.html', '_blank', 'width=420,height=650');
                 } else {
                     if (typeof showToast === 'function') showToast('🔄 В разработке!');
@@ -247,21 +265,36 @@ function openHeroesMenu() {
 window.openHeroesMenu = openHeroesMenu;
 
 // ============================================================
-//  АВТОМАТИЧЕСКОЕ ДОБАВЛЕНИЕ КНОПКИ
+//  АВТОМАТИЧЕСКОЕ ДОБАВЛЕНИЕ КНОПКИ (НЕСКОЛЬКО ПОПЫТОК)
 // ============================================================
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('📄 DOM загружен, добавляем кнопку...');
-    setTimeout(addHeroButton, 1000);
-    setTimeout(addHeroButton, 3000);
-    setTimeout(addHeroButton, 5000);
-});
+function tryAddButton() {
+    console.log('🔄 Попытка добавить кнопку...');
+    addHeroButton();
+}
 
+// Ждём загрузки DOM
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('📄 DOM загружен');
+        setTimeout(tryAddButton, 500);
+        setTimeout(tryAddButton, 1500);
+        setTimeout(tryAddButton, 3000);
+        setTimeout(tryAddButton, 5000);
+    });
+} else {
+    setTimeout(tryAddButton, 500);
+    setTimeout(tryAddButton, 1500);
+    setTimeout(tryAddButton, 3000);
+    setTimeout(tryAddButton, 5000);
+}
+
+// Следим за появлением app
 const appObserver = new MutationObserver(function() {
     const app = document.getElementById('app');
     if (app && app.classList.contains('show')) {
-        console.log('📱 Приложение появилось, добавляем кнопку...');
-        setTimeout(addHeroButton, 500);
-        setTimeout(addHeroButton, 1500);
+        console.log('📱 Приложение появилось!');
+        setTimeout(tryAddButton, 500);
+        setTimeout(tryAddButton, 1500);
         appObserver.disconnect();
     }
 });
