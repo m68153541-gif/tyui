@@ -3,203 +3,25 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🦄 Забава Игра</title>
+    <title>⭐ Забава Игра</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, 'Comic Sans MS', system-ui, sans-serif;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
         }
 
         body {
             min-height: 100vh;
-            background: linear-gradient(135deg, #ff6b9d, #ff2e63, #ff6b9d);
-            background-size: 200% 200%;
-            animation: bgGradient 6s ease-in-out infinite;
+            background: radial-gradient(circle at 30% 40%, #1a0e2e, #0a0515);
             display: flex;
             justify-content: center;
             padding: 20px 12px;
-            color: #ffffff;
-            overflow-y: auto;
+            color: #f0f0ff;
             position: relative;
-        }
-
-        @keyframes bgGradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        .sparkle {
-            position: fixed;
-            pointer-events: none;
-            z-index: 0;
-            font-size: 14px;
-            color: white;
-            opacity: 0.7;
-            animation: sparkleFall linear infinite;
-        }
-
-        @keyframes sparkleFall {
-            0% { transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0.8; }
-            100% { transform: translateY(110vh) translateX(50px) rotate(720deg); opacity: 0; }
-        }
-
-        #loadingScreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #ff6b9d, #ff2e63, #ff6b9d);
-            background-size: 200% 200%;
-            animation: bgGradient 4s ease-in-out infinite;
-            transition: opacity 0.8s ease;
-            overflow: hidden;
-        }
-
-        #loadingScreen.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .loading-animation {
-            position: relative;
-            width: 300px;
-            height: 300px;
-            margin-bottom: 30px;
-        }
-
-        .loading-animation .unicorn {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 80px;
-            animation: unicornFloat 3s ease-in-out infinite;
-            z-index: 2;
-        }
-
-        @keyframes unicornFloat {
-            0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(-5deg); }
-            50% { transform: translate(-50%, -60%) scale(1.1) rotate(5deg); }
-        }
-
-        .loading-animation .orbit-star {
-            position: absolute;
-            font-size: 30px;
-            animation: orbitStar 8s linear infinite;
-        }
-
-        .loading-animation .orbit-star:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; font-size: 25px; }
-        .loading-animation .orbit-star:nth-child(2) { top: 5%; right: 15%; animation-delay: 1.5s; font-size: 20px; }
-        .loading-animation .orbit-star:nth-child(3) { bottom: 15%; left: 5%; animation-delay: 3s; font-size: 28px; }
-        .loading-animation .orbit-star:nth-child(4) { bottom: 10%; right: 10%; animation-delay: 4.5s; font-size: 22px; }
-        .loading-animation .orbit-star:nth-child(5) { top: 20%; left: 50%; animation-delay: 6s; font-size: 18px; }
-        .loading-animation .orbit-star:nth-child(6) { bottom: 20%; left: 50%; animation-delay: 7.5s; font-size: 24px; }
-        .loading-animation .orbit-star:nth-child(7) { top: 50%; left: 5%; animation-delay: 2s; font-size: 20px; }
-        .loading-animation .orbit-star:nth-child(8) { top: 50%; right: 5%; animation-delay: 5.5s; font-size: 20px; }
-
-        @keyframes orbitStar {
-            0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 0.3; }
-            25% { transform: translate(30px, -40px) scale(1.3) rotate(90deg); opacity: 1; }
-            50% { transform: translate(60px, 0) scale(1) rotate(180deg); opacity: 0.8; }
-            75% { transform: translate(30px, 40px) scale(1.2) rotate(270deg); opacity: 1; }
-            100% { transform: translate(0, 0) scale(1) rotate(360deg); opacity: 0.3; }
-        }
-
-        .loading-animation .sparkle-ring {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 250px;
-            height: 250px;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            animation: ringPulse 3s ease-in-out infinite;
-        }
-
-        .loading-animation .sparkle-ring:nth-child(9) {
-            width: 200px;
-            height: 200px;
-            animation-delay: 0.5s;
-            border-color: rgba(255, 217, 61, 0.2);
-        }
-
-        .loading-animation .sparkle-ring:nth-child(10) {
-            width: 150px;
-            height: 150px;
-            animation-delay: 1s;
-            border-color: rgba(255, 255, 255, 0.15);
-        }
-
-        @keyframes ringPulse {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
-            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-        }
-
-        #loadingScreen h2 {
-            font-size: 32px;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 0 40px rgba(255, 105, 180, 0.5);
-            margin-bottom: 20px;
-            animation: shimmer 2s ease-in-out infinite;
-            z-index: 3;
-        }
-
-        @keyframes shimmer {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        .loading-bar-container {
-            width: 300px;
-            max-width: 80%;
-            height: 12px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 3;
-        }
-
-        .loading-bar {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #ff6b9d, #ff2e63, #ffd93d, #ff6b9d);
-            background-size: 300% 100%;
-            animation: loadingGradient 2s linear infinite;
-            border-radius: 20px;
-            transition: width 0.3s ease;
-        }
-
-        @keyframes loadingGradient {
-            0% { background-position: 0% 0%; }
-            100% { background-position: 300% 0%; }
-        }
-
-        .loading-text {
-            margin-top: 12px;
-            font-size: 18px;
-            color: rgba(255, 255, 255, 0.9);
-            font-weight: 500;
-            letter-spacing: 1px;
-            z-index: 3;
-        }
-
-        .loading-percent {
-            font-weight: 700;
-            color: #ffd93d;
+            overflow-x: hidden;
         }
 
         #app {
@@ -207,55 +29,55 @@
             z-index: 1;
             max-width: 500px;
             width: 100%;
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            background: rgba(12, 8, 28, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border-radius: 48px 48px 32px 32px;
             padding: 24px 20px 30px;
-            box-shadow: 0 20px 60px rgba(255, 105, 180, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            opacity: 0;
-            transform: translateY(30px) scale(0.95);
-            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-            margin-bottom: 80px;
-        }
-
-        #app.show {
-            opacity: 1;
-            transform: translateY(0) scale(1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.04);
         }
 
         h1 {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 700;
             text-align: center;
             letter-spacing: 1px;
-            color: #ffffff;
-            text-shadow: 0 0 40px rgba(255, 105, 180, 0.3);
+            background: linear-gradient(135deg, #a29bfe, #6c5ce7, #fd79a8);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradShift 4s ease-in-out infinite alternate;
             margin-bottom: 18px;
         }
 
+        @keyframes gradShift {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+
         .user-card {
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
             border-radius: 24px;
             padding: 16px 18px;
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px 12px;
             margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
         }
 
         .user-card .label {
             font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
+            color: #8a8ab0;
             letter-spacing: 0.3px;
         }
 
         .user-card .value {
             font-weight: 600;
             text-align: right;
-            color: #ffffff;
+            color: #e8e8ff;
             font-size: 14px;
             word-break: break-all;
         }
@@ -272,11 +94,11 @@
         #userUid {
             cursor: pointer;
             transition: 0.2s;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+            border-bottom: 1px dashed rgba(255, 215, 0, 0.3);
         }
 
         #userUid:hover {
-            color: #ffd93d;
+            color: #ffd700;
         }
 
         .balance-grid {
@@ -287,44 +109,49 @@
 
         .balance-item {
             flex: 1;
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.03);
             border-radius: 20px;
             padding: 14px 8px;
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(4px);
         }
 
         .balance-item .num {
             font-size: 28px;
             font-weight: 800;
             letter-spacing: 0.5px;
+            transition: 0.3s;
         }
 
         .balance-item .num.gold {
-            color: #ffd93d;
-            text-shadow: 0 0 30px rgba(255, 217, 61, 0.3);
+            background: linear-gradient(135deg, #f9ca24, #f0932b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .balance-item .num.cyan {
-            color: #7ed6df;
-            text-shadow: 0 0 30px rgba(126, 214, 223, 0.3);
+            background: linear-gradient(135deg, #7ed6df, #22a6b3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .balance-item .lbl {
             font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
+            color: #8a8ab0;
             margin-top: 4px;
         }
 
         .pet-status {
             display: flex;
             justify-content: space-between;
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.02);
             padding: 12px 16px;
             border-radius: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.04);
             margin-bottom: 20px;
             font-size: 14px;
+            backdrop-filter: blur(4px);
         }
 
         .btn-grid {
@@ -342,20 +169,23 @@
             gap: 6px;
             padding: 16px 10px;
             border: none;
-            border-radius: 20px;
+            border-radius: 60px;
             font-size: 15px;
             font-weight: 700;
-            color: #ffffff;
+            color: #fff;
             cursor: pointer;
-            transition: all 0.2s ease;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.2);
+            will-change: transform, box-shadow, filter;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
             letter-spacing: 0.3px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            background: #2a2a50;
+            box-shadow: 0 8px 0 #15152a, 0 6px 20px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transform: translateY(0px) scale(1);
         }
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(0,0,0,0.2);
         }
 
         .btn:active {
@@ -363,21 +193,36 @@
             transition-duration: 0.08s;
         }
 
-        .btn:nth-child(1) { background: linear-gradient(135deg, #ff6b9d, #ff2e63); }
-        .btn:nth-child(2) { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
-        .btn:nth-child(3) { background: linear-gradient(135deg, #ffd93d, #f0932b); }
-        .btn:nth-child(4) { background: linear-gradient(135deg, #ff6b9d, #fd79a8); }
-        .btn:nth-child(5) { background: linear-gradient(135deg, #55efc4, #00b894); }
-        .btn:nth-child(6) { background: linear-gradient(135deg, #ffd93d, #f9ca24); }
-        .btn:nth-child(7) { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
-        .btn:nth-child(8) { background: linear-gradient(135deg, #55efc4, #00b894); }
-        .btn:nth-child(9) { background: linear-gradient(135deg, #ff6b9d, #fd79a8); }
-        .btn:nth-child(10) { background: linear-gradient(135deg, #ffd93d, #f0932b); }
-        .btn:nth-child(11) { background: linear-gradient(135deg, #ff2e63, #e84393); }
-        .btn:nth-child(12) { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+        .btn.primary {
+            background: linear-gradient(145deg, #f9ca24, #f0932b);
+            box-shadow: 0 8px 0 #b86d1c, 0 6px 20px rgba(249, 202, 36, 0.3);
+            color: #1a1a2e;
+        }
+
+        .btn.blue {
+            background: linear-gradient(145deg, #4a8fe0, #2d6bb8);
+            box-shadow: 0 8px 0 #1a3f6e, 0 6px 20px rgba(45, 107, 184, 0.3);
+        }
+
+        .btn.special {
+            background: linear-gradient(145deg, #fd79a8, #e84393);
+            box-shadow: 0 8px 0 #a0296a, 0 6px 20px rgba(232, 67, 147, 0.3);
+        }
+
+        .btn.purple {
+            background: linear-gradient(145deg, #a29bfe, #6c5ce7);
+            box-shadow: 0 8px 0 #3a2f8a, 0 6px 20px rgba(108, 92, 231, 0.3);
+        }
+
+        .btn.green {
+            background: linear-gradient(145deg, #55efc4, #00b894);
+            box-shadow: 0 8px 0 #00715a, 0 6px 20px rgba(0, 184, 148, 0.3);
+            color: #0f1a1a;
+        }
 
         .btn.danger {
-            background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            box-shadow: 0 8px 0 #87281e, 0 6px 20px rgba(231, 76, 60, 0.3);
         }
 
         .btn.full {
@@ -395,10 +240,11 @@
             pointer-events: none;
         }
 
+        /* Кнопка героев */
         #btnHeroes {
             background: linear-gradient(135deg, #ff6b9d, #ff2e63, #ff6b9d) !important;
             background-size: 200% 200% !important;
-            animation: bgGradient 3s ease-in-out infinite !important;
+            animation: btnHeroesGradient 3s ease-in-out infinite !important;
             border: 2px solid rgba(255, 215, 0, 0.3) !important;
             box-shadow: 0 0 30px rgba(255, 105, 180, 0.3) !important;
             font-size: 16px !important;
@@ -406,11 +252,17 @@
             grid-column: span 3 !important;
         }
 
+        @keyframes btnHeroesGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
         .wheel-overlay {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(255, 105, 180, 0.3);
+            background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(10px);
             z-index: 1000;
             align-items: center;
@@ -424,22 +276,22 @@
         }
 
         .wheel-container {
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(20px);
+            background: rgba(12, 8, 28, 0.95);
             border-radius: 48px;
             padding: 28px 24px 32px;
             max-width: 440px;
             width: 100%;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 30px 80px rgba(255, 105, 180, 0.3);
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
             animation: scaleUp 0.25s ease;
         }
 
         .wheel-container h2 {
             text-align: center;
             margin-bottom: 12px;
-            color: #ffffff;
-            text-shadow: 0 0 40px rgba(255, 105, 180, 0.3);
+            background: linear-gradient(135deg, #ffd700, #f5a623);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .wheel-wrapper {
@@ -454,7 +306,7 @@
             height: auto;
             aspect-ratio: 1/1;
             border-radius: 50%;
-            box-shadow: 0 0 60px rgba(255, 105, 180, 0.2);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.15);
             cursor: pointer;
         }
 
@@ -464,7 +316,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             font-size: 36px;
-            text-shadow: 0 0 30px rgba(255, 105, 180, 0.5);
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
             pointer-events: none;
         }
 
@@ -474,7 +326,7 @@
             font-weight: 600;
             padding: 12px 0 6px;
             min-height: 50px;
-            color: #ffffff;
+            color: #f0f0ff;
         }
 
         .wheel-actions {
@@ -490,7 +342,7 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(255, 105, 180, 0.3);
+            background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(8px);
             z-index: 2000;
             align-items: center;
@@ -504,16 +356,15 @@
         }
 
         .modal {
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(20px);
+            background: rgba(12, 8, 28, 0.96);
             border-radius: 40px;
             padding: 28px 24px 30px;
             max-width: 440px;
             width: 100%;
             max-height: 85vh;
             overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 30px 80px rgba(255, 105, 180, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
             animation: scaleUp 0.2s ease;
         }
 
@@ -521,15 +372,15 @@
             text-align: center;
             margin-bottom: 16px;
             font-size: 22px;
-            color: #ffffff;
+            color: #f0f0ff;
         }
 
         .modal input {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 12px;
             padding: 12px 16px;
-            color: #ffffff;
+            color: #f0f0ff;
             font-size: 15px;
             width: 100%;
             outline: none;
@@ -537,8 +388,8 @@
         }
 
         .modal input:focus {
-            border-color: #ffd93d;
-            box-shadow: 0 0 20px rgba(255, 217, 61, 0.1);
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
         }
 
         .modal .btn {
@@ -550,15 +401,15 @@
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%) translateY(80px);
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(10, 8, 25, 0.92);
             backdrop-filter: blur(12px);
             padding: 14px 28px;
-            border-radius: 20px;
-            color: #ffffff;
+            border-radius: 60px;
+            color: #fff;
             font-weight: 500;
             font-size: 15px;
-            box-shadow: 0 12px 40px rgba(255, 105, 180, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             z-index: 9999;
             transition: 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
             opacity: 0;
@@ -587,14 +438,14 @@
 
         @keyframes popStar {
             0% { transform: scale(1); }
-            50% { transform: scale(1.3); color: #ffd93d; }
+            50% { transform: scale(1.3); color: #ffd700; }
             100% { transform: scale(1); }
         }
 
         .clicker-progress {
             width: 100%;
             height: 10px;
-            background: rgba(255, 255, 255, 0.1);
+            background: #2a2a4a;
             border-radius: 20px;
             margin: 8px 0;
             overflow: hidden;
@@ -603,7 +454,7 @@
         .clicker-progress .fill {
             height: 100%;
             width: 0%;
-            background: linear-gradient(90deg, #ff6b9d, #ffd93d);
+            background: linear-gradient(90deg, #f9ca24, #f0932b);
             border-radius: 20px;
             transition: 0.2s;
         }
@@ -615,27 +466,26 @@
             width: 56px;
             height: 56px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(8px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: linear-gradient(145deg, #4CAF50, #2e7d32);
+            border: 2px solid rgba(255,255,255,0.2);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 24px;
-            color: #ffffff;
-            box-shadow: 0 4px 30px rgba(255, 105, 180, 0.3);
+            color: white;
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4), 0 4px 0 #1b5e20;
             z-index: 9999;
-            transition: all 0.3s ease;
+            transition: all 0.2s;
         }
 
         #musicBtn:hover {
             transform: scale(1.1);
-            border-color: rgba(255, 255, 255, 0.4);
         }
 
         #musicBtn:active {
-            transform: scale(0.95);
+            transform: translateY(4px) scale(0.95);
+            box-shadow: 0 2px 0 #1b5e20;
         }
 
         @keyframes fadeIn {
@@ -659,10 +509,10 @@
         }
 
         .chat-container .msg.user { color: #7ed6df; }
-        .chat-container .msg.admin { color: #ffd93d; }
+        .chat-container .msg.admin { color: #ffd700; }
         .chat-container .msg .time {
             font-size: 10px;
-            color: rgba(255,255,255,0.4);
+            color: #666;
             margin-left: 10px;
         }
 
@@ -672,25 +522,25 @@
         }
 
         #contestBanner {
-            background: rgba(255, 217, 61, 0.1);
+            background: linear-gradient(135deg, rgba(249, 202, 36, 0.12), rgba(240, 147, 43, 0.08));
             border-radius: 40px;
             padding: 12px 18px;
             text-align: center;
-            border: 1px solid rgba(255, 217, 61, 0.15);
+            border: 1px solid rgba(255, 215, 0, 0.15);
             margin-bottom: 18px;
         }
 
         #contestBanner .title {
             font-weight: 700;
             font-size: 16px;
-            color: #ffd93d;
+            color: #ffd700;
         }
 
         #contestBanner .timer {
             font-size: 26px;
             font-weight: 700;
             font-variant-numeric: tabular-nums;
-            color: #ffffff;
+            color: #fff;
         }
 
         .leaderboard-table {
@@ -702,7 +552,7 @@
         .leaderboard-table th {
             padding: 8px;
             text-align: left;
-            color: rgba(255,255,255,0.5);
+            color: #888;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
@@ -710,38 +560,6 @@
             padding: 8px;
             color: #fff;
             border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-        }
-
-        .admin-panel .btn {
-            font-size: 13px;
-            padding: 10px 6px;
-        }
-
-        .code-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            margin: 4px 0;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-        }
-
-        .code-text {
-            cursor: pointer;
-            color: #ffd93d;
-            font-weight: bold;
-        }
-
-        .code-type {
-            color: rgba(255,255,255,0.5);
-            font-size: 12px;
-        }
-
-        .code-delete {
-            cursor: pointer;
-            color: #ff4757;
-            font-weight: bold;
         }
 
         @media (max-width: 420px) {
@@ -756,43 +574,12 @@
                 bottom: 12px;
                 right: 12px;
             }
-            .loading-animation { width: 200px; height: 200px; }
-            .loading-animation .unicorn { font-size: 60px; }
-            .loading-animation .sparkle-ring { width: 180px; height: 180px; }
-            .loading-animation .sparkle-ring:nth-child(9) { width: 140px; height: 140px; }
-            .loading-animation .sparkle-ring:nth-child(10) { width: 100px; height: 100px; }
         }
     </style>
 </head>
 <body>
-    <div id="sparklesContainer"></div>
-
-    <div id="loadingScreen">
-        <div class="loading-animation">
-            <div class="sparkle-ring"></div>
-            <div class="sparkle-ring"></div>
-            <div class="sparkle-ring"></div>
-            <div class="orbit-star">✨</div>
-            <div class="orbit-star">⭐</div>
-            <div class="orbit-star">🌟</div>
-            <div class="orbit-star">💖</div>
-            <div class="orbit-star">✨</div>
-            <div class="orbit-star">⭐</div>
-            <div class="orbit-star">🌟</div>
-            <div class="orbit-star">💖</div>
-            <div class="unicorn">🦄</div>
-        </div>
-        <h2>✨ Забава Игра ✨</h2>
-        <div class="loading-bar-container">
-            <div class="loading-bar" id="loadingBar"></div>
-        </div>
-        <div class="loading-text">
-            Загрузка... <span class="loading-percent" id="loadingPercent">0%</span>
-        </div>
-    </div>
-
     <div id="app">
-        <h1>🦄 Забава Игра</h1>
+        <h1>⭐ Забава Игра</h1>
 
         <div class="user-card" id="userCard">
             <span class="label">Имя</span><span class="value" id="userName">—</span>
@@ -811,7 +598,7 @@
         <div id="contestBanner" style="display:none;"></div>
 
         <div class="pet-status" id="petStatus">
-            <span class="stage" id="petStage">🦄 Малыш</span>
+            <span class="stage" id="petStage">🪳 Малыш</span>
             <span class="progress" id="petProgress">0 / 100 ⭐</span>
         </div>
 
@@ -820,16 +607,16 @@
         </div>
 
         <div class="btn-grid" id="btnGrid">
-            <button class="btn" id="btnPlay">🎮 Играть</button>
-            <button class="btn" id="btnBank">🏦 Банк</button>
-            <button class="btn" id="btnClicker">⭐ Кликер</button>
-            <button class="btn" id="btnCoeff">🔥 Коэфф.</button>
-            <button class="btn" id="btnPet">🦄 Питомец</button>
-            <button class="btn" id="btnBuy">🛒 Попытки</button>
-            <button class="btn" id="btnCode">🎫 Код</button>
-            <button class="btn" id="btnLeaderboard">🏆 Лидеры</button>
+            <button class="btn primary" id="btnPlay">🎮 Играть</button>
+            <button class="btn blue" id="btnBank">🏦 Банк</button>
+            <button class="btn special" id="btnClicker">⭐ Кликер</button>
+            <button class="btn purple" id="btnCoeff">🔥 Коэфф.</button>
+            <button class="btn green" id="btnPet">🪳 Питомец</button>
+            <button class="btn green" id="btnBuy">🛒 Попытки</button>
+            <button class="btn" id="btnCode" style="background:linear-gradient(145deg,#00b894,#00a381);box-shadow:0 8px 0 #00715a;">🎫 Код</button>
+            <button class="btn" id="btnLeaderboard" style="background:linear-gradient(145deg,#6c5ce7,#4a3db8);box-shadow:0 8px 0 #3a2f8a;">🏆 Лидеры</button>
             <button class="btn full small" id="btnRules">📜 Правила</button>
-            <button class="btn full small danger" id="btnSupport">🆘 Жалобы</button>
+            <button class="btn full small danger" id="btnSupport">🆘 Поддержка</button>
             <button class="btn full small" id="btnAdmin">🔧 Админ</button>
         </div>
     </div>
@@ -839,12 +626,12 @@
             <h2>🎰 Колесо удачи</h2>
             <div class="wheel-wrapper">
                 <canvas id="wheelCanvas" width="400" height="400"></canvas>
-                <div class="wheel-center">🦄</div>
+                <div class="wheel-center">⭐</div>
             </div>
             <div class="wheel-result" id="wheelResult">Нажмите "Крутить"!</div>
             <div class="wheel-attempts">🎮 Попыток: <strong id="wheelAttemptsCount">0</strong></div>
             <div class="wheel-actions">
-                <button class="btn" id="wheelSpinBtn">🔄 Крутить</button>
+                <button class="btn primary" id="wheelSpinBtn">🔄 Крутить</button>
                 <button class="btn" id="wheelCloseBtn">✖ Закрыть</button>
             </div>
         </div>
@@ -861,62 +648,20 @@
 
     <button id="musicBtn" title="Вкл/Выкл музыку">🎵</button>
 
+    <!-- ============================================================ -->
+    <!--  ПОДКЛЮЧАЕМ СКРИПТЫ: СНАЧАЛА GAME.JS, ПОТОМ HEROES.JS        -->
+    <!-- ============================================================ -->
+    <script src="game.js"></script>
+    <script src="heroes.js"></script>
+
     <script>
-        // ============================================================
-        //  БЛЁСТКИ
-        // ============================================================
-        const sparklesContainer = document.getElementById('sparklesContainer');
-        for (let i = 0; i < 40; i++) {
-            const sparkle = document.createElement('div');
-            sparkle.className = 'sparkle';
-            sparkle.textContent = ['✦', '✧', '·', '⋆', '✶', '✵'][Math.floor(Math.random() * 6)];
-            sparkle.style.left = Math.random() * 100 + '%';
-            sparkle.style.fontSize = (Math.random() * 12 + 8) + 'px';
-            sparkle.style.animationDuration = (Math.random() * 20 + 15) + 's';
-            sparkle.style.animationDelay = (Math.random() * 20) + 's';
-            sparkle.style.opacity = Math.random() * 0.5 + 0.3;
-            sparklesContainer.appendChild(sparkle);
-        }
-
-        // ============================================================
-        //  ЗАГРУЗКА
-        // ============================================================
-        const loadingScreen = document.getElementById('loadingScreen');
-        const loadingBar = document.getElementById('loadingBar');
-        const loadingPercent = document.getElementById('loadingPercent');
-        const app = document.getElementById('app');
-        
-        let progress = 0;
-        const totalTime = 10000;
-        const startTime = Date.now();
-        
-        function updateLoading() {
-            const elapsed = Date.now() - startTime;
-            progress = Math.min((elapsed / totalTime) * 100, 100);
-            
-            loadingBar.style.width = progress + '%';
-            loadingPercent.textContent = Math.floor(progress) + '%';
-            
-            if (progress < 100) {
-                setTimeout(updateLoading, 50);
-            } else {
-                setTimeout(() => {
-                    loadingScreen.classList.add('hidden');
-                    setTimeout(() => {
-                        app.classList.add('show');
-                        loadGameScripts();
-                    }, 300);
-                }, 500);
-            }
-        }
-        setTimeout(updateLoading, 100);
-
         // ============================================================
         //  МУЗЫКА
         // ============================================================
         const music = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3');
         music.loop = true;
-        music.volume = 0.15;
+        music.volume = 0.2;
+
         const musicBtn = document.getElementById('musicBtn');
         let musicOn = false;
 
@@ -926,11 +671,17 @@
                 music.pause();
                 musicOn = false;
                 musicBtn.textContent = '🎵';
+                musicBtn.title = 'Включить музыку';
+                musicBtn.style.background = 'linear-gradient(145deg, #4CAF50, #2e7d32)';
             } else {
                 music.play().then(() => {
                     musicOn = true;
-                    musicBtn.textContent = '🔊';
-                }).catch(() => {});
+                    musicBtn.textContent = '🔇';
+                    musicBtn.title = 'Выключить музыку';
+                    musicBtn.style.background = 'linear-gradient(145deg, #e74c3c, #c0392b)';
+                }).catch(() => {
+                    alert('Не удалось запустить музыку');
+                });
             }
         });
 
@@ -938,7 +689,9 @@
             if (!musicOn) {
                 music.play().then(() => {
                     musicOn = true;
-                    musicBtn.textContent = '🔊';
+                    musicBtn.textContent = '🔇';
+                    musicBtn.title = 'Выключить музыку';
+                    musicBtn.style.background = 'linear-gradient(145deg, #e74c3c, #c0392b)';
                 }).catch(() => {});
             }
             document.removeEventListener('click', firstClick);
@@ -982,28 +735,7 @@
         };
 
         // ============================================================
-        //  ЗАГРУЗКА GAME.JS
-        // ============================================================
-        function loadGameScripts() {
-            if (!document.querySelector('script[src="game.js"]')) {
-                const script1 = document.createElement('script');
-                script1.src = 'game.js';
-                script1.onload = function() {
-                    console.log('✅ game.js загружен');
-                    setTimeout(addHeroButton, 500);
-                };
-                script1.onerror = function() {
-                    console.error('❌ Ошибка загрузки game.js');
-                    setTimeout(addHeroButton, 500);
-                };
-                document.head.appendChild(script1);
-            } else {
-                setTimeout(addHeroButton, 500);
-            }
-        }
-
-        // ============================================================
-        //  КНОПКА "СПАСИТЕЛИ ЗВЁЗД"
+        //  ДОБАВЛЕНИЕ КНОПКИ "СПАСИТЕЛИ ЗВЁЗД" ПОСЛЕ ЗАГРУЗКИ
         // ============================================================
         function addHeroButton() {
             const btnGrid = document.getElementById('btnGrid');
@@ -1011,17 +743,21 @@
                 setTimeout(addHeroButton, 500);
                 return;
             }
-            
+
             if (document.getElementById('btnHeroes')) return;
-            
+
             const heroBtn = document.createElement('button');
             heroBtn.id = 'btnHeroes';
             heroBtn.className = 'btn full small';
             heroBtn.textContent = '🦸‍♂️ Спасители звёзд';
             heroBtn.onclick = function() {
-                openHeroesMenu();
+                if (typeof openHeroesMenu === 'function') {
+                    openHeroesMenu();
+                } else {
+                    showToast('⚠️ Меню героев загружается...');
+                }
             };
-            
+
             const adminBtn = document.getElementById('btnAdmin');
             if (adminBtn) {
                 btnGrid.insertBefore(heroBtn, adminBtn);
@@ -1030,392 +766,13 @@
             }
         }
 
-        // ============================================================
-        //  МЕНЮ ГЕРОЕВ И ИГРА ЭЛИН (ВСЁ В ОДНОМ)
-        // ============================================================
-        let heroesProgress = { elin: false, mark: false, comics: false, evna: false };
-
-        function loadHeroesProgress() {
-            try {
-                const saved = localStorage.getItem('heroesProgress');
-                if (saved) heroesProgress = JSON.parse(saved);
-            } catch(e) {}
-        }
-        function saveHeroesProgress() {
-            try {
-                localStorage.setItem('heroesProgress', JSON.stringify(heroesProgress));
-            } catch(e) {}
-        }
-        loadHeroesProgress();
-
-        // ============================================================
-        //  ОТКРЫТИЕ МЕНЮ
-        // ============================================================
-        function openHeroesMenu() {
-            // Удаляем старые overlay
-            const oldOverlay = document.getElementById('heroesOverlay');
-            if (oldOverlay) oldOverlay.remove();
-            
-            const overlay = document.createElement('div');
-            overlay.id = 'heroesOverlay';
-            overlay.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9998;
-                background: linear-gradient(135deg, #ff0844, #ffb199, #ff0844);
-                background-size: 300% 300%;
-                animation: heroBgGradient 4s ease-in-out infinite;
-                display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto;
-            `;
-            
-            // Добавляем стили
-            let styleEl = document.getElementById('heroesStyle');
-            if (!styleEl) {
-                styleEl = document.createElement('style');
-                styleEl.id = 'heroesStyle';
-                styleEl.textContent = `
-                    @keyframes heroBgGradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-                    .hero-card { background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); border-radius: 30px; padding: 20px 25px; margin: 10px 0; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
-                    .hero-card:hover { background: rgba(255,255,255,0.2); transform: scale(1.02); }
-                    .hero-card.locked { opacity: 0.5; filter: grayscale(0.5); cursor: not-allowed; }
-                    .hero-card .status-done { color: #ffd93d; }
-                    .hero-card .status-locked { color: #ff4757; }
-                    .hero-card .status-available { color: #7ed6df; }
-                    @keyframes elinFall { 0% { transform: translateY(-50px) rotate(0deg); opacity: 1; } 100% { transform: translateY(calc(100% + 50px)) rotate(720deg); opacity: 0; } }
-                    @keyframes elinCatch { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
-                    @keyframes pulseBtn { 0%, 100% { box-shadow: 0 0 60px rgba(255,105,180,0.3); } 50% { box-shadow: 0 0 80px rgba(255,105,180,0.6); } }
-                `;
-                document.head.appendChild(styleEl);
-            }
-            
-            const container = document.createElement('div');
-            container.style.cssText = `max-width: 500px; width: 100%; padding: 20px;`;
-            
-            const title = document.createElement('h2');
-            title.textContent = '🦸‍♂️ Наши герои';
-            title.style.cssText = `text-align: center; color: #fff; font-size: 32px; margin-bottom: 25px;`;
-            container.appendChild(title);
-            
-            const heroes = [
-                { id: 'elin', name: 'Элин', emoji: '👩‍🚀', desc: 'Собери 150 звёзд за 3 минуты' },
-                { id: 'mark', name: 'Марк', emoji: '🧑‍🚀', desc: 'В разработке...' },
-                { id: 'comics', name: 'Комикс', emoji: '🦸', desc: 'В разработке...' },
-                { id: 'evna', name: 'Евна', emoji: '👩‍💻', desc: 'В разработке...' }
-            ];
-            
-            heroes.forEach(function(hero) {
-                const isUnlocked = hero.id === 'elin' || heroesProgress[hero.id] || (hero.id !== 'elin' && heroesProgress['elin']);
-                const isDone = heroesProgress[hero.id];
-                
-                let statusText = '🔒 Заблокирован';
-                let statusClass = 'status-locked';
-                if (isDone) { statusText = '✅ Пройдено!'; statusClass = 'status-done'; }
-                else if (isUnlocked) { statusText = '▶️ Доступно'; statusClass = 'status-available'; }
-                
-                const card = document.createElement('div');
-                card.className = 'hero-card' + (isUnlocked && !isDone ? '' : ' locked');
-                
-                card.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:15px;">
-                        <span style="font-size:40px;">${hero.emoji}</span>
-                        <div>
-                            <div style="font-size:20px;font-weight:700;color:#fff;">${hero.name}</div>
-                            <div style="font-size:13px;color:rgba(255,255,255,0.6);">${hero.desc}</div>
-                            <div class="${statusClass}" style="font-size:13px;">${statusText}</div>
-                        </div>
-                    </div>
-                    <span style="font-size:24px;color:rgba(255,255,255,0.3);">${isDone ? '✅' : (isUnlocked ? '▶️' : '🔒')}</span>
-                `;
-                
-                if (isUnlocked && !isDone) {
-                    card.onclick = function() {
-                        if (hero.id === 'elin') {
-                            // Закрываем меню и запускаем игру
-                            const overlayEl = document.getElementById('heroesOverlay');
-                            if (overlayEl) overlayEl.remove();
-                            startElinGameDirect();
-                        } else {
-                            showToast('🔄 В разработке!');
-                        }
-                    };
-                } else if (isDone) {
-                    card.onclick = function() { showToast('✅ Уже пройдено!'); };
-                } else {
-                    card.onclick = function() { showToast('🔒 Сначала пройдите предыдущего героя!'); };
-                }
-                container.appendChild(card);
-            });
-            
-            const backBtn = document.createElement('button');
-            backBtn.textContent = '⬅️ Назад';
-            backBtn.style.cssText = `width: 100%; padding: 16px; border: none; border-radius: 20px; background: rgba(255,255,255,0.15); color: #fff; font-size: 18px; font-weight: 700; cursor: pointer; margin-top: 20px;`;
-            backBtn.onclick = function() {
-                const overlayEl = document.getElementById('heroesOverlay');
-                if (overlayEl) overlayEl.remove();
-                showToast('⬅️ Возврат в главное меню');
-            };
-            container.appendChild(backBtn);
-            
-            overlay.appendChild(container);
-            document.body.appendChild(overlay);
-        }
-
-        // ============================================================
-        //  ИГРА ЭЛИН - ПРЯМОЙ ЗАПУСК
-        // ============================================================
-        function startElinGameDirect() {
-            // Удаляем старую игру
-            const oldGame = document.getElementById('elinGameOverlay');
-            if (oldGame) oldGame.remove();
-            
-            // Создаём игровое поле
-            const gameOverlay = document.createElement('div');
-            gameOverlay.id = 'elinGameOverlay';
-            gameOverlay.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;
-                background: linear-gradient(135deg, #0a0515, #1a0e3e, #0a0515);
-                background-size: 300% 300%;
-                animation: heroBgGradient 6s ease-in-out infinite;
-                display: flex; flex-direction: column; align-items: center; padding: 20px; overflow: hidden;
-            `;
-            
-            // Звёздный фон
-            for (let i = 0; i < 50; i++) {
-                const star = document.createElement('div');
-                star.textContent = '✦';
-                star.style.cssText = `position: absolute; color: rgba(255,255,255,0.1); font-size: ${Math.random()*20+10}px; top: ${Math.random()*100}%; left: ${Math.random()*100}%; animation: sparkleFall ${Math.random()*20+10}s linear infinite; animation-delay: ${Math.random()*10}s; pointer-events: none;`;
-                gameOverlay.appendChild(star);
-            }
-            
-            // Верхняя панель
-            const topPanel = document.createElement('div');
-            topPanel.style.cssText = `width: 100%; max-width: 500px; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(255,255,255,0.05); border-radius: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); z-index: 2; margin-bottom: 15px;`;
-            topPanel.innerHTML = `
-                <div style="color:#fff;font-weight:700;">⏱️ <span id="elinTimer">03:00</span></div>
-                <div style="color:#ffd93d;font-weight:700;font-size:20px;">⭐ <span id="elinCollected">0</span> / 150</div>
-                <button id="elinBackBtn" style="padding: 8px 16px; border: none; border-radius: 12px; background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-size: 14px; border: 1px solid rgba(255,255,255,0.1);">✖</button>
-            `;
-            gameOverlay.appendChild(topPanel);
-            
-            // Контейнер для звёзд
-            const starsContainer = document.createElement('div');
-            starsContainer.id = 'elinStarsContainer';
-            starsContainer.style.cssText = `width: 100%; max-width: 500px; flex: 1; position: relative; border-radius: 30px; overflow: hidden; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);`;
-            
-            // Кнопка "Начать"
-            const startBtn = document.createElement('button');
-            startBtn.id = 'elinStartBtn';
-            startBtn.textContent = '🌟 НАЧАТЬ';
-            startBtn.style.cssText = `position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 50px; border: none; border-radius: 30px; background: linear-gradient(135deg, #ff6b9d, #ff2e63); color: #ffffff; font-size: 24px; font-weight: 700; cursor: pointer; z-index: 10; box-shadow: 0 0 60px rgba(255,105,180,0.3); animation: pulseBtn 2s ease-in-out infinite;`;
-            startBtn.onclick = function() { 
-                startElinGameplayDirect(); 
-            };
-            starsContainer.appendChild(startBtn);
-            gameOverlay.appendChild(starsContainer);
-            
-            // Кнопка назад
-            document.getElementById('elinBackBtn').onclick = function() {
-                if (elinGameActive) {
-                    if (confirm('Вы уверены, что хотите выйти? Прогресс будет потерян!')) {
-                        stopElinGameDirect();
-                        gameOverlay.remove();
-                        openHeroesMenu();
-                    }
-                } else {
-                    gameOverlay.remove();
-                    openHeroesMenu();
-                }
-            };
-            
-            document.body.appendChild(gameOverlay);
-            elinGameOverlay = gameOverlay;
-        }
-
-        // ============================================================
-        //  ИГРОВОЙ ПРОЦЕСС
-        // ============================================================
-        let elinGameInterval = null;
-        let elinStars = [];
-        let elinCollected = 0;
-        let elinTimeLeft = 180;
-        let elinGameActive = false;
-        let elinStarCreationInterval = null;
-        let elinGameOverlay = null;
-
-        function startElinGameplayDirect() {
-            const startBtn = document.getElementById('elinStartBtn');
-            if (startBtn) startBtn.remove();
-            
-            elinCollected = 0;
-            elinTimeLeft = 180;
-            elinGameActive = true;
-            elinStars = [];
-            
-            document.getElementById('elinCollected').textContent = '0';
-            updateElinTimerDirect();
-            
-            if (elinGameInterval) clearInterval(elinGameInterval);
-            elinGameInterval = setInterval(function() {
-                elinTimeLeft--;
-                updateElinTimerDirect();
-                if (elinTimeLeft <= 0) {
-                    endElinGameDirect(false);
-                }
-            }, 1000);
-            
-            if (elinStarCreationInterval) clearInterval(elinStarCreationInterval);
-            elinStarCreationInterval = setInterval(function() {
-                if (elinGameActive) createElinStarDirect();
-            }, 400);
-            
-            for (let i = 0; i < 20; i++) {
-                setTimeout(function() { createElinStarDirect(); }, i * 150);
-            }
-            showToast('🌟 Собирайте звёзды! Нужно 150 за 3 минуты!');
-        }
-
-        function createElinStarDirect() {
-            if (!elinGameActive) return;
-            const container = document.getElementById('elinStarsContainer');
-            if (!container) return;
-            
-            const existingStars = container.querySelectorAll('.elin-falling-star');
-            if (existingStars.length > 40) return;
-            
-            const star = document.createElement('div');
-            star.className = 'elin-falling-star';
-            const emojis = ['⭐', '🌟', '✨', '💫'];
-            star.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-            star.style.cssText = `
-                position: absolute; left: ${Math.random()*90+5}%; top: -30px; font-size: ${Math.random()*20+20}px;
-                cursor: pointer; z-index: 1; user-select: none; text-shadow: 0 0 20px rgba(255,215,0,0.5);
-                animation: elinFall ${Math.random()*3+2}s linear forwards; transition: transform 0.1s;
-            `;
-            star.dataset.caught = 'false';
-            
-            star.onclick = function(e) {
-                e.stopPropagation();
-                if (this.dataset.caught === 'true') return;
-                if (!elinGameActive) return;
-                
-                this.dataset.caught = 'true';
-                this.style.animation = 'elinCatch 0.3s ease forwards';
-                elinCollected++;
-                document.getElementById('elinCollected').textContent = elinCollected;
-                this.style.color = '#ffd93d';
-                this.style.textShadow = '0 0 40px rgba(255,215,0,0.8)';
-                
-                setTimeout(function() { if (this && this.parentNode) this.remove(); }, 300);
-                if (elinCollected >= 150) endElinGameDirect(true);
-            };
-            
-            container.appendChild(star);
-            elinStars.push(star);
-            
-            setTimeout(function() {
-                if (star.parentNode && star.dataset.caught === 'false') {
-                    star.remove();
-                    const index = elinStars.indexOf(star);
-                    if (index > -1) elinStars.splice(index, 1);
-                }
-            }, 5000);
-        }
-
-        function updateElinTimerDirect() {
-            const timerEl = document.getElementById('elinTimer');
-            if (!timerEl) return;
-            const minutes = Math.floor(elinTimeLeft / 60);
-            const seconds = elinTimeLeft % 60;
-            timerEl.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-            timerEl.style.color = elinTimeLeft < 30 ? '#ff4757' : '#ffffff';
-        }
-
-        function endElinGameDirect(won) {
-            if (!elinGameActive) return;
-            elinGameActive = false;
-            
-            if (elinGameInterval) { clearInterval(elinGameInterval); elinGameInterval = null; }
-            if (elinStarCreationInterval) { clearInterval(elinStarCreationInterval); elinStarCreationInterval = null; }
-            
-            document.querySelectorAll('.elin-falling-star').forEach(function(star) { star.remove(); });
-            elinStars = [];
-            
-            const container = document.getElementById('elinStarsContainer');
-            if (!container) return;
-            
-            const oldResult = container.querySelector('.elin-result');
-            if (oldResult) oldResult.remove();
-            
-            const resultDiv = document.createElement('div');
-            resultDiv.className = 'elin-result';
-            resultDiv.style.cssText = `position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 10; background: rgba(0,0,0,0.7); padding: 40px; border-radius: 30px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); min-width: 280px;`;
-            
-            if (won) {
-                heroesProgress.elin = true;
-                saveHeroesProgress();
-                
-                // Пытаемся начислить награду
-                try {
-                    if (typeof getCurrentUser === 'function') {
-                        const user = getCurrentUser();
-                        if (user) {
-                            user.stars = (user.stars || 0) + 50;
-                            if (typeof saveAllData === 'function') saveAllData();
-                            if (typeof saveToServer === 'function') saveToServer();
-                        }
-                    }
-                } catch(e) {}
-                
-                resultDiv.innerHTML = `
-                    <div style="font-size:60px;margin-bottom:15px;">🎉</div>
-                    <div style="font-size:28px;font-weight:700;color:#ffd93d;">ПОБЕДА!</div>
-                    <div style="font-size:18px;color:rgba(255,255,255,0.8);margin:10px 0;">Вы собрали ${elinCollected} ⭐ за 3 минуты!</div>
-                    <div style="font-size:16px;color:#7ed6df;margin:10px 0;">🎁 Награда: +50 звёзд на аккаунт!</div>
-                    <button id="elinResultBtn" style="margin-top:15px;padding:12px 40px;border:none;border-radius:20px;background:linear-gradient(135deg,#ffd93d,#f0932b);color:#1a1a2e;font-size:18px;font-weight:700;cursor:pointer;">✅ Отлично!</button>
-                `;
-                document.getElementById('elinResultBtn').onclick = function() {
-                    if (elinGameOverlay) elinGameOverlay.remove();
-                    openHeroesMenu();
-                    showToast('🎉 Вы прошли миссию Элин! +50 звёзд!');
-                };
-                showToast('🎉 ПОБЕДА!');
-            } else {
-                resultDiv.innerHTML = `
-                    <div style="font-size:60px;margin-bottom:15px;">😢</div>
-                    <div style="font-size:28px;font-weight:700;color:#ff4757;">ВРЕМЯ ВЫШЛО!</div>
-                    <div style="font-size:18px;color:rgba(255,255,255,0.8);margin:10px 0;">Вы собрали ${elinCollected} ⭐ из 150</div>
-                    <div style="font-size:16px;color:#ff6b9d;margin:10px 0;">Попробуйте ещё раз!</div>
-                    <div>
-                        <button id="elinResultBtn" style="margin-top:15px;padding:12px 40px;border:none;border-radius:20px;background:linear-gradient(135deg,#ff6b9d,#ff2e63);color:#fff;font-size:18px;font-weight:700;cursor:pointer;">🔄 Попробовать снова</button>
-                        <button id="elinExitBtn" style="margin-top:15px;padding:12px 30px;border:none;border-radius:20px;background:rgba(255,255,255,0.1);color:#fff;font-size:16px;cursor:pointer;margin-left:10px;">🏠 Выйти</button>
-                    </div>
-                `;
-                document.getElementById('elinResultBtn').onclick = function() {
-                    if (elinGameOverlay) elinGameOverlay.remove();
-                    startElinGameDirect();
-                };
-                document.getElementById('elinExitBtn').onclick = function() {
-                    if (elinGameOverlay) elinGameOverlay.remove();
-                    openHeroesMenu();
-                };
-                showToast('⏰ Время вышло! Попробуйте ещё раз!');
-            }
-            container.appendChild(resultDiv);
-        }
-
-        function stopElinGameDirect() {
-            elinGameActive = false;
-            if (elinGameInterval) { clearInterval(elinGameInterval); elinGameInterval = null; }
-            if (elinStarCreationInterval) { clearInterval(elinStarCreationInterval); elinStarCreationInterval = null; }
-            elinStars = [];
-        }
-
-        // ============================================================
-        //  ЗАПУСК
-        // ============================================================
+        // Ждём загрузки game.js и heroes.js
         setTimeout(addHeroButton, 1000);
         setTimeout(addHeroButton, 3000);
         setTimeout(addHeroButton, 5000);
-        
-        console.log('🦄 Забава Игра готова!');
+
+        console.log('🦄 Забава Игра загружена!');
+        console.log('🦸‍♂️ Ожидаем загрузку heroes.js...');
     </script>
 </body>
 </html>
