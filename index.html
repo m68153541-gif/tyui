@@ -32,20 +32,23 @@
             100% { background-position: 0% 50%; }
         }
 
+        /* Блёстки на фоне */
         .sparkle {
             position: fixed;
             pointer-events: none;
             z-index: 0;
-            font-size: 20px;
+            font-size: 14px;
+            color: white;
+            opacity: 0.7;
             animation: sparkleFall linear infinite;
-            opacity: 0.6;
         }
 
         @keyframes sparkleFall {
-            0% { transform: translateY(-20px) rotate(0deg); opacity: 0.8; }
-            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+            0% { transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0.8; }
+            100% { transform: translateY(110vh) translateX(50px) rotate(720deg); opacity: 0; }
         }
 
+        /* ===== ЭКРАН ЗАГРУЗКИ С АНИМАЦИЕЙ ===== */
         #loadingScreen {
             position: fixed;
             top: 0;
@@ -61,6 +64,7 @@
             background-size: 200% 200%;
             animation: bgGradient 4s ease-in-out infinite;
             transition: opacity 0.8s ease;
+            overflow: hidden;
         }
 
         #loadingScreen.hidden {
@@ -68,24 +72,81 @@
             pointer-events: none;
         }
 
-        #loadingScreen .logo {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 80px;
-            background: rgba(255, 255, 255, 0.15);
-            box-shadow: 0 0 80px rgba(255, 105, 180, 0.5);
-            animation: pulseLogo 1.5s ease-in-out infinite;
+        /* Анимированные звёзды и единороги на загрузке */
+        .loading-animation {
+            position: relative;
+            width: 300px;
+            height: 300px;
             margin-bottom: 30px;
-            border: 3px solid rgba(255, 255, 255, 0.2);
         }
 
-        @keyframes pulseLogo {
-            0%, 100% { transform: scale(1) rotate(-5deg); box-shadow: 0 0 80px rgba(255, 105, 180, 0.5); }
-            50% { transform: scale(1.08) rotate(5deg); box-shadow: 0 0 120px rgba(255, 105, 180, 0.8); }
+        .loading-animation .unicorn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            animation: unicornFloat 3s ease-in-out infinite;
+            z-index: 2;
+        }
+
+        @keyframes unicornFloat {
+            0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(-5deg); }
+            50% { transform: translate(-50%, -60%) scale(1.1) rotate(5deg); }
+        }
+
+        .loading-animation .orbit-star {
+            position: absolute;
+            font-size: 30px;
+            animation: orbitStar 8s linear infinite;
+        }
+
+        .loading-animation .orbit-star:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; font-size: 25px; }
+        .loading-animation .orbit-star:nth-child(2) { top: 5%; right: 15%; animation-delay: 1.5s; font-size: 20px; }
+        .loading-animation .orbit-star:nth-child(3) { bottom: 15%; left: 5%; animation-delay: 3s; font-size: 28px; }
+        .loading-animation .orbit-star:nth-child(4) { bottom: 10%; right: 10%; animation-delay: 4.5s; font-size: 22px; }
+        .loading-animation .orbit-star:nth-child(5) { top: 20%; left: 50%; animation-delay: 6s; font-size: 18px; }
+        .loading-animation .orbit-star:nth-child(6) { bottom: 20%; left: 50%; animation-delay: 7.5s; font-size: 24px; }
+        .loading-animation .orbit-star:nth-child(7) { top: 50%; left: 5%; animation-delay: 2s; font-size: 20px; }
+        .loading-animation .orbit-star:nth-child(8) { top: 50%; right: 5%; animation-delay: 5.5s; font-size: 20px; }
+
+        @keyframes orbitStar {
+            0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 0.3; }
+            25% { transform: translate(30px, -40px) scale(1.3) rotate(90deg); opacity: 1; }
+            50% { transform: translate(60px, 0) scale(1) rotate(180deg); opacity: 0.8; }
+            75% { transform: translate(30px, 40px) scale(1.2) rotate(270deg); opacity: 1; }
+            100% { transform: translate(0, 0) scale(1) rotate(360deg); opacity: 0.3; }
+        }
+
+        .loading-animation .sparkle-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: ringPulse 3s ease-in-out infinite;
+        }
+
+        .loading-animation .sparkle-ring:nth-child(9) {
+            width: 200px;
+            height: 200px;
+            animation-delay: 0.5s;
+            border-color: rgba(255, 217, 61, 0.2);
+        }
+
+        .loading-animation .sparkle-ring:nth-child(10) {
+            width: 150px;
+            height: 150px;
+            animation-delay: 1s;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        @keyframes ringPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
         }
 
         #loadingScreen h2 {
@@ -95,6 +156,7 @@
             text-shadow: 0 0 40px rgba(255, 105, 180, 0.5);
             margin-bottom: 20px;
             animation: shimmer 2s ease-in-out infinite;
+            z-index: 3;
         }
 
         @keyframes shimmer {
@@ -111,6 +173,7 @@
             overflow: hidden;
             position: relative;
             box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 3;
         }
 
         .loading-bar {
@@ -134,6 +197,7 @@
             color: rgba(255, 255, 255, 0.9);
             font-weight: 500;
             letter-spacing: 1px;
+            z-index: 3;
         }
 
         .loading-percent {
@@ -141,6 +205,7 @@
             color: #ffd93d;
         }
 
+        /* ===== ОСНОВНОЕ ПРИЛОЖЕНИЕ ===== */
         #app {
             position: relative;
             z-index: 1;
@@ -286,37 +351,34 @@
             font-weight: 700;
             color: #ffffff;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.2);
+            transition: all 0.2s ease;
             text-shadow: 0 2px 10px rgba(0,0,0,0.2);
             letter-spacing: 0.3px;
-            box-shadow: 0 6px 25px rgba(0,0,0,0.15);
-            will-change: transform;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
         }
 
-        .btn:nth-child(1) { animation: floatBtn 3.2s ease-in-out infinite; background: linear-gradient(135deg, #ff6b9d, #ff2e63); }
-        .btn:nth-child(2) { animation: floatBtn 3.6s ease-in-out infinite 0.2s; background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
-        .btn:nth-child(3) { animation: floatBtn 2.8s ease-in-out infinite 0.5s; background: linear-gradient(135deg, #ffd93d, #f0932b); }
-        .btn:nth-child(4) { animation: floatBtn 3.4s ease-in-out infinite 0.1s; background: linear-gradient(135deg, #ff6b9d, #fd79a8); }
-        .btn:nth-child(5) { animation: floatBtn 3.0s ease-in-out infinite 0.7s; background: linear-gradient(135deg, #55efc4, #00b894); }
-        .btn:nth-child(6) { animation: floatBtn 3.8s ease-in-out infinite 0.3s; background: linear-gradient(135deg, #ffd93d, #f9ca24); }
-        .btn:nth-child(7) { animation: floatBtn 2.6s ease-in-out infinite 0.9s; background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
-        .btn:nth-child(8) { animation: floatBtn 3.3s ease-in-out infinite 0.4s; background: linear-gradient(135deg, #55efc4, #00b894); }
-        .btn:nth-child(9) { animation: floatBtn 3.7s ease-in-out infinite 0.6s; background: linear-gradient(135deg, #ff6b9d, #fd79a8); }
-        .btn:nth-child(10) { animation: floatBtn 2.9s ease-in-out infinite 0.8s; background: linear-gradient(135deg, #ffd93d, #f0932b); }
-        .btn:nth-child(11) { animation: floatBtn 3.5s ease-in-out infinite 0.15s; background: linear-gradient(135deg, #ff2e63, #e84393); }
-        .btn:nth-child(12) { animation: floatBtn 3.1s ease-in-out infinite 0.55s; background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
-
-        @keyframes floatBtn {
-            0% { transform: translateY(0px) scale(1); }
-            50% { transform: translateY(-10px) scale(1.03); }
-            100% { transform: translateY(0px) scale(1); }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.2);
         }
 
         .btn:active {
-            transform: translateY(4px) scale(0.96) !important;
-            animation: none !important;
+            transform: translateY(2px) scale(0.97);
             transition-duration: 0.08s;
         }
+
+        .btn:nth-child(1) { background: linear-gradient(135deg, #ff6b9d, #ff2e63); }
+        .btn:nth-child(2) { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+        .btn:nth-child(3) { background: linear-gradient(135deg, #ffd93d, #f0932b); }
+        .btn:nth-child(4) { background: linear-gradient(135deg, #ff6b9d, #fd79a8); }
+        .btn:nth-child(5) { background: linear-gradient(135deg, #55efc4, #00b894); }
+        .btn:nth-child(6) { background: linear-gradient(135deg, #ffd93d, #f9ca24); }
+        .btn:nth-child(7) { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+        .btn:nth-child(8) { background: linear-gradient(135deg, #55efc4, #00b894); }
+        .btn:nth-child(9) { background: linear-gradient(135deg, #ff6b9d, #fd79a8); }
+        .btn:nth-child(10) { background: linear-gradient(135deg, #ffd93d, #f0932b); }
+        .btn:nth-child(11) { background: linear-gradient(135deg, #ff2e63, #e84393); }
+        .btn:nth-child(12) { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
 
         .btn.danger {
             background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
@@ -335,9 +397,9 @@
             opacity: 0.5;
             transform: translateY(4px);
             pointer-events: none;
-            animation: none !important;
         }
 
+        /* ===== ОСТАЛЬНЫЕ СТИЛИ ===== */
         .wheel-overlay {
             display: none;
             position: fixed;
@@ -416,7 +478,6 @@
 
         .wheel-actions .btn {
             flex: 1;
-            animation: none !important;
         }
 
         .modal-overlay {
@@ -476,7 +537,6 @@
 
         .modal .btn {
             margin-top: 8px;
-            animation: none !important;
         }
 
         #toast {
@@ -647,7 +707,6 @@
         }
 
         .admin-panel .btn {
-            animation: none !important;
             font-size: 13px;
             padding: 10px 6px;
         }
@@ -691,14 +750,34 @@
                 bottom: 12px;
                 right: 12px;
             }
+            .loading-animation { width: 200px; height: 200px; }
+            .loading-animation .unicorn { font-size: 60px; }
+            .loading-animation .sparkle-ring { width: 180px; height: 180px; }
+            .loading-animation .sparkle-ring:nth-child(9) { width: 140px; height: 140px; }
+            .loading-animation .sparkle-ring:nth-child(10) { width: 100px; height: 100px; }
         }
     </style>
 </head>
 <body>
+    <!-- Блёстки на фоне -->
     <div id="sparklesContainer"></div>
 
+    <!-- ЭКРАН ЗАГРУЗКИ -->
     <div id="loadingScreen">
-        <div class="logo">🦄</div>
+        <div class="loading-animation">
+            <div class="sparkle-ring"></div>
+            <div class="sparkle-ring"></div>
+            <div class="sparkle-ring"></div>
+            <div class="orbit-star">✨</div>
+            <div class="orbit-star">⭐</div>
+            <div class="orbit-star">🌟</div>
+            <div class="orbit-star">💖</div>
+            <div class="orbit-star">✨</div>
+            <div class="orbit-star">⭐</div>
+            <div class="orbit-star">🌟</div>
+            <div class="orbit-star">💖</div>
+            <div class="unicorn">🦄</div>
+        </div>
         <h2>✨ Забава Игра ✨</h2>
         <div class="loading-bar-container">
             <div class="loading-bar" id="loadingBar"></div>
@@ -708,6 +787,7 @@
         </div>
     </div>
 
+    <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->
     <div id="app">
         <h1>🦄 Забава Игра</h1>
 
@@ -751,6 +831,7 @@
         </div>
     </div>
 
+    <!-- КОЛЕСО -->
     <div class="wheel-overlay" id="wheelOverlay">
         <div class="wheel-container">
             <h2>🎰 Колесо удачи</h2>
@@ -767,6 +848,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal" id="modalContent">
             <h2 id="modalTitle">Заголовок</h2>
@@ -776,6 +858,7 @@
 
     <div id="toast"></div>
 
+    <!-- КНОПКА МУЗЫКИ -->
     <button id="musicBtn" title="Вкл/Выкл музыку">🎵</button>
 
     <script>
@@ -783,21 +866,20 @@
         //  БЛЁСТКИ НА ФОНЕ
         // ============================================================
         const sparklesContainer = document.getElementById('sparklesContainer');
-        const sparkleEmojis = ['✨', '🌟', '💖', '🌸', '🌈', '🦄', '⭐'];
-
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 40; i++) {
             const sparkle = document.createElement('div');
             sparkle.className = 'sparkle';
-            sparkle.textContent = sparkleEmojis[Math.floor(Math.random() * sparkleEmojis.length)];
+            sparkle.textContent = ['✦', '✧', '·', '⋆', '✶', '✵'][Math.floor(Math.random() * 6)];
             sparkle.style.left = Math.random() * 100 + '%';
-            sparkle.style.fontSize = (Math.random() * 20 + 14) + 'px';
-            sparkle.style.animationDuration = (Math.random() * 15 + 10) + 's';
-            sparkle.style.animationDelay = (Math.random() * 15) + 's';
+            sparkle.style.fontSize = (Math.random() * 12 + 8) + 'px';
+            sparkle.style.animationDuration = (Math.random() * 20 + 15) + 's';
+            sparkle.style.animationDelay = (Math.random() * 20) + 's';
+            sparkle.style.opacity = Math.random() * 0.5 + 0.3;
             sparklesContainer.appendChild(sparkle);
         }
 
         // ============================================================
-        //  ЗАГРУЗКА
+        //  ЗАГРУЗКА (8-10 секунд)
         // ============================================================
         const loadingScreen = document.getElementById('loadingScreen');
         const loadingBar = document.getElementById('loadingBar');
@@ -805,15 +887,19 @@
         const app = document.getElementById('app');
         
         let progress = 0;
-        const loadingInterval = setInterval(() => {
-            progress += Math.random() * 3 + 1;
-            if (progress > 100) progress = 100;
+        const totalTime = 10000; // 10 секунд
+        const startTime = Date.now();
+        
+        function updateLoading() {
+            const elapsed = Date.now() - startTime;
+            progress = Math.min((elapsed / totalTime) * 100, 100);
             
             loadingBar.style.width = progress + '%';
             loadingPercent.textContent = Math.floor(progress) + '%';
             
-            if (progress >= 100) {
-                clearInterval(loadingInterval);
+            if (progress < 100) {
+                setTimeout(updateLoading, 50);
+            } else {
                 setTimeout(() => {
                     loadingScreen.classList.add('hidden');
                     setTimeout(() => {
@@ -822,10 +908,12 @@
                     }, 300);
                 }, 500);
             }
-        }, 80);
+        }
+        
+        setTimeout(updateLoading, 100);
 
         // ============================================================
-        //  МУЗЫКА (Весёлая, подходит под тему единорога)
+        //  МУЗЫКА
         // ============================================================
         const music = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3');
         music.loop = true;
@@ -914,7 +1002,7 @@
             document.head.appendChild(script);
         }
 
-        console.log('✨ Добро пожаловать в розовую сказку! 🦄');
+        console.log('🦄 Добро пожаловать в розовую сказку!');
     </script>
 </body>
 </html>
