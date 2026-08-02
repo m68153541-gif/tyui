@@ -6,6 +6,7 @@
     <title>🦄 Забава Игра</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* ===== ОСНОВНЫЕ СТИЛИ ===== */
         * {
             margin: 0;
             padding: 0;
@@ -395,6 +396,20 @@
             pointer-events: none;
         }
 
+        #btnTrials {
+            background: linear-gradient(135deg, #ffd93d, #f0932b) !important;
+            border: 2px solid rgba(255, 215, 0, 0.3) !important;
+            font-size: 16px !important;
+            padding: 14px !important;
+            grid-column: span 3 !important;
+            color: #1a1a2e !important;
+            border-radius: 20px !important;
+            cursor: pointer !important;
+            font-weight: 700 !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2) !important;
+        }
+
         #btnShop {
             background: linear-gradient(135deg, #fd79a8, #e84393) !important;
             border: 2px solid rgba(255, 215, 0, 0.2) !important;
@@ -408,8 +423,8 @@
             transition: all 0.3s ease !important;
         }
 
-        /* ===== СТИЛИ ДЛЯ МАГАЗИНА ===== */
-        #shopOverlay {
+        /* ===== СТИЛИ ДЛЯ ИСПЫТАНИЙ ===== */
+        #trialsOverlay {
             position: fixed;
             top: 0;
             left: 0;
@@ -418,6 +433,7 @@
             z-index: 9998;
             background: linear-gradient(135deg, #1a0e3e, #0a0515, #1a0e3e);
             background-size: 300% 300%;
+            animation: heroBgGradient 4s ease-in-out infinite;
             display: none;
             align-items: center;
             justify-content: center;
@@ -425,129 +441,106 @@
             overflow-y: auto;
             flex-direction: column;
         }
-        #shopOverlay.active {
+        #trialsOverlay.active {
             display: flex;
         }
 
-        .shop-container {
+        @keyframes heroBgGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .trials-container {
             max-width: 500px;
             width: 100%;
             padding: 20px;
             max-height: 90vh;
             overflow-y: auto;
         }
-        .shop-container h2 {
+        .trials-container h2 {
             text-align: center;
             color: #fff;
             font-size: 28px;
-            margin-bottom: 15px;
+            margin-bottom: 5px;
         }
-        .shop-preview {
+        .trials-container .subtitle {
             text-align: center;
-            padding: 15px;
-            background: rgba(255,255,255,0.03);
+            color: rgba(255,255,255,0.5);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .trial-card {
+            background: rgba(255,255,255,0.05);
             border-radius: 16px;
-            margin-bottom: 15px;
-            border: 1px solid rgba(255,255,255,0.05);
+            padding: 18px 20px;
+            margin-bottom: 12px;
+            border: 2px solid rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        .shop-preview .preview-emoji {
-            font-size: 60px;
+        .trial-card:hover {
+            transform: translateX(5px);
+            background: rgba(255,255,255,0.08);
         }
-        .shop-preview .preview-name {
+        .trial-card.locked {
+            opacity: 0.5;
+            cursor: default;
+        }
+        .trial-card.locked:hover {
+            transform: none;
+        }
+        .trial-card.completed {
+            border-color: rgba(255, 217, 61, 0.3);
+            background: rgba(255, 217, 61, 0.05);
+        }
+        .trial-card .trial-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+        .trial-card .trial-num {
+            font-size: 24px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.1);
+            min-width: 30px;
+        }
+        .trial-card .trial-info .trial-name {
             font-size: 18px;
             font-weight: 700;
             color: #fff;
-            margin-top: 5px;
         }
-        .shop-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            justify-content: center;
-        }
-        .shop-tab {
-            padding: 10px 25px;
-            border: none;
-            border-radius: 30px;
-            background: rgba(255,255,255,0.05);
-            color: rgba(255,255,255,0.5);
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-        .shop-tab:hover {
-            background: rgba(255,255,255,0.1);
-        }
-        .shop-tab.active {
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            border-color: rgba(255,217,61,0.2);
-        }
-        .shop-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            max-height: 350px;
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-        .shop-grid::-webkit-scrollbar {
-            width: 4px;
-        }
-        .shop-grid::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.2);
-            border-radius: 10px;
-        }
-        .shop-item {
-            background: rgba(255,255,255,0.05);
-            border-radius: 16px;
-            padding: 15px;
-            text-align: center;
-            border: 2px solid rgba(255,255,255,0.05);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-        }
-        .shop-item:hover {
-            transform: translateY(-2px);
-            background: rgba(255,255,255,0.08);
-        }
-        .shop-item.active {
-            border-color: #ffd93d;
-            background: rgba(255,217,61,0.05);
-        }
-        .shop-item.owned {
-            border-color: rgba(255,217,61,0.2);
-        }
-        .shop-item .emoji {
-            font-size: 40px;
-            display: block;
-            margin-bottom: 5px;
-        }
-        .shop-item .name {
-            font-size: 14px;
-            font-weight: 700;
-            color: #fff;
-        }
-        .shop-item .price {
+        .trial-card .trial-info .trial-desc {
             font-size: 13px;
-            color: #ffd93d;
-            margin-top: 4px;
+            color: rgba(255,255,255,0.5);
         }
-        .shop-item .price.free {
+        .trial-card .trial-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+        .trial-card .trial-price {
+            font-size: 14px;
+            color: #ffd93d;
+            font-weight: 700;
+        }
+        .trial-card .trial-price.free {
             color: #7ed6df;
         }
-        .shop-item .check {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            font-size: 14px;
+        .trial-card .trial-status {
+            font-size: 18px;
         }
-        .shop-item .buy-btn {
-            margin-top: 8px;
-            padding: 6px 15px;
+        .trial-card .trial-status.locked { color: #ff4757; }
+        .trial-card .trial-status.done { color: #ffd93d; }
+        .trial-card .trial-status.available { color: #7ed6df; }
+
+        .trial-btn {
+            padding: 6px 18px;
             border: none;
             border-radius: 12px;
             font-size: 13px;
@@ -557,24 +550,29 @@
             background: linear-gradient(135deg, #ff6b9d, #ff2e63);
             color: #fff;
         }
-        .shop-item .buy-btn:hover {
+        .trial-btn:hover {
             transform: scale(1.05);
         }
-        .shop-item .buy-btn:disabled {
+        .trial-btn:disabled {
             opacity: 0.3;
             cursor: not-allowed;
             transform: none !important;
         }
-        .shop-item .buy-btn.active-btn {
+        .trial-btn.buy {
             background: linear-gradient(135deg, #ffd93d, #f0932b);
             color: #1a1a2e;
         }
-        .shop-item .buy-btn.owned-btn {
+        .trial-btn.play {
+            background: linear-gradient(135deg, #55efc4, #00b894);
+            color: #1a1a2e;
+        }
+        .trial-btn.done {
             background: rgba(255,255,255,0.1);
-            color: rgba(255,255,255,0.5);
+            color: rgba(255,255,255,0.3);
             cursor: default;
         }
-        .shop-back-btn {
+
+        .trials-back-btn {
             width: 100%;
             padding: 16px;
             border: none;
@@ -587,24 +585,146 @@
             margin-top: 15px;
             transition: all 0.3s ease;
         }
-        .shop-back-btn:hover {
+        .trials-back-btn:hover {
             background: rgba(255,255,255,0.2);
         }
 
-        @keyframes bgNeon {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        /* ===== СТИЛИ ДЛЯ ИГРЫ ИСПЫТАНИЯ ===== */
+        #trialGameOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            background: linear-gradient(135deg, #0a0515, #1a0e3e, #0a0515);
+            background-size: 300% 300%;
+            animation: heroBgGradient 6s ease-in-out infinite;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow: hidden;
         }
-        @keyframes bgAurora {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        #trialGameOverlay.active {
+            display: flex;
         }
-        @keyframes bgRainbow {
-            from { background-position: 0% 50%; }
-            to { background-position: 200% 50%; }
+
+        #trialTopPanel {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 2;
+            margin-bottom: 15px;
         }
+        #trialTopPanel .trial-title { color: #fff; font-weight: 700; }
+        #trialTopPanel .trial-progress { color: #ffd93d; font-weight: 700; }
+        #trialTopPanel .trial-timer { color: #7ed6df; font-weight: 700; }
+
+        #trialGameContainer {
+            width: 100%;
+            max-width: 500px;
+            flex: 1;
+            position: relative;
+            border-radius: 30px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .trial-game-btn {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 30px;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        .trial-game-btn:hover {
+            transform: scale(1.05);
+        }
+        .trial-game-btn.primary {
+            background: linear-gradient(135deg, #ff6b9d, #ff2e63);
+            color: #fff;
+            box-shadow: 0 0 40px rgba(255, 105, 180, 0.3);
+        }
+        .trial-game-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .trial-click-star {
+            font-size: 80px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s;
+            text-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
+        }
+        .trial-click-star:hover {
+            transform: scale(1.1);
+        }
+        .trial-click-star.pop {
+            animation: trialPop 0.2s ease;
+        }
+        @keyframes trialPop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4); color: #ffd93d; }
+            100% { transform: scale(1); }
+        }
+
+        .trial-progress-bar {
+            width: 80%;
+            max-width: 300px;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        .trial-progress-bar .fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ffd93d, #f0932b);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .trial-result {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 40px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 280px;
+            animation: scaleUp 0.3s ease;
+        }
+        .trial-result .big { font-size: 60px; margin-bottom: 15px; }
+        .trial-result .title { font-size: 28px; font-weight: 700; }
+        .trial-result .title.win { color: #ffd93d; }
+        .trial-result .title.lose { color: #ff4757; }
+        .trial-result .desc { font-size: 18px; color: rgba(255,255,255,0.8); margin: 10px 0; }
+        .trial-result .reward { font-size: 16px; color: #7ed6df; margin: 10px 0; }
 
         .wheel-overlay {
             display: none;
@@ -929,11 +1049,8 @@
             .loading-animation .sparkle-ring { width: 180px; height: 180px; }
             .loading-animation .sparkle-ring:nth-child(9) { width: 140px; height: 140px; }
             .loading-animation .sparkle-ring:nth-child(10) { width: 100px; height: 100px; }
-            .shop-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-            .shop-item { padding: 12px; }
-            .shop-item .emoji { font-size: 30px; }
-            .shop-tabs { gap: 6px; }
-            .shop-tab { padding: 8px 15px; font-size: 14px; }
+            .trial-card { flex-direction: column; align-items: stretch; gap: 8px; }
+            .trial-card .trial-right { flex-direction: row; justify-content: space-between; align-items: center; flex-wrap: wrap; }
         }
     </style>
 </head>
@@ -1005,23 +1122,33 @@
             <button class="btn full small danger" id="btnSupport">🆘 Жалобы</button>
             <button class="btn full small" id="btnAdmin">🔧 Админ</button>
             <button class="btn full small" id="btnShop">🛍️ Магазин</button>
+            <button class="btn full small" id="btnTrials">⚡ Испытания</button>
         </div>
     </div>
 
-    <!-- МАГАЗИН (overlay) -->
-    <div id="shopOverlay">
-        <div class="shop-container">
-            <h2>🛍️ Магазин скинов</h2>
-            <div class="shop-preview" id="shopPreview">
-                <div class="preview-emoji" id="previewEmoji">🦄</div>
-                <div class="preview-name" id="previewName">Единорог</div>
+    <!-- ИСПЫТАНИЯ -->
+    <div id="trialsOverlay">
+        <div class="trials-container">
+            <h2>⚡ Испытания</h2>
+            <div class="subtitle">Проходи испытания и получай награды! 🏆</div>
+            <div id="trialsList"></div>
+            <button class="trials-back-btn" id="trialsBackBtn">⬅️ Назад</button>
+        </div>
+    </div>
+
+    <!-- ИГРА ИСПЫТАНИЯ -->
+    <div id="trialGameOverlay">
+        <div id="trialTopPanel">
+            <div class="trial-title" id="trialTitle">⭐ Звёздный сбор</div>
+            <div class="trial-progress" id="trialProgress">0 / 50</div>
+            <div class="trial-timer" id="trialTimer">⏱️ 60</div>
+        </div>
+        <div id="trialGameContainer">
+            <div class="trial-click-star" id="trialClickStar">⭐</div>
+            <div class="trial-progress-bar">
+                <div class="fill" id="trialFill"></div>
             </div>
-            <div class="shop-tabs">
-                <button class="shop-tab active" data-tab="pets">🦄 Питомцы</button>
-                <button class="shop-tab" data-tab="bgs">🌅 Фоны</button>
-            </div>
-            <div class="shop-grid" id="shopGrid"></div>
-            <button class="shop-back-btn" id="shopBackBtn">⬅️ Назад</button>
+            <div style="color:rgba(255,255,255,0.5);font-size:14px;margin-top:10px;">Кликай на звезду! ⭐</div>
         </div>
     </div>
 
@@ -1094,8 +1221,7 @@
                     loadingScreen.classList.add('hidden');
                     setTimeout(() => {
                         app.classList.add('show');
-                        // Инициализируем магазин
-                        initShop();
+                        initTrials();
                     }, 300);
                 }, 500);
             }
@@ -1173,279 +1299,297 @@
         };
 
         // ============================================================
-        //  МАГАЗИН - ДАННЫЕ
+        //  ИСПЫТАНИЯ - ДАННЫЕ
         // ============================================================
-        const SHOP_DATA = {
-            pets: [
-                { id: 'unicorn_default', name: '🦄 Единорог', price: 0, emoji: '🦄', default: true },
-                { id: 'dragon', name: '🐉 Дракон', price: 100, emoji: '🐉' },
-                { id: 'cat', name: '🐱 Кот', price: 50, emoji: '🐱' },
-                { id: 'fox', name: '🦊 Лис', price: 75, emoji: '🦊' },
-                { id: 'panda', name: '🐼 Панда', price: 80, emoji: '🐼' },
-                { id: 'phoenix', name: '🔥 Феникс', price: 200, emoji: '🔥' },
-                { id: 'mermaid', name: '🧜‍♀️ Русалка', price: 150, emoji: '🧜‍♀️' },
-                { id: 'ghost', name: '👻 Призрак', price: 60, emoji: '👻' },
-                { id: 'alien', name: '👽 Инопланетянин', price: 120, emoji: '👽' }
-            ],
-            backgrounds: [
-                { id: 'bg_default', name: '🌌 Космос', price: 0, gradient: 'linear-gradient(135deg, #ff6b9d, #ff2e63, #ff6b9d)', default: true },
-                { id: 'bg_sunset', name: '🌅 Закат', price: 50, gradient: 'linear-gradient(135deg, #ff6b6b, #ffd93d, #6c5ce7)' },
-                { id: 'bg_forest', name: '🌿 Лес', price: 40, gradient: 'linear-gradient(135deg, #2d3436, #00b894, #55efc4)' },
-                { id: 'bg_ocean', name: '🌊 Океан', price: 45, gradient: 'linear-gradient(135deg, #0c2461, #0984e3, #74b9ff)' },
-                { id: 'bg_candy', name: '🍭 Конфетный', price: 60, gradient: 'linear-gradient(135deg, #fd79a8, #ffd93d, #a29bfe)' },
-                { id: 'bg_neon', name: '💜 Неон', price: 80, gradient: 'linear-gradient(135deg, #2d2d44, #6c5ce7, #fd79a8, #00d4ff)', bgSize: '400% 400%', anim: 'bgNeon 8s ease-in-out infinite' },
-                { id: 'bg_aurora', name: '🌌 Северное сияние', price: 100, gradient: 'linear-gradient(135deg, #0c0c2e, #2d1b69, #1a5276, #00d4ff)', bgSize: '400% 400%', anim: 'bgAurora 10s ease-in-out infinite' },
-                { id: 'bg_rainbow', name: '🌈 Радуга', price: 70, gradient: 'conic-gradient(from 0deg, red, orange, yellow, green, blue, indigo, violet, red)', bgSize: '200% 200%', anim: 'bgRainbow 6s linear infinite' }
-            ]
+        const TRIALS_DATA = [
+            { id: 1, name: '⭐ Звёздный сбор', desc: 'Собери 50 звёзд за 60 секунд', target: 50, time: 60, reward: 30, price: 0, icon: '⭐' },
+            { id: 2, name: '🚀 Космический клик', desc: 'Сделай 80 кликов за 30 секунд', target: 80, time: 30, reward: 50, price: 400, icon: '🚀' },
+            { id: 3, name: '🌈 Радужный сбор', desc: 'Собери 100 звёзд за 90 секунд', target: 100, time: 90, reward: 80, price: 600, icon: '🌈' },
+            { id: 4, name: '🔥 Огненный рывок', desc: 'Сделай 120 кликов за 40 секунд', target: 120, time: 40, reward: 120, price: 800, icon: '🔥' },
+            { id: 5, name: '🌟 Звёздный мастер', desc: 'Собери 200 звёзд за 120 секунд', target: 200, time: 120, reward: 200, price: 1000, icon: '🌟' }
+        ];
+
+        let trialsState = {
+            completed: {},
+            purchased: {}
         };
 
-        let shopState = {
-            purchasedPets: ['unicorn_default'],
-            activePet: 'unicorn_default',
-            purchasedBgs: ['bg_default'],
-            activeBg: 'bg_default'
-        };
-
-        function loadShopState() {
+        function loadTrialsState() {
             try {
-                const saved = localStorage.getItem('shopState');
+                const saved = localStorage.getItem('trialsState');
                 if (saved) {
                     const parsed = JSON.parse(saved);
-                    if (parsed.purchasedPets && parsed.activePet) {
-                        shopState = parsed;
-                        if (!shopState.purchasedPets.includes('unicorn_default')) {
-                            shopState.purchasedPets.unshift('unicorn_default');
-                        }
-                        if (!shopState.purchasedBgs.includes('bg_default')) {
-                            shopState.purchasedBgs.unshift('bg_default');
-                        }
-                        return;
-                    }
+                    trialsState = parsed;
+                    return;
                 }
             } catch(e) {}
-            shopState = {
-                purchasedPets: ['unicorn_default'],
-                activePet: 'unicorn_default',
-                purchasedBgs: ['bg_default'],
-                activeBg: 'bg_default'
-            };
-            saveShopState();
+            trialsState = { completed: {}, purchased: {} };
+            saveTrialsState();
         }
 
-        function saveShopState() {
+        function saveTrialsState() {
             try {
-                localStorage.setItem('shopState', JSON.stringify(shopState));
+                localStorage.setItem('trialsState', JSON.stringify(trialsState));
             } catch(e) {}
         }
 
-        loadShopState();
+        loadTrialsState();
 
         // ============================================================
-        //  МАГАЗИН - ФУНКЦИИ
+        //  ИСПЫТАНИЯ - UI
         // ============================================================
-        let currentTab = 'pets';
-
-        function initShop() {
-            // Кнопка магазина
-            const shopBtn = document.getElementById('btnShop');
-            if (shopBtn) {
-                shopBtn.onclick = function() {
-                    openShop();
+        function initTrials() {
+            const btn = document.getElementById('btnTrials');
+            if (btn) {
+                btn.onclick = function() {
+                    openTrials();
                 };
             }
 
-            // Кнопка назад в магазине
-            document.getElementById('shopBackBtn').onclick = function() {
-                document.getElementById('shopOverlay').classList.remove('active');
+            document.getElementById('trialsBackBtn').onclick = function() {
+                document.getElementById('trialsOverlay').classList.remove('active');
                 showToast('⬅️ Возврат в главное меню');
             };
-
-            // Табы
-            document.querySelectorAll('.shop-tab').forEach(tab => {
-                tab.onclick = function() {
-                    document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                    currentTab = this.dataset.tab;
-                    renderShop();
-                };
-            });
-
-            // Применяем сохранённый фон
-            const bg = SHOP_DATA.backgrounds.find(b => b.id === shopState.activeBg);
-            if (bg && bg.id !== 'bg_default') {
-                applyBg(bg.id);
-            }
-
-            // Применяем сохранённого питомца
-            const pet = SHOP_DATA.pets.find(p => p.id === shopState.activePet);
-            if (pet && pet.id !== 'unicorn_default') {
-                applyPet(pet.id);
-            }
-
-            console.log('🛍️ Магазин готов!');
         }
 
-        function openShop() {
+        function openTrials() {
             const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
             if (!user || !user.registered) {
                 showToast('❌ Сначала зарегистрируйтесь!');
                 if (typeof checkRegistration === 'function') checkRegistration();
                 return;
             }
-            document.getElementById('shopOverlay').classList.add('active');
-            renderShop();
-            updatePreview();
+            document.getElementById('trialsOverlay').classList.add('active');
+            renderTrials();
         }
 
-        function renderShop() {
-            const grid = document.getElementById('shopGrid');
-            const items = currentTab === 'pets' ? SHOP_DATA.pets : SHOP_DATA.backgrounds;
-            const purchased = currentTab === 'pets' ? shopState.purchasedPets : shopState.purchasedBgs;
-            const active = currentTab === 'pets' ? shopState.activePet : shopState.activeBg;
-
+        function renderTrials() {
+            const list = document.getElementById('trialsList');
             let html = '';
-            items.forEach(item => {
-                const isOwned = purchased.includes(item.id);
-                const isActive = active === item.id;
-                const price = item.price || 0;
 
-                let btnHtml = '';
-                if (isActive) {
-                    btnHtml = `<button class="buy-btn active-btn" disabled>✅ Активен</button>`;
-                } else if (isOwned) {
-                    btnHtml = `<button class="buy-btn active-btn" onclick="selectItem('${currentTab}', '${item.id}')">📌 Выбрать</button>`;
-                } else if (price === 0) {
-                    btnHtml = `<button class="buy-btn" onclick="buyItem('${currentTab}', '${item.id}')">🆓 Бесплатно</button>`;
+            TRIALS_DATA.forEach((trial, index) => {
+                const isCompleted = trialsState.completed[trial.id] || false;
+                const isPurchased = trialsState.purchased[trial.id] || false;
+                const isFirst = index === 0;
+
+                let isUnlocked = false;
+                if (isFirst) {
+                    isUnlocked = true;
                 } else {
-                    btnHtml = `<button class="buy-btn" onclick="buyItem('${currentTab}', '${item.id}')">⭐ ${price}</button>`;
+                    const prevTrial = TRIALS_DATA[index - 1];
+                    const prevCompleted = trialsState.completed[prevTrial.id] || false;
+                    const prevPurchased = trialsState.purchased[prevTrial.id] || false;
+                    if (prevCompleted || prevPurchased) {
+                        isUnlocked = true;
+                    }
+                }
+
+                let statusText = '🔒 Заблокировано';
+                let statusClass = 'locked';
+                let btnHtml = '';
+
+                if (isCompleted) {
+                    statusText = '✅ Пройдено';
+                    statusClass = 'done';
+                    btnHtml = `<button class="trial-btn done" disabled>✅ Пройдено</button>`;
+                } else if (!isUnlocked) {
+                    statusText = '🔒 Заблокировано';
+                    statusClass = 'locked';
+                    btnHtml = `<button class="trial-btn" disabled>🔒 Заблокировано</button>`;
+                } else if (!isPurchased && !isFirst) {
+                    statusText = '💎 Купить';
+                    statusClass = 'available';
+                    btnHtml = `<button class="trial-btn buy" onclick="buyTrial(${trial.id})">⭐ ${trial.price}</button>`;
+                } else {
+                    statusText = '▶️ Играть';
+                    statusClass = 'available';
+                    btnHtml = `<button class="trial-btn play" onclick="startTrial(${trial.id})">▶️ Играть</button>`;
                 }
 
                 html += `
-                    <div class="shop-item ${isActive ? 'active' : ''} ${isOwned ? 'owned' : ''}">
-                        <div class="emoji">${item.emoji || '🎨'}</div>
-                        <div class="name">${item.name}</div>
-                        <div class="price ${price === 0 ? 'free' : ''}">${price === 0 ? '🆓 Бесплатно' : '⭐ ' + price}</div>
-                        ${isActive ? '<div class="check">✅</div>' : ''}
-                        ${btnHtml}
+                    <div class="trial-card ${isCompleted ? 'completed' : ''} ${!isUnlocked ? 'locked' : ''}">
+                        <div class="trial-left">
+                            <div class="trial-num">${trial.icon}</div>
+                            <div class="trial-info">
+                                <div class="trial-name">${trial.name}</div>
+                                <div class="trial-desc">${trial.desc}</div>
+                            </div>
+                        </div>
+                        <div class="trial-right">
+                            <div class="trial-price ${trial.price === 0 ? 'free' : ''}">${trial.price === 0 ? '🆓 Бесплатно' : '⭐ ' + trial.price}</div>
+                            <div class="trial-status ${statusClass}">${statusText}</div>
+                            ${btnHtml}
+                        </div>
                     </div>
                 `;
             });
-            grid.innerHTML = html;
-            updatePreview();
+
+            list.innerHTML = html;
         }
 
-        function updatePreview() {
-            const pet = SHOP_DATA.pets.find(p => p.id === shopState.activePet);
-            if (pet) {
-                document.getElementById('previewEmoji').textContent = pet.emoji;
-                document.getElementById('previewName').textContent = pet.name;
-            }
-        }
-
-        function buyItem(type, itemId) {
+        // ============================================================
+        //  ИСПЫТАНИЯ - ЛОГИКА
+        // ============================================================
+        function buyTrial(trialId) {
             const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
             if (!user) { showToast('❌ Игрок не найден'); return; }
 
-            const items = type === 'pets' ? SHOP_DATA.pets : SHOP_DATA.backgrounds;
-            const item = items.find(i => i.id === itemId);
-            if (!item) return;
+            const trial = TRIALS_DATA.find(t => t.id === trialId);
+            if (!trial) return;
 
-            const price = item.price || 0;
-            const purchased = type === 'pets' ? shopState.purchasedPets : shopState.purchasedBgs;
-
-            if (purchased.includes(itemId)) {
-                showToast('⚠️ Уже куплено!');
-                selectItem(type, itemId);
+            if (user.stars < trial.price) {
+                showToast('❌ Недостаточно звёзд! Нужно ' + trial.price + ' ⭐');
                 return;
             }
 
-            if (user.stars < price) {
-                showToast('❌ Недостаточно звёзд! Нужно ' + price + ' ⭐');
+            user.stars -= trial.price;
+            if (typeof saveAllData === 'function') saveAllData();
+            if (typeof saveToServer === 'function') saveToServer();
+
+            trialsState.purchased[trialId] = true;
+            saveTrialsState();
+
+            showToast('🎉 Испытание куплено!');
+            renderTrials();
+        }
+
+        let trialGame = {
+            id: null,
+            target: 0,
+            time: 0,
+            count: 0,
+            timer: null,
+            isRunning: false,
+            reward: 0
+        };
+
+        function startTrial(trialId) {
+            const trial = TRIALS_DATA.find(t => t.id === trialId);
+            if (!trial) return;
+
+            const isCompleted = trialsState.completed[trial.id] || false;
+            if (isCompleted) {
+                showToast('✅ Уже пройдено!');
                 return;
             }
 
-            if (price > 0) {
-                user.stars -= price;
-                if (typeof saveAllData === 'function') saveAllData();
-                if (typeof saveToServer === 'function') saveToServer();
-            }
+            // Закрываем список испытаний
+            document.getElementById('trialsOverlay').classList.remove('active');
 
-            if (type === 'pets') {
-                shopState.purchasedPets.push(itemId);
-            } else {
-                shopState.purchasedBgs.push(itemId);
-            }
-            saveShopState();
+            // Настраиваем игру
+            trialGame.id = trial.id;
+            trialGame.target = trial.target;
+            trialGame.time = trial.time;
+            trialGame.count = 0;
+            trialGame.reward = trial.reward;
+            trialGame.isRunning = false;
 
-            showToast('🎉 Куплено! ' + item.name);
-            selectItem(type, itemId);
-        }
+            document.getElementById('trialTitle').textContent = trial.icon + ' ' + trial.name;
+            document.getElementById('trialProgress').textContent = '0 / ' + trial.target;
+            document.getElementById('trialTimer').textContent = '⏱️ ' + trial.time;
+            document.getElementById('trialFill').style.width = '0%';
 
-        function selectItem(type, itemId) {
-            const items = type === 'pets' ? SHOP_DATA.pets : SHOP_DATA.backgrounds;
-            const item = items.find(i => i.id === itemId);
-            if (!item) return;
+            // Показываем игру
+            document.getElementById('trialGameOverlay').classList.add('active');
 
-            const purchased = type === 'pets' ? shopState.purchasedPets : shopState.purchasedBgs;
-            if (!purchased.includes(itemId)) {
-                showToast('❌ Сначала купите этот скин!');
-                return;
-            }
+            // Обработчик клика
+            const star = document.getElementById('trialClickStar');
+            star.onclick = function() {
+                if (!trialGame.isRunning) return;
+                trialGame.count++;
+                document.getElementById('trialProgress').textContent = trialGame.count + ' / ' + trialGame.target;
+                const progress = (trialGame.count / trialGame.target) * 100;
+                document.getElementById('trialFill').style.width = Math.min(progress, 100) + '%';
 
-            if (type === 'pets') {
-                shopState.activePet = itemId;
-                saveShopState();
-                applyPet(itemId);
-            } else {
-                shopState.activeBg = itemId;
-                saveShopState();
-                applyBg(itemId);
-            }
+                // Анимация
+                this.classList.remove('pop');
+                void this.offsetWidth;
+                this.classList.add('pop');
 
-            showToast('✅ Выбран ' + item.name);
-            renderShop();
-        }
-
-        function applyPet(skinId) {
-            const pet = SHOP_DATA.pets.find(p => p.id === skinId);
-            if (!pet) return;
-
-            const petStageEl = document.getElementById('petStage');
-            if (petStageEl) {
-                const currentText = petStageEl.textContent;
-                const stageText = currentText.replace(/^[^\s]+\s/, '');
-                petStageEl.textContent = pet.emoji + ' ' + stageText;
-            }
-        }
-
-        function applyBg(bgId) {
-            const bg = SHOP_DATA.backgrounds.find(b => b.id === bgId);
-            if (!bg) return;
-
-            const body = document.body;
-            body.style.background = bg.gradient;
-            body.style.backgroundSize = bg.bgSize || 'auto';
-            if (bg.anim) {
-                body.style.animation = bg.anim;
-            }
-
-            const overlay = document.getElementById('shopOverlay');
-            if (overlay) {
-                overlay.style.background = bg.gradient;
-                overlay.style.backgroundSize = bg.bgSize || 'auto';
-                if (bg.anim) {
-                    overlay.style.animation = bg.anim;
+                if (trialGame.count >= trialGame.target) {
+                    endTrial(true);
                 }
+            };
+
+            // Запускаем таймер
+            let timeLeft = trialGame.time;
+            trialGame.isRunning = true;
+
+            if (trialGame.timer) clearInterval(trialGame.timer);
+            trialGame.timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('trialTimer').textContent = '⏱️ ' + timeLeft;
+                if (timeLeft <= 0) {
+                    endTrial(false);
+                }
+            }, 1000);
+
+            showToast('🎯 Начато испытание!');
+        }
+
+        function endTrial(won) {
+            trialGame.isRunning = false;
+            if (trialGame.timer) {
+                clearInterval(trialGame.timer);
+                trialGame.timer = null;
             }
+
+            const container = document.getElementById('trialGameContainer');
+            const oldResult = container.querySelector('.trial-result');
+            if (oldResult) oldResult.remove();
+
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'trial-result';
+
+            if (won) {
+                trialsState.completed[trialGame.id] = true;
+                saveTrialsState();
+
+                // Награда
+                try {
+                    const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+                    if (user) {
+                        user.stars = (user.stars || 0) + trialGame.reward;
+                        if (typeof saveAllData === 'function') saveAllData();
+                        if (typeof saveToServer === 'function') saveToServer();
+                    }
+                } catch(e) {}
+
+                resultDiv.innerHTML = `
+                    <div class="big">🎉</div>
+                    <div class="title win">ПОБЕДА!</div>
+                    <div class="desc">Вы собрали ${trialGame.count} из ${trialGame.target} звёзд!</div>
+                    <div class="reward">🎁 Награда: +${trialGame.reward} звёзд!</div>
+                    <button class="trial-game-btn primary" onclick="closeTrialGame()">✅ Отлично!</button>
+                `;
+                showToast('🎉 Победа! +' + trialGame.reward + ' ⭐');
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="big">😢</div>
+                    <div class="title lose">ВРЕМЯ ВЫШЛО!</div>
+                    <div class="desc">Вы собрали ${trialGame.count} из ${trialGame.target} звёзд</div>
+                    <div class="reward">Попробуйте ещё раз!</div>
+                    <button class="trial-game-btn primary" onclick="closeTrialGame()">🏠 Выйти</button>
+                `;
+                showToast('⏰ Время вышло!');
+            }
+
+            container.appendChild(resultDiv);
+        }
+
+        function closeTrialGame() {
+            document.getElementById('trialGameOverlay').classList.remove('active');
+            renderTrials();
+            // Открываем список испытаний
+            document.getElementById('trialsOverlay').classList.add('active');
         }
 
         // ============================================================
         //  ЗАПУСК
         // ============================================================
         console.log('🦄 Забава Игра загружена!');
-        console.log('🛍️ Магазин скинов активирован!');
-        console.log('🦄 Доступно питомцев: ' + SHOP_DATA.pets.length);
-        console.log('🌅 Доступно фонов: ' + SHOP_DATA.backgrounds.length);
+        console.log('⚡ Испытания активированы!');
+        console.log('📋 Доступно испытаний: ' + TRIALS_DATA.length);
     </script>
 </body>
 </html>
