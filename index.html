@@ -395,6 +395,33 @@
             pointer-events: none;
         }
 
+        /* Кнопки для новых функций */
+        #btnShop {
+            background: linear-gradient(135deg, #fd79a8, #e84393) !important;
+            border: 2px solid rgba(255, 215, 0, 0.2) !important;
+            font-size: 16px !important;
+            padding: 14px !important;
+            grid-column: span 3 !important;
+            color: white !important;
+            border-radius: 20px !important;
+            cursor: pointer !important;
+            font-weight: 700 !important;
+            transition: all 0.3s ease !important;
+        }
+
+        #btnQuests {
+            background: linear-gradient(135deg, #a29bfe, #6c5ce7) !important;
+            border: 2px solid rgba(255, 215, 0, 0.2) !important;
+            font-size: 16px !important;
+            padding: 14px !important;
+            grid-column: span 3 !important;
+            color: white !important;
+            border-radius: 20px !important;
+            cursor: pointer !important;
+            font-weight: 700 !important;
+            transition: all 0.3s ease !important;
+        }
+
         .wheel-overlay {
             display: none;
             position: fixed;
@@ -850,6 +877,12 @@
 
     <button id="musicBtn" title="Вкл/Выкл музыку">🎵</button>
 
+    <!-- ============================================================ -->
+    <!--  ПОДКЛЮЧАЕМ СКРИПТЫ                                            -->
+    <!-- ============================================================ -->
+    <script src="game.js"></script>
+    <script src="features.js"></script>
+
     <script>
         // ============================================================
         //  БЛЁСТКИ
@@ -969,27 +1002,8 @@
             window._toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
         };
 
-        // ============================================================
-        //  ЗАГРУЗКА GAME.JS
-        // ============================================================
-        function loadGameScript() {
-            if (!document.querySelector('script[src="game.js"]')) {
-                const script = document.createElement('script');
-                script.src = 'game.js';
-                script.onload = function() {
-                    console.log('✅ game.js загружен');
-                };
-                script.onerror = function() {
-                    console.error('❌ Ошибка загрузки game.js');
-                };
-                document.head.appendChild(script);
-            }
-        }
-
-        // Загружаем game.js после появления меню
-        setTimeout(loadGameScript, 1000);
-
         console.log('🦄 Забава Игра загружена!');
+        console.log('🛍️ Магазин скинов активирован!');
     </script>
 </body>
 </html>
