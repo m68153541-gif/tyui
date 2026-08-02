@@ -6,7 +6,7 @@
     <title>🦄 Забава Игра</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* ===== ОСНОВНЫЕ СТИЛИ (сокращены для экономии места) ===== */
+        /* ===== ОСНОВНЫЕ СТИЛИ ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, 'Comic Sans MS', system-ui, sans-serif; }
         body { min-height: 100vh; background: linear-gradient(135deg, #ff6b9d, #ff2e63, #ff6b9d); background-size: 200% 200%; animation: bgGradient 6s ease-in-out infinite; display: flex; justify-content: center; padding: 20px 12px; color: #ffffff; overflow-y: auto; position: relative; }
         @keyframes bgGradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
@@ -96,12 +96,10 @@
         .trial-card .trial-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
         .trial-card .trial-price { font-size: 14px; color: #ffd93d; font-weight: 700; }
         .trial-card .trial-price.free { color: #7ed6df; }
-        .trial-card .trial-price .replay { font-size: 11px; color: rgba(255,255,255,0.4); }
         .trial-card .trial-status { font-size: 16px; }
         .trial-card .trial-status.locked { color: #ff4757; }
         .trial-card .trial-status.done { color: #ffd93d; }
         .trial-card .trial-status.available { color: #7ed6df; }
-
         .trial-btn { padding: 6px 18px; border: none; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; background: linear-gradient(135deg, #ff6b9d, #ff2e63); color: #fff; }
         .trial-btn:hover { transform: scale(1.05); }
         .trial-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; }
@@ -139,14 +137,12 @@
         .trial-result .desc { font-size: 18px; color: rgba(255,255,255,0.8); margin: 10px 0; }
         .trial-result .reward { font-size: 16px; color: #7ed6df; margin: 10px 0; }
 
-        /* ===== ИГРА "НАЙДИ ЦВЕТ" ===== */
         .color-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; width: 100%; max-width: 300px; margin: 10px 0; }
         .color-btn { width: 80px; height: 80px; border-radius: 16px; border: 3px solid rgba(255,255,255,0.1); cursor: pointer; transition: all 0.2s ease; }
         .color-btn:hover { transform: scale(1.05); }
         .color-btn:active { transform: scale(0.95); }
         .color-btn.correct { border-color: #ffd93d; box-shadow: 0 0 30px rgba(255,217,61,0.3); }
 
-        /* ===== ИГРА "ЗАПОМНИ" ===== */
         .memory-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; width: 100%; max-width: 250px; margin: 10px 0; }
         .memory-card { width: 70px; height: 70px; border-radius: 16px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 30px; transition: all 0.2s ease; user-select: none; }
         .memory-card:hover { transform: scale(1.05); background: rgba(255,255,255,0.08); }
@@ -498,6 +494,8 @@
         //  ИСПЫТАНИЯ - UI
         // ============================================================
         function initTrials() {
+            console.log('⚡ Инициализация испытаний...');
+            
             const btn = document.getElementById('btnTrials');
             if (btn) {
                 btn.onclick = function() {
@@ -509,6 +507,9 @@
                 document.getElementById('trialsOverlay').classList.remove('active');
                 showToast('⬅️ Возврат в главное меню');
             };
+            
+            // Сразу рендерим испытания для проверки
+            console.log('📋 Данные испытаний:', TRIALS_DATA);
         }
 
         function openTrials() {
@@ -524,6 +525,12 @@
 
         function renderTrials() {
             const list = document.getElementById('trialsList');
+            if (!list) {
+                console.error('❌ trialsList не найден!');
+                return;
+            }
+            
+            console.log('🔄 Рендеринг испытаний...');
             let html = '';
 
             TRIALS_DATA.forEach((trial, index) => {
@@ -582,10 +589,11 @@
             });
 
             list.innerHTML = html;
+            console.log('✅ Испытания отрендерены!');
         }
 
         // ============================================================
-        //  ИСПЫТАНИЯ - ЛОГИКА
+        //  ИСПЫТАНИЯ - ЛОГИКА (ОСТАВЛЯЕМ КАК ЕСТЬ)
         // ============================================================
         function replayTrial(trialId) {
             const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
@@ -600,13 +608,11 @@
             if (typeof saveAllData === 'function') saveAllData();
             if (typeof saveToServer === 'function') saveToServer();
 
-            // Снимаем статус пройденного
             delete trialsState.completed[trialId];
             saveTrialsState();
 
             showToast('🔄 Испытание открыто заново!');
             renderTrials();
-            // Запускаем сразу
             setTimeout(() => startTrial(trialId), 500);
         }
 
@@ -630,17 +636,14 @@
             const trial = TRIALS_DATA.find(t => t.id === trialId);
             if (!trial) return;
 
-            // Закрываем список
             document.getElementById('trialsOverlay').classList.remove('active');
 
-            // Обновляем попытки
             if (!trialsState.attempts[trialId]) {
                 trialsState.attempts[trialId] = 0;
             }
             trialsState.attempts[trialId]++;
             saveTrialsState();
 
-            // Настраиваем игру
             trialGame.id = trial.id;
             trialGame.type = trial.type;
             trialGame.target = trial.target;
@@ -653,11 +656,9 @@
             document.getElementById('trialProgress').textContent = '0 / ' + trial.target;
             document.getElementById('trialTimer').textContent = '⏱️ ' + trial.time;
 
-            // Очищаем контейнер
             const container = document.getElementById('trialGameContainer');
             container.innerHTML = '';
 
-            // Создаём игру в зависимости от типа
             if (trial.type === 'click') {
                 createClickGame(container);
             } else if (trial.type === 'color') {
@@ -666,10 +667,8 @@
                 createMemoryGame(container);
             }
 
-            // Показываем игру
             document.getElementById('trialGameOverlay').classList.add('active');
 
-            // Запускаем таймер
             let timeLeft = trialGame.time;
             trialGame.isRunning = true;
 
@@ -685,9 +684,6 @@
             showToast('🎯 Начато испытание!');
         }
 
-        // ============================================================
-        //  ИГРА "КЛИКЕР"
-        // ============================================================
         function createClickGame(container) {
             const star = document.createElement('div');
             star.className = 'trial-click-star';
@@ -700,54 +696,39 @@
                 const progress = (trialGame.count / trialGame.target) * 100;
                 const fill = document.getElementById('trialFill');
                 if (fill) fill.style.width = Math.min(progress, 100) + '%';
-
                 this.classList.remove('pop');
                 void this.offsetWidth;
                 this.classList.add('pop');
-
                 if (trialGame.count >= trialGame.target) {
                     endTrial(true);
                 }
             };
-
             const progressBar = document.createElement('div');
             progressBar.className = 'trial-progress-bar';
             progressBar.innerHTML = '<div class="fill" id="trialFill"></div>';
-
             const hint = document.createElement('div');
             hint.style.cssText = 'color:rgba(255,255,255,0.5);font-size:14px;margin-top:10px;';
             hint.textContent = 'Кликай на звезду! ⭐';
-
             container.appendChild(star);
             container.appendChild(progressBar);
             container.appendChild(hint);
         }
 
-        // ============================================================
-        //  ИГРА "НАЙДИ ЦВЕТ"
-        // ============================================================
         function createColorGame(container) {
             const colors = ['#ff6b6b', '#ffd93d', '#6c5ce7', '#00b894', '#fd79a8', '#0984e3', '#fdcb6e', '#e17055'];
             const colorNames = ['Красный', 'Жёлтый', 'Фиолетовый', 'Зелёный', 'Розовый', 'Синий', 'Оранжевый', 'Коралловый'];
-
-            // Выбираем целевой цвет
             const targetIndex = Math.floor(Math.random() * colors.length);
             trialGame.colorTarget = targetIndex;
-
             const info = document.createElement('div');
             info.style.cssText = 'color:#fff;font-size:20px;font-weight:700;margin-bottom:15px;';
             info.textContent = 'Найди цвет: ' + colorNames[targetIndex];
-
             const grid = document.createElement('div');
             grid.className = 'color-grid';
-
-            // Перемешиваем цвета
             const shuffled = [...colors];
             for (let i = shuffled.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
             }
-
             shuffled.forEach((color, index) => {
                 const btn = document.createElement('div');
                 btn.className = 'color-btn';
@@ -763,11 +744,9 @@
                         if (trialGame.count >= trialGame.target) {
                             endTrial(true);
                         } else {
-                            // Новый цвет
                             const newTarget = Math.floor(Math.random() * colors.length);
                             trialGame.colorTarget = newTarget;
                             info.textContent = 'Найди цвет: ' + colorNames[newTarget];
-                            // Убираем подсветку
                             document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('correct'));
                             showToast('✅ Правильно! Ищи следующий цвет!');
                         }
@@ -779,66 +758,56 @@
                 };
                 grid.appendChild(btn);
             });
-
             const progressBar = document.createElement('div');
             progressBar.className = 'trial-progress-bar';
             progressBar.innerHTML = '<div class="fill" id="trialFill"></div>';
-
             container.appendChild(info);
             container.appendChild(grid);
             container.appendChild(progressBar);
         }
 
-        // ============================================================
-        //  ИГРА "ЗАПОМНИ"
-        // ============================================================
         function createMemoryGame(container) {
             const emojis = ['⭐', '🌟', '✨', '💫', '🌙', '☀️', '🌈', '🦄'];
             const sequence = [];
             const total = trialGame.target;
-
-            // Генерируем последовательность
             for (let i = 0; i < total; i++) {
                 sequence.push(emojis[Math.floor(Math.random() * emojis.length)]);
             }
             trialGame.memorySequence = sequence;
             trialGame.memoryIndex = 0;
-
             const info = document.createElement('div');
             info.style.cssText = 'color:#fff;font-size:18px;font-weight:700;margin-bottom:10px;text-align:center;';
             info.textContent = 'Запомни последовательность!';
-
             const display = document.createElement('div');
             display.style.cssText = 'font-size:40px;padding:15px;text-align:center;min-height:60px;color:#ffd93d;';
+            const memoryGrid = document.createElement('div');
+            memoryGrid.id = 'memoryGrid';
+            memoryGrid.className = 'memory-grid';
+            const progressBar = document.createElement('div');
+            progressBar.className = 'trial-progress-bar';
+            progressBar.innerHTML = '<div class="fill" id="trialFill"></div>';
+            container.appendChild(info);
+            container.appendChild(display);
+            container.appendChild(memoryGrid);
+            container.appendChild(progressBar);
 
-            const grid = document.createElement('div');
-            grid.className = 'memory-grid';
-
-            // Показываем последовательность
             let showIndex = 0;
             const showInterval = setInterval(() => {
                 if (showIndex >= sequence.length) {
                     clearInterval(showInterval);
                     display.textContent = '🔮 Теперь повтори!';
-                    // Создаём карточки для выбора
                     const shuffledEmojis = [...emojis];
                     for (let i = shuffledEmojis.length - 1; i > 0; i--) {
                         const j = Math.floor(Math.random() * (i + 1));
                         [shuffledEmojis[i], shuffledEmojis[j]] = [shuffledEmojis[j], shuffledEmojis[i]];
                     }
-
-                    const cardEmojis = [];
-                    // Берём уникальные эмодзи для карточек
                     const uniqueEmojis = [...new Set(sequence)];
                     const extra = shuffledEmojis.filter(e => !uniqueEmojis.includes(e)).slice(0, 6 - uniqueEmojis.length);
                     const allEmojis = [...uniqueEmojis, ...extra];
-                    // Перемешиваем
                     for (let i = allEmojis.length - 1; i > 0; i--) {
                         const j = Math.floor(Math.random() * (i + 1));
                         [allEmojis[i], allEmojis[j]] = [allEmojis[j], allEmojis[i]];
                     }
-
-                    // Создаём карточки
                     const cards = allEmojis.slice(0, 6);
                     const gridContainer = document.getElementById('memoryGrid');
                     if (gridContainer) {
@@ -852,7 +821,6 @@
                                 if (!trialGame.isRunning) return;
                                 if (this.textContent !== '❓') return;
                                 if (trialGame.memoryIndex >= sequence.length) return;
-
                                 const expected = sequence[trialGame.memoryIndex];
                                 if (this.dataset.emoji === expected) {
                                     this.textContent = this.dataset.emoji;
@@ -878,55 +846,25 @@
                     }
                     return;
                 }
-
                 display.textContent = sequence[showIndex];
                 showIndex++;
             }, 500);
-
-            // Создаём контейнер для карточек
-            const memoryGrid = document.createElement('div');
-            memoryGrid.id = 'memoryGrid';
-            memoryGrid.className = 'memory-grid';
-
-            const progressBar = document.createElement('div');
-            progressBar.className = 'trial-progress-bar';
-            progressBar.innerHTML = '<div class="fill" id="trialFill"></div>';
-
-            container.appendChild(info);
-            container.appendChild(display);
-            container.appendChild(memoryGrid);
-            container.appendChild(progressBar);
-
-            // Сохраняем ссылку для использования в таймауте
-            setTimeout(() => {
-                if (document.getElementById('memoryGrid')) {
-                    // Уже создано
-                }
-            }, 100);
         }
 
-        // ============================================================
-        //  ЗАВЕРШЕНИЕ ИСПЫТАНИЯ
-        // ============================================================
         function endTrial(won) {
             trialGame.isRunning = false;
             if (trialGame.timer) {
                 clearInterval(trialGame.timer);
                 trialGame.timer = null;
             }
-
             const container = document.getElementById('trialGameContainer');
             const oldResult = container.querySelector('.trial-result');
             if (oldResult) oldResult.remove();
-
             const resultDiv = document.createElement('div');
             resultDiv.className = 'trial-result';
-
             if (won) {
                 trialsState.completed[trialGame.id] = true;
                 saveTrialsState();
-
-                // Награда
                 try {
                     const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
                     if (user) {
@@ -935,7 +873,6 @@
                         if (typeof saveToServer === 'function') saveToServer();
                     }
                 } catch(e) {}
-
                 resultDiv.innerHTML = `
                     <div class="big">🎉</div>
                     <div class="title win">ПОБЕДА!</div>
@@ -954,7 +891,6 @@
                 `;
                 showToast('⏰ Время вышло!');
             }
-
             container.appendChild(resultDiv);
         }
 
@@ -968,9 +904,19 @@
         //  ЗАПУСК
         // ============================================================
         console.log('🦄 Забава Игра загружена!');
-        console.log('⚡ Испытания с разнообразными механиками активированы!');
+        console.log('⚡ Испытания активированы!');
         console.log('📋 Доступно испытаний: ' + TRIALS_DATA.length);
         console.log('🔄 Перепрохождение: 100⭐ за попытку');
+        
+        // Принудительный рендеринг для проверки
+        setTimeout(function() {
+            console.log('🔄 Проверка рендеринга испытаний...');
+            if (document.getElementById('trialsList')) {
+                console.log('✅ trialsList найден');
+            } else {
+                console.error('❌ trialsList НЕ найден!');
+            }
+        }, 2000);
     </script>
 </body>
 </html>
