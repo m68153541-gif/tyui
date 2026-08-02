@@ -6,99 +6,18 @@
     <title>🦄 Забава Игра</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* ===== ОСНОВНЫЕ СТИЛИ ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, 'Comic Sans MS', system-ui, sans-serif;
-        }
-
-        body {
-            min-height: 100vh;
-            background: linear-gradient(135deg, #ff6b9d, #ff2e63, #ff6b9d);
-            background-size: 200% 200%;
-            animation: bgGradient 6s ease-in-out infinite;
-            display: flex;
-            justify-content: center;
-            padding: 20px 12px;
-            color: #ffffff;
-            overflow-y: auto;
-            position: relative;
-        }
-
-        @keyframes bgGradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        .sparkle {
-            position: fixed;
-            pointer-events: none;
-            z-index: 0;
-            font-size: 14px;
-            color: white;
-            opacity: 0.7;
-            animation: sparkleFall linear infinite;
-        }
-
-        @keyframes sparkleFall {
-            0% { transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0.8; }
-            100% { transform: translateY(110vh) translateX(50px) rotate(720deg); opacity: 0; }
-        }
-
-        #loadingScreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #ff6b9d, #ff2e63, #ff6b9d);
-            background-size: 200% 200%;
-            animation: bgGradient 4s ease-in-out infinite;
-            transition: opacity 0.8s ease;
-            overflow: hidden;
-        }
-
-        #loadingScreen.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .loading-animation {
-            position: relative;
-            width: 300px;
-            height: 300px;
-            margin-bottom: 30px;
-        }
-
-        .loading-animation .unicorn {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 80px;
-            animation: unicornFloat 3s ease-in-out infinite;
-            z-index: 2;
-        }
-
-        @keyframes unicornFloat {
-            0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(-5deg); }
-            50% { transform: translate(-50%, -60%) scale(1.1) rotate(5deg); }
-        }
-
-        .loading-animation .orbit-star {
-            position: absolute;
-            font-size: 30px;
-            animation: orbitStar 8s linear infinite;
-        }
-
+        /* ===== ОСНОВНЫЕ СТИЛИ (сокращены для экономии места) ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, 'Comic Sans MS', system-ui, sans-serif; }
+        body { min-height: 100vh; background: linear-gradient(135deg, #ff6b9d, #ff2e63, #ff6b9d); background-size: 200% 200%; animation: bgGradient 6s ease-in-out infinite; display: flex; justify-content: center; padding: 20px 12px; color: #ffffff; overflow-y: auto; position: relative; }
+        @keyframes bgGradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .sparkle { position: fixed; pointer-events: none; z-index: 0; font-size: 14px; color: white; opacity: 0.7; animation: sparkleFall linear infinite; }
+        @keyframes sparkleFall { 0% { transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0.8; } 100% { transform: translateY(110vh) translateX(50px) rotate(720deg); opacity: 0; } }
+        #loadingScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #ff6b9d, #ff2e63, #ff6b9d); background-size: 200% 200%; animation: bgGradient 4s ease-in-out infinite; transition: opacity 0.8s ease; overflow: hidden; }
+        #loadingScreen.hidden { opacity: 0; pointer-events: none; }
+        .loading-animation { position: relative; width: 300px; height: 300px; margin-bottom: 30px; }
+        .loading-animation .unicorn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; animation: unicornFloat 3s ease-in-out infinite; z-index: 2; }
+        @keyframes unicornFloat { 0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(-5deg); } 50% { transform: translate(-50%, -60%) scale(1.1) rotate(5deg); } }
+        .loading-animation .orbit-star { position: absolute; font-size: 30px; animation: orbitStar 8s linear infinite; }
         .loading-animation .orbit-star:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; font-size: 25px; }
         .loading-animation .orbit-star:nth-child(2) { top: 5%; right: 15%; animation-delay: 1.5s; font-size: 20px; }
         .loading-animation .orbit-star:nth-child(3) { bottom: 15%; left: 5%; animation-delay: 3s; font-size: 28px; }
@@ -107,263 +26,38 @@
         .loading-animation .orbit-star:nth-child(6) { bottom: 20%; left: 50%; animation-delay: 7.5s; font-size: 24px; }
         .loading-animation .orbit-star:nth-child(7) { top: 50%; left: 5%; animation-delay: 2s; font-size: 20px; }
         .loading-animation .orbit-star:nth-child(8) { top: 50%; right: 5%; animation-delay: 5.5s; font-size: 20px; }
-
-        @keyframes orbitStar {
-            0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 0.3; }
-            25% { transform: translate(30px, -40px) scale(1.3) rotate(90deg); opacity: 1; }
-            50% { transform: translate(60px, 0) scale(1) rotate(180deg); opacity: 0.8; }
-            75% { transform: translate(30px, 40px) scale(1.2) rotate(270deg); opacity: 1; }
-            100% { transform: translate(0, 0) scale(1) rotate(360deg); opacity: 0.3; }
-        }
-
-        .loading-animation .sparkle-ring {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 250px;
-            height: 250px;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            animation: ringPulse 3s ease-in-out infinite;
-        }
-
-        .loading-animation .sparkle-ring:nth-child(9) {
-            width: 200px;
-            height: 200px;
-            animation-delay: 0.5s;
-            border-color: rgba(255, 217, 61, 0.2);
-        }
-
-        .loading-animation .sparkle-ring:nth-child(10) {
-            width: 150px;
-            height: 150px;
-            animation-delay: 1s;
-            border-color: rgba(255, 255, 255, 0.15);
-        }
-
-        @keyframes ringPulse {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
-            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-        }
-
-        #loadingScreen h2 {
-            font-size: 32px;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 0 40px rgba(255, 105, 180, 0.5);
-            margin-bottom: 20px;
-            animation: shimmer 2s ease-in-out infinite;
-            z-index: 3;
-        }
-
-        @keyframes shimmer {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        .loading-bar-container {
-            width: 300px;
-            max-width: 80%;
-            height: 12px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 3;
-        }
-
-        .loading-bar {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #ff6b9d, #ff2e63, #ffd93d, #ff6b9d);
-            background-size: 300% 100%;
-            animation: loadingGradient 2s linear infinite;
-            border-radius: 20px;
-            transition: width 0.3s ease;
-        }
-
-        @keyframes loadingGradient {
-            0% { background-position: 0% 0%; }
-            100% { background-position: 300% 0%; }
-        }
-
-        .loading-text {
-            margin-top: 12px;
-            font-size: 18px;
-            color: rgba(255, 255, 255, 0.9);
-            font-weight: 500;
-            letter-spacing: 1px;
-            z-index: 3;
-        }
-
-        .loading-percent {
-            font-weight: 700;
-            color: #ffd93d;
-        }
-
-        #app {
-            position: relative;
-            z-index: 1;
-            max-width: 500px;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 48px 48px 32px 32px;
-            padding: 24px 20px 30px;
-            box-shadow: 0 20px 60px rgba(255, 105, 180, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            opacity: 0;
-            transform: translateY(30px) scale(0.95);
-            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-            margin-bottom: 80px;
-        }
-
-        #app.show {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-
-        h1 {
-            font-size: 28px;
-            font-weight: 700;
-            text-align: center;
-            letter-spacing: 1px;
-            color: #ffffff;
-            text-shadow: 0 0 40px rgba(255, 105, 180, 0.3);
-            margin-bottom: 18px;
-        }
-
-        .user-card {
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 24px;
-            padding: 16px 18px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px 12px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .user-card .label {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-            letter-spacing: 0.3px;
-        }
-
-        .user-card .value {
-            font-weight: 600;
-            text-align: right;
-            color: #ffffff;
-            font-size: 14px;
-            word-break: break-all;
-        }
-
-        .user-card .full {
-            grid-column: span 2;
-            text-align: center;
-            font-size: 13px;
-            font-weight: 500;
-            padding-top: 6px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        #userUid {
-            cursor: pointer;
-            transition: 0.2s;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
-        }
-
-        #userUid:hover {
-            color: #ffd93d;
-        }
-
-        .balance-grid {
-            display: flex;
-            gap: 14px;
-            margin: 12px 0 18px;
-        }
-
-        .balance-item {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.06);
-            border-radius: 20px;
-            padding: 14px 8px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .balance-item .num {
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-        }
-
-        .balance-item .num.gold {
-            color: #ffd93d;
-            text-shadow: 0 0 30px rgba(255, 217, 61, 0.3);
-        }
-
-        .balance-item .num.cyan {
-            color: #7ed6df;
-            text-shadow: 0 0 30px rgba(126, 214, 223, 0.3);
-        }
-
-        .balance-item .lbl {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-            margin-top: 4px;
-        }
-
-        .pet-status {
-            display: flex;
-            justify-content: space-between;
-            background: rgba(255, 255, 255, 0.06);
-            padding: 12px 16px;
-            border-radius: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .btn-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 14px 12px;
-            margin-top: 6px;
-        }
-
-        .btn {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 16px 10px;
-            border: none;
-            border-radius: 20px;
-            font-size: 15px;
-            font-weight: 700;
-            color: #ffffff;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            letter-spacing: 0.3px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(0,0,0,0.2);
-        }
-
-        .btn:active {
-            transform: translateY(2px) scale(0.97);
-            transition-duration: 0.08s;
-        }
-
+        @keyframes orbitStar { 0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 0.3; } 25% { transform: translate(30px, -40px) scale(1.3) rotate(90deg); opacity: 1; } 50% { transform: translate(60px, 0) scale(1) rotate(180deg); opacity: 0.8; } 75% { transform: translate(30px, 40px) scale(1.2) rotate(270deg); opacity: 1; } 100% { transform: translate(0, 0) scale(1) rotate(360deg); opacity: 0.3; } }
+        .loading-animation .sparkle-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 250px; height: 250px; border: 2px solid rgba(255,255,255,0.1); border-radius: 50%; animation: ringPulse 3s ease-in-out infinite; }
+        .loading-animation .sparkle-ring:nth-child(9) { width: 200px; height: 200px; animation-delay: 0.5s; border-color: rgba(255,217,61,0.2); }
+        .loading-animation .sparkle-ring:nth-child(10) { width: 150px; height: 150px; animation-delay: 1s; border-color: rgba(255,255,255,0.15); }
+        @keyframes ringPulse { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; } 50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; } }
+        #loadingScreen h2 { font-size: 32px; font-weight: 700; color: #ffffff; text-shadow: 0 0 40px rgba(255,105,180,0.5); margin-bottom: 20px; animation: shimmer 2s ease-in-out infinite; z-index: 3; }
+        @keyframes shimmer { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .loading-bar-container { width: 300px; max-width: 80%; height: 12px; background: rgba(255,255,255,0.2); border-radius: 20px; overflow: hidden; position: relative; box-shadow: inset 0 2px 10px rgba(0,0,0,0.1); z-index: 3; }
+        .loading-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #ff6b9d, #ff2e63, #ffd93d, #ff6b9d); background-size: 300% 100%; animation: loadingGradient 2s linear infinite; border-radius: 20px; transition: width 0.3s ease; }
+        @keyframes loadingGradient { 0% { background-position: 0% 0%; } 100% { background-position: 300% 0%; } }
+        .loading-text { margin-top: 12px; font-size: 18px; color: rgba(255,255,255,0.9); font-weight: 500; letter-spacing: 1px; z-index: 3; }
+        .loading-percent { font-weight: 700; color: #ffd93d; }
+        #app { position: relative; z-index: 1; max-width: 500px; width: 100%; background: rgba(255,255,255,0.12); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 48px 48px 32px 32px; padding: 24px 20px 30px; box-shadow: 0 20px 60px rgba(255,105,180,0.2), inset 0 1px 0 rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); opacity: 0; transform: translateY(30px) scale(0.95); transition: all 0.6s cubic-bezier(0.34,1.56,0.64,1); margin-bottom: 80px; }
+        #app.show { opacity: 1; transform: translateY(0) scale(1); }
+        h1 { font-size: 28px; font-weight: 700; text-align: center; letter-spacing: 1px; color: #ffffff; text-shadow: 0 0 40px rgba(255,105,180,0.3); margin-bottom: 18px; }
+        .user-card { background: rgba(255,255,255,0.08); border-radius: 24px; padding: 16px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.08); }
+        .user-card .label { font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 0.3px; }
+        .user-card .value { font-weight: 600; text-align: right; color: #ffffff; font-size: 14px; word-break: break-all; }
+        .user-card .full { grid-column: span 2; text-align: center; font-size: 13px; font-weight: 500; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); }
+        #userUid { cursor: pointer; transition: 0.2s; border-bottom: 1px dashed rgba(255,255,255,0.2); }
+        #userUid:hover { color: #ffd93d; }
+        .balance-grid { display: flex; gap: 14px; margin: 12px 0 18px; }
+        .balance-item { flex: 1; background: rgba(255,255,255,0.06); border-radius: 20px; padding: 14px 8px; text-align: center; border: 1px solid rgba(255,255,255,0.06); }
+        .balance-item .num { font-size: 28px; font-weight: 800; letter-spacing: 0.5px; }
+        .balance-item .num.gold { color: #ffd93d; text-shadow: 0 0 30px rgba(255,217,61,0.3); }
+        .balance-item .num.cyan { color: #7ed6df; text-shadow: 0 0 30px rgba(126,214,223,0.3); }
+        .balance-item .lbl { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+        .pet-status { display: flex; justify-content: space-between; background: rgba(255,255,255,0.06); padding: 12px 16px; border-radius: 40px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 20px; font-size: 14px; }
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px 12px; margin-top: 6px; }
+        .btn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 16px 10px; border: none; border-radius: 20px; font-size: 15px; font-weight: 700; color: #ffffff; cursor: pointer; transition: all 0.2s ease; text-shadow: 0 2px 10px rgba(0,0,0,0.2); letter-spacing: 0.3px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(0,0,0,0.2); }
+        .btn:active { transform: translateY(2px) scale(0.97); transition-duration: 0.08s; }
         .btn:nth-child(1) { background: linear-gradient(135deg, #ff6b9d, #ff2e63); }
         .btn:nth-child(2) { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
         .btn:nth-child(3) { background: linear-gradient(135deg, #ffd93d, #f0932b); }
@@ -376,349 +70,68 @@
         .btn:nth-child(10) { background: linear-gradient(135deg, #ffd93d, #f0932b); }
         .btn:nth-child(11) { background: linear-gradient(135deg, #ff2e63, #e84393); }
         .btn:nth-child(12) { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+        .btn.danger { background: linear-gradient(135deg, #e74c3c, #c0392b) !important; }
+        .btn.full { grid-column: span 3; }
+        .btn.small { padding: 12px 10px; font-size: 13px; }
+        .btn:disabled { opacity: 0.5; transform: translateY(4px); pointer-events: none; }
+        #btnTrials { background: linear-gradient(135deg, #ffd93d, #f0932b) !important; border: 2px solid rgba(255,215,0,0.3) !important; font-size: 16px !important; padding: 14px !important; grid-column: span 3 !important; color: #1a1a2e !important; border-radius: 20px !important; cursor: pointer !important; font-weight: 700 !important; transition: all 0.3s ease !important; box-shadow: 0 4px 15px rgba(255,215,0,0.2) !important; }
+        #btnShop { background: linear-gradient(135deg, #fd79a8, #e84393) !important; border: 2px solid rgba(255,215,0,0.2) !important; font-size: 16px !important; padding: 14px !important; grid-column: span 3 !important; color: white !important; border-radius: 20px !important; cursor: pointer !important; font-weight: 700 !important; transition: all 0.3s ease !important; }
 
-        .btn.danger {
-            background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
-        }
-
-        .btn.full {
-            grid-column: span 3;
-        }
-
-        .btn.small {
-            padding: 12px 10px;
-            font-size: 13px;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            transform: translateY(4px);
-            pointer-events: none;
-        }
-
-        #btnTrials {
-            background: linear-gradient(135deg, #ffd93d, #f0932b) !important;
-            border: 2px solid rgba(255, 215, 0, 0.3) !important;
-            font-size: 16px !important;
-            padding: 14px !important;
-            grid-column: span 3 !important;
-            color: #1a1a2e !important;
-            border-radius: 20px !important;
-            cursor: pointer !important;
-            font-weight: 700 !important;
-            transition: all 0.3s ease !important;
-            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2) !important;
-        }
-
-        #btnShop {
-            background: linear-gradient(135deg, #fd79a8, #e84393) !important;
-            border: 2px solid rgba(255, 215, 0, 0.2) !important;
-            font-size: 16px !important;
-            padding: 14px !important;
-            grid-column: span 3 !important;
-            color: white !important;
-            border-radius: 20px !important;
-            cursor: pointer !important;
-            font-weight: 700 !important;
-            transition: all 0.3s ease !important;
-        }
-
-        /* ===== СТИЛИ ДЛЯ ИСПЫТАНИЙ ===== */
-        #trialsOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9998;
-            background: linear-gradient(135deg, #1a0e3e, #0a0515, #1a0e3e);
-            background-size: 300% 300%;
-            animation: heroBgGradient 4s ease-in-out infinite;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            overflow-y: auto;
-            flex-direction: column;
-        }
-        #trialsOverlay.active {
-            display: flex;
-        }
-
-        @keyframes heroBgGradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        .trials-container {
-            max-width: 500px;
-            width: 100%;
-            padding: 20px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        .trials-container h2 {
-            text-align: center;
-            color: #fff;
-            font-size: 28px;
-            margin-bottom: 5px;
-        }
-        .trials-container .subtitle {
-            text-align: center;
-            color: rgba(255,255,255,0.5);
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
-
-        .trial-card {
-            background: rgba(255,255,255,0.05);
-            border-radius: 16px;
-            padding: 18px 20px;
-            margin-bottom: 12px;
-            border: 2px solid rgba(255,255,255,0.05);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .trial-card:hover {
-            transform: translateX(5px);
-            background: rgba(255,255,255,0.08);
-        }
-        .trial-card.locked {
-            opacity: 0.5;
-            cursor: default;
-        }
-        .trial-card.locked:hover {
-            transform: none;
-        }
-        .trial-card.completed {
-            border-color: rgba(255, 217, 61, 0.3);
-            background: rgba(255, 217, 61, 0.05);
-        }
-        .trial-card .trial-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex: 1;
-        }
-        .trial-card .trial-num {
-            font-size: 24px;
-            font-weight: 700;
-            color: rgba(255,255,255,0.1);
-            min-width: 30px;
-        }
-        .trial-card .trial-info .trial-name {
-            font-size: 18px;
-            font-weight: 700;
-            color: #fff;
-        }
-        .trial-card .trial-info .trial-desc {
-            font-size: 13px;
-            color: rgba(255,255,255,0.5);
-        }
-        .trial-card .trial-right {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 4px;
-        }
-        .trial-card .trial-price {
-            font-size: 14px;
-            color: #ffd93d;
-            font-weight: 700;
-        }
-        .trial-card .trial-price.free {
-            color: #7ed6df;
-        }
-        .trial-card .trial-status {
-            font-size: 18px;
-        }
+        /* ===== ИСПЫТАНИЯ ===== */
+        #trialsOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9998; background: linear-gradient(135deg, #1a0e3e, #0a0515, #1a0e3e); background-size: 300% 300%; animation: heroBgGradient 4s ease-in-out infinite; display: none; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; flex-direction: column; }
+        #trialsOverlay.active { display: flex; }
+        @keyframes heroBgGradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .trials-container { max-width: 500px; width: 100%; padding: 20px; max-height: 90vh; overflow-y: auto; }
+        .trials-container h2 { text-align: center; color: #fff; font-size: 28px; margin-bottom: 5px; }
+        .trials-container .subtitle { text-align: center; color: rgba(255,255,255,0.5); font-size: 14px; margin-bottom: 20px; }
+        .trial-card { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 18px 20px; margin-bottom: 12px; border: 2px solid rgba(255,255,255,0.05); transition: all 0.3s ease; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .trial-card:hover { transform: translateX(5px); background: rgba(255,255,255,0.08); }
+        .trial-card.locked { opacity: 0.5; cursor: default; }
+        .trial-card.locked:hover { transform: none; }
+        .trial-card.completed { border-color: rgba(255,217,61,0.3); background: rgba(255,217,61,0.05); }
+        .trial-card .trial-left { display: flex; align-items: center; gap: 15px; flex: 1; min-width: 150px; }
+        .trial-card .trial-num { font-size: 28px; font-weight: 700; color: rgba(255,255,255,0.1); min-width: 35px; }
+        .trial-card .trial-info .trial-name { font-size: 18px; font-weight: 700; color: #fff; }
+        .trial-card .trial-info .trial-desc { font-size: 13px; color: rgba(255,255,255,0.5); }
+        .trial-card .trial-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+        .trial-card .trial-price { font-size: 14px; color: #ffd93d; font-weight: 700; }
+        .trial-card .trial-price.free { color: #7ed6df; }
+        .trial-card .trial-price .replay { font-size: 11px; color: rgba(255,255,255,0.4); }
+        .trial-card .trial-status { font-size: 16px; }
         .trial-card .trial-status.locked { color: #ff4757; }
         .trial-card .trial-status.done { color: #ffd93d; }
         .trial-card .trial-status.available { color: #7ed6df; }
 
-        .trial-btn {
-            padding: 6px 18px;
-            border: none;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: linear-gradient(135deg, #ff6b9d, #ff2e63);
-            color: #fff;
-        }
-        .trial-btn:hover {
-            transform: scale(1.05);
-        }
-        .trial-btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-        .trial-btn.buy {
-            background: linear-gradient(135deg, #ffd93d, #f0932b);
-            color: #1a1a2e;
-        }
-        .trial-btn.play {
-            background: linear-gradient(135deg, #55efc4, #00b894);
-            color: #1a1a2e;
-        }
-        .trial-btn.done {
-            background: rgba(255,255,255,0.1);
-            color: rgba(255,255,255,0.3);
-            cursor: default;
-        }
+        .trial-btn { padding: 6px 18px; border: none; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; background: linear-gradient(135deg, #ff6b9d, #ff2e63); color: #fff; }
+        .trial-btn:hover { transform: scale(1.05); }
+        .trial-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; }
+        .trial-btn.buy { background: linear-gradient(135deg, #ffd93d, #f0932b); color: #1a1a2e; }
+        .trial-btn.play { background: linear-gradient(135deg, #55efc4, #00b894); color: #1a1a2e; }
+        .trial-btn.replay { background: linear-gradient(135deg, #a29bfe, #6c5ce7); color: #fff; }
+        .trial-btn.done { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); cursor: default; }
 
-        .trials-back-btn {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 20px;
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            font-size: 18px;
-            font-weight: 700;
-            cursor: pointer;
-            margin-top: 15px;
-            transition: all 0.3s ease;
-        }
-        .trials-back-btn:hover {
-            background: rgba(255,255,255,0.2);
-        }
+        .trials-back-btn { width: 100%; padding: 16px; border: none; border-radius: 20px; background: rgba(255,255,255,0.1); color: #fff; font-size: 18px; font-weight: 700; cursor: pointer; margin-top: 15px; transition: all 0.3s ease; }
+        .trials-back-btn:hover { background: rgba(255,255,255,0.2); }
 
-        /* ===== СТИЛИ ДЛЯ ИГРЫ ИСПЫТАНИЯ ===== */
-        #trialGameOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9999;
-            background: linear-gradient(135deg, #0a0515, #1a0e3e, #0a0515);
-            background-size: 300% 300%;
-            animation: heroBgGradient 6s ease-in-out infinite;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            overflow: hidden;
-        }
-        #trialGameOverlay.active {
-            display: flex;
-        }
-
-        #trialTopPanel {
-            width: 100%;
-            max-width: 500px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 2;
-            margin-bottom: 15px;
-        }
+        /* ===== ИГРА ИСПЫТАНИЯ ===== */
+        #trialGameOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: linear-gradient(135deg, #0a0515, #1a0e3e, #0a0515); background-size: 300% 300%; animation: heroBgGradient 6s ease-in-out infinite; display: none; flex-direction: column; align-items: center; padding: 20px; overflow: hidden; }
+        #trialGameOverlay.active { display: flex; }
+        #trialTopPanel { width: 100%; max-width: 500px; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(255,255,255,0.05); border-radius: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); z-index: 2; margin-bottom: 15px; }
         #trialTopPanel .trial-title { color: #fff; font-weight: 700; }
         #trialTopPanel .trial-progress { color: #ffd93d; font-weight: 700; }
         #trialTopPanel .trial-timer { color: #7ed6df; font-weight: 700; }
-
-        #trialGameContainer {
-            width: 100%;
-            max-width: 500px;
-            flex: 1;
-            position: relative;
-            border-radius: 30px;
-            overflow: hidden;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .trial-game-btn {
-            padding: 15px 40px;
-            border: none;
-            border-radius: 30px;
-            font-size: 20px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 5px;
-        }
-        .trial-game-btn:hover {
-            transform: scale(1.05);
-        }
-        .trial-game-btn.primary {
-            background: linear-gradient(135deg, #ff6b9d, #ff2e63);
-            color: #fff;
-            box-shadow: 0 0 40px rgba(255, 105, 180, 0.3);
-        }
-        .trial-game-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .trial-click-star {
-            font-size: 80px;
-            cursor: pointer;
-            user-select: none;
-            transition: transform 0.1s;
-            text-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
-        }
-        .trial-click-star:hover {
-            transform: scale(1.1);
-        }
-        .trial-click-star.pop {
-            animation: trialPop 0.2s ease;
-        }
-        @keyframes trialPop {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.4); color: #ffd93d; }
-            100% { transform: scale(1); }
-        }
-
-        .trial-progress-bar {
-            width: 80%;
-            max-width: 300px;
-            height: 8px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-            overflow: hidden;
-            margin: 15px 0;
-        }
-        .trial-progress-bar .fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #ffd93d, #f0932b);
-            border-radius: 10px;
-            transition: width 0.3s ease;
-        }
-
-        .trial-result {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            z-index: 10;
-            background: rgba(0, 0, 0, 0.85);
-            padding: 40px;
-            border-radius: 30px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            min-width: 280px;
-            animation: scaleUp 0.3s ease;
-        }
+        #trialGameContainer { width: 100%; max-width: 500px; flex: 1; position: relative; border-radius: 30px; overflow: hidden; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .trial-game-btn { padding: 15px 40px; border: none; border-radius: 30px; font-size: 20px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; margin: 5px; }
+        .trial-game-btn:hover { transform: scale(1.05); }
+        .trial-game-btn.primary { background: linear-gradient(135deg, #ff6b9d, #ff2e63); color: #fff; box-shadow: 0 0 40px rgba(255,105,180,0.3); }
+        .trial-game-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+        .trial-click-star { font-size: 80px; cursor: pointer; user-select: none; transition: transform 0.1s; text-shadow: 0 0 40px rgba(255,215,0,0.3); }
+        .trial-click-star:hover { transform: scale(1.1); }
+        .trial-click-star.pop { animation: trialPop 0.2s ease; }
+        @keyframes trialPop { 0% { transform: scale(1); } 50% { transform: scale(1.4); color: #ffd93d; } 100% { transform: scale(1); } }
+        .trial-progress-bar { width: 80%; max-width: 300px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin: 15px 0; }
+        .trial-progress-bar .fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ffd93d, #f0932b); border-radius: 10px; transition: width 0.3s ease; }
+        .trial-result { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 10; background: rgba(0,0,0,0.85); padding: 40px; border-radius: 30px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); min-width: 280px; animation: scaleUp 0.3s ease; }
         .trial-result .big { font-size: 60px; margin-bottom: 15px; }
         .trial-result .title { font-size: 28px; font-weight: 700; }
         .trial-result .title.win { color: #ffd93d; }
@@ -726,324 +139,72 @@
         .trial-result .desc { font-size: 18px; color: rgba(255,255,255,0.8); margin: 10px 0; }
         .trial-result .reward { font-size: 16px; color: #7ed6df; margin: 10px 0; }
 
-        .wheel-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(255, 105, 180, 0.3);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            animation: fadeIn 0.25s ease;
-        }
-        .wheel-overlay.active {
-            display: flex;
-        }
-        .wheel-container {
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(20px);
-            border-radius: 48px;
-            padding: 28px 24px 32px;
-            max-width: 440px;
-            width: 100%;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 30px 80px rgba(255, 105, 180, 0.3);
-            animation: scaleUp 0.25s ease;
-        }
-        .wheel-container h2 {
-            text-align: center;
-            margin-bottom: 12px;
-            color: #ffffff;
-            text-shadow: 0 0 40px rgba(255, 105, 180, 0.3);
-        }
-        .wheel-wrapper {
-            position: relative;
-            margin: 0 auto;
-            max-width: 320px;
-        }
-        #wheelCanvas {
-            display: block;
-            width: 100%;
-            height: auto;
-            aspect-ratio: 1/1;
-            border-radius: 50%;
-            box-shadow: 0 0 60px rgba(255, 105, 180, 0.2);
-            cursor: pointer;
-        }
-        .wheel-center {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 36px;
-            text-shadow: 0 0 30px rgba(255, 105, 180, 0.5);
-            pointer-events: none;
-        }
-        .wheel-result {
-            text-align: center;
-            font-size: 18px;
-            font-weight: 600;
-            padding: 12px 0 6px;
-            min-height: 50px;
-            color: #ffffff;
-        }
-        .wheel-actions {
-            display: flex;
-            gap: 12px;
-        }
-        .wheel-actions .btn {
-            flex: 1;
-        }
+        /* ===== ИГРА "НАЙДИ ЦВЕТ" ===== */
+        .color-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; width: 100%; max-width: 300px; margin: 10px 0; }
+        .color-btn { width: 80px; height: 80px; border-radius: 16px; border: 3px solid rgba(255,255,255,0.1); cursor: pointer; transition: all 0.2s ease; }
+        .color-btn:hover { transform: scale(1.05); }
+        .color-btn:active { transform: scale(0.95); }
+        .color-btn.correct { border-color: #ffd93d; box-shadow: 0 0 30px rgba(255,217,61,0.3); }
 
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(255, 105, 180, 0.3);
-            backdrop-filter: blur(8px);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            animation: fadeIn 0.2s ease;
-        }
-        .modal-overlay.active {
-            display: flex;
-        }
-        .modal {
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(20px);
-            border-radius: 40px;
-            padding: 28px 24px 30px;
-            max-width: 440px;
-            width: 100%;
-            max-height: 85vh;
-            overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 30px 80px rgba(255, 105, 180, 0.3);
-            animation: scaleUp 0.2s ease;
-        }
-        .modal h2 {
-            text-align: center;
-            margin-bottom: 16px;
-            font-size: 22px;
-            color: #ffffff;
-        }
-        .modal input {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            padding: 12px 16px;
-            color: #ffffff;
-            font-size: 15px;
-            width: 100%;
-            outline: none;
-            transition: 0.3s;
-        }
-        .modal input:focus {
-            border-color: #ffd93d;
-            box-shadow: 0 0 20px rgba(255, 217, 61, 0.1);
-        }
-        .modal .btn {
-            margin-top: 8px;
-        }
+        /* ===== ИГРА "ЗАПОМНИ" ===== */
+        .memory-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; width: 100%; max-width: 250px; margin: 10px 0; }
+        .memory-card { width: 70px; height: 70px; border-radius: 16px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 30px; transition: all 0.2s ease; user-select: none; }
+        .memory-card:hover { transform: scale(1.05); background: rgba(255,255,255,0.08); }
+        .memory-card.flipped { background: rgba(255,217,61,0.15); border-color: #ffd93d; }
+        .memory-card.matched { opacity: 0.3; cursor: default; }
 
-        #toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%) translateY(80px);
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(12px);
-            padding: 14px 28px;
-            border-radius: 20px;
-            color: #ffffff;
-            font-weight: 500;
-            font-size: 15px;
-            box-shadow: 0 12px 40px rgba(255, 105, 180, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 9999;
-            transition: 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
-            opacity: 0;
-            pointer-events: none;
-            white-space: nowrap;
-            max-width: 90%;
-            text-align: center;
-        }
-        #toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .clicker-star {
-            font-size: 72px;
-            cursor: pointer;
-            user-select: none;
-            margin: 6px 0;
-            transition: 0.1s;
-        }
-        .clicker-star.pop {
-            animation: popStar 0.2s ease;
-        }
-        @keyframes popStar {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.3); color: #ffd93d; }
-            100% { transform: scale(1); }
-        }
-        .clicker-progress {
-            width: 100%;
-            height: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            margin: 8px 0;
-            overflow: hidden;
-        }
-        .clicker-progress .fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #ff6b9d, #ffd93d);
-            border-radius: 20px;
-            transition: 0.2s;
-        }
-
-        #musicBtn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(8px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: #ffffff;
-            box-shadow: 0 4px 30px rgba(255, 105, 180, 0.3);
-            z-index: 9999;
-            transition: all 0.3s ease;
-        }
-        #musicBtn:hover {
-            transform: scale(1.1);
-            border-color: rgba(255, 255, 255, 0.4);
-        }
-        #musicBtn:active {
-            transform: scale(0.95);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes scaleUp {
-            from { opacity: 0; transform: scale(0.92); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .chat-container {
-            max-height: 200px;
-            overflow-y: auto;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 12px;
-            padding: 12px;
-            margin: 8px 0;
-            font-size: 14px;
-        }
+        .wheel-overlay { display: none; position: fixed; inset: 0; background: rgba(255,105,180,0.3); backdrop-filter: blur(10px); z-index: 1000; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.25s ease; }
+        .wheel-overlay.active { display: flex; }
+        .wheel-container { background: rgba(255,255,255,0.12); backdrop-filter: blur(20px); border-radius: 48px; padding: 28px 24px 32px; max-width: 440px; width: 100%; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 30px 80px rgba(255,105,180,0.3); animation: scaleUp 0.25s ease; }
+        .wheel-container h2 { text-align: center; margin-bottom: 12px; color: #ffffff; text-shadow: 0 0 40px rgba(255,105,180,0.3); }
+        .wheel-wrapper { position: relative; margin: 0 auto; max-width: 320px; }
+        #wheelCanvas { display: block; width: 100%; height: auto; aspect-ratio: 1/1; border-radius: 50%; box-shadow: 0 0 60px rgba(255,105,180,0.2); cursor: pointer; }
+        .wheel-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 36px; text-shadow: 0 0 30px rgba(255,105,180,0.5); pointer-events: none; }
+        .wheel-result { text-align: center; font-size: 18px; font-weight: 600; padding: 12px 0 6px; min-height: 50px; color: #ffffff; }
+        .wheel-actions { display: flex; gap: 12px; }
+        .wheel-actions .btn { flex: 1; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(255,105,180,0.3); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.2s ease; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: rgba(255,255,255,0.12); backdrop-filter: blur(20px); border-radius: 40px; padding: 28px 24px 30px; max-width: 440px; width: 100%; max-height: 85vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 30px 80px rgba(255,105,180,0.3); animation: scaleUp 0.2s ease; }
+        .modal h2 { text-align: center; margin-bottom: 16px; font-size: 22px; color: #ffffff; }
+        .modal input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 16px; color: #ffffff; font-size: 15px; width: 100%; outline: none; transition: 0.3s; }
+        .modal input:focus { border-color: #ffd93d; box-shadow: 0 0 20px rgba(255,217,61,0.1); }
+        .modal .btn { margin-top: 8px; }
+        #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px); background: rgba(255,255,255,0.12); backdrop-filter: blur(12px); padding: 14px 28px; border-radius: 20px; color: #ffffff; font-weight: 500; font-size: 15px; box-shadow: 0 12px 40px rgba(255,105,180,0.3); border: 1px solid rgba(255,255,255,0.1); z-index: 9999; transition: 0.3s cubic-bezier(0.2,0.9,0.3,1.2); opacity: 0; pointer-events: none; white-space: nowrap; max-width: 90%; text-align: center; }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .clicker-star { font-size: 72px; cursor: pointer; user-select: none; margin: 6px 0; transition: 0.1s; }
+        .clicker-star.pop { animation: popStar 0.2s ease; }
+        @keyframes popStar { 0% { transform: scale(1); } 50% { transform: scale(1.3); color: #ffd93d; } 100% { transform: scale(1); } }
+        .clicker-progress { width: 100%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 20px; margin: 8px 0; overflow: hidden; }
+        .clicker-progress .fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ff6b9d, #ffd93d); border-radius: 20px; transition: 0.2s; }
+        #musicBtn { position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.12); backdrop-filter: blur(8px); border: 2px solid rgba(255,255,255,0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #ffffff; box-shadow: 0 4px 30px rgba(255,105,180,0.3); z-index: 9999; transition: all 0.3s ease; }
+        #musicBtn:hover { transform: scale(1.1); border-color: rgba(255,255,255,0.4); }
+        #musicBtn:active { transform: scale(0.95); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleUp { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        .chat-container { max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 12px; margin: 8px 0; font-size: 14px; }
         .chat-container .msg.user { color: #7ed6df; }
         .chat-container .msg.admin { color: #ffd93d; }
-        .chat-container .msg .time {
-            font-size: 10px;
-            color: rgba(255,255,255,0.4);
-            margin-left: 10px;
-        }
-        .scrollable {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        #contestBanner {
-            background: rgba(255, 217, 61, 0.1);
-            border-radius: 40px;
-            padding: 12px 18px;
-            text-align: center;
-            border: 1px solid rgba(255, 217, 61, 0.15);
-            margin-bottom: 18px;
-        }
-        #contestBanner .title {
-            font-weight: 700;
-            font-size: 16px;
-            color: #ffd93d;
-        }
-        #contestBanner .timer {
-            font-size: 26px;
-            font-weight: 700;
-            font-variant-numeric: tabular-nums;
-            color: #ffffff;
-        }
-
-        .leaderboard-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 10px 0;
-        }
-        .leaderboard-table th {
-            padding: 8px;
-            text-align: left;
-            color: rgba(255,255,255,0.5);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .leaderboard-table td {
-            padding: 8px;
-            color: #fff;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-        }
-
-        .admin-panel .btn {
-            font-size: 13px;
-            padding: 10px 6px;
-        }
-
-        .code-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            margin: 4px 0;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-        }
-        .code-text {
-            cursor: pointer;
-            color: #ffd93d;
-            font-weight: bold;
-        }
-        .code-type {
-            color: rgba(255,255,255,0.5);
-            font-size: 12px;
-        }
-        .code-delete {
-            cursor: pointer;
-            color: #ff4757;
-            font-weight: bold;
-        }
+        .chat-container .msg .time { font-size: 10px; color: rgba(255,255,255,0.4); margin-left: 10px; }
+        .scrollable { max-height: 300px; overflow-y: auto; }
+        #contestBanner { background: rgba(255,217,61,0.1); border-radius: 40px; padding: 12px 18px; text-align: center; border: 1px solid rgba(255,217,61,0.15); margin-bottom: 18px; }
+        #contestBanner .title { font-weight: 700; font-size: 16px; color: #ffd93d; }
+        #contestBanner .timer { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; color: #ffffff; }
+        .leaderboard-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        .leaderboard-table th { padding: 8px; text-align: left; color: rgba(255,255,255,0.5); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .leaderboard-table td { padding: 8px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .admin-panel .btn { font-size: 13px; padding: 10px 6px; }
+        .code-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin: 4px 0; background: rgba(255,255,255,0.05); border-radius: 8px; }
+        .code-text { cursor: pointer; color: #ffd93d; font-weight: bold; }
+        .code-type { color: rgba(255,255,255,0.5); font-size: 12px; }
+        .code-delete { cursor: pointer; color: #ff4757; font-weight: bold; }
 
         @media (max-width: 420px) {
             .btn-grid { gap: 10px; }
             .btn { font-size: 13px; padding: 14px 6px; }
             .balance-item .num { font-size: 24px; }
             #app { padding: 18px 14px 22px; }
-            #musicBtn {
-                width: 48px;
-                height: 48px;
-                font-size: 20px;
-                bottom: 12px;
-                right: 12px;
-            }
+            #musicBtn { width: 48px; height: 48px; font-size: 20px; bottom: 12px; right: 12px; }
             .loading-animation { width: 200px; height: 200px; }
             .loading-animation .unicorn { font-size: 60px; }
             .loading-animation .sparkle-ring { width: 180px; height: 180px; }
@@ -1051,6 +212,10 @@
             .loading-animation .sparkle-ring:nth-child(10) { width: 100px; height: 100px; }
             .trial-card { flex-direction: column; align-items: stretch; gap: 8px; }
             .trial-card .trial-right { flex-direction: row; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+            .color-grid { gap: 10px; }
+            .color-btn { width: 60px; height: 60px; }
+            .memory-grid { gap: 8px; }
+            .memory-card { width: 55px; height: 55px; font-size: 24px; }
         }
     </style>
 </head>
@@ -1130,7 +295,7 @@
     <div id="trialsOverlay">
         <div class="trials-container">
             <h2>⚡ Испытания</h2>
-            <div class="subtitle">Проходи испытания и получай награды! 🏆</div>
+            <div class="subtitle">Проходи разные испытания и зарабатывай звёзды! 🏆</div>
             <div id="trialsList"></div>
             <button class="trials-back-btn" id="trialsBackBtn">⬅️ Назад</button>
         </div>
@@ -1139,17 +304,11 @@
     <!-- ИГРА ИСПЫТАНИЯ -->
     <div id="trialGameOverlay">
         <div id="trialTopPanel">
-            <div class="trial-title" id="trialTitle">⭐ Звёздный сбор</div>
-            <div class="trial-progress" id="trialProgress">0 / 50</div>
-            <div class="trial-timer" id="trialTimer">⏱️ 60</div>
+            <div class="trial-title" id="trialTitle">⭐ Испытание</div>
+            <div class="trial-progress" id="trialProgress">0 / 0</div>
+            <div class="trial-timer" id="trialTimer">⏱️ 0</div>
         </div>
-        <div id="trialGameContainer">
-            <div class="trial-click-star" id="trialClickStar">⭐</div>
-            <div class="trial-progress-bar">
-                <div class="fill" id="trialFill"></div>
-            </div>
-            <div style="color:rgba(255,255,255,0.5);font-size:14px;margin-top:10px;">Кликай на звезду! ⭐</div>
-        </div>
+        <div id="trialGameContainer"></div>
     </div>
 
     <div class="wheel-overlay" id="wheelOverlay">
@@ -1302,16 +461,16 @@
         //  ИСПЫТАНИЯ - ДАННЫЕ
         // ============================================================
         const TRIALS_DATA = [
-            { id: 1, name: '⭐ Звёздный сбор', desc: 'Собери 50 звёзд за 60 секунд', target: 50, time: 60, reward: 30, price: 0, icon: '⭐' },
-            { id: 2, name: '🚀 Космический клик', desc: 'Сделай 80 кликов за 30 секунд', target: 80, time: 30, reward: 50, price: 400, icon: '🚀' },
-            { id: 3, name: '🌈 Радужный сбор', desc: 'Собери 100 звёзд за 90 секунд', target: 100, time: 90, reward: 80, price: 600, icon: '🌈' },
-            { id: 4, name: '🔥 Огненный рывок', desc: 'Сделай 120 кликов за 40 секунд', target: 120, time: 40, reward: 120, price: 800, icon: '🔥' },
-            { id: 5, name: '🌟 Звёздный мастер', desc: 'Собери 200 звёзд за 120 секунд', target: 200, time: 120, reward: 200, price: 1000, icon: '🌟' }
+            { id: 1, name: '⭐ Звёздный сбор', desc: 'Собери 50 звёзд за 60 секунд', target: 50, time: 60, reward: 30, price: 0, icon: '⭐', type: 'click' },
+            { id: 2, name: '🎨 Найди цвет', desc: 'Найди правильный цвет 7 раз', target: 7, time: 30, reward: 50, price: 400, icon: '🎨', type: 'color' },
+            { id: 3, name: '🧠 Запомни', desc: 'Запомни последовательность из 6 звёзд', target: 6, time: 45, reward: 80, price: 600, icon: '🧠', type: 'memory' },
+            { id: 4, name: '🚀 Космический клик', desc: 'Сделай 100 кликов за 30 секунд', target: 100, time: 30, reward: 120, price: 800, icon: '🚀', type: 'click' },
+            { id: 5, name: '🌈 Радуга', desc: 'Найди все цвета радуги', target: 7, time: 40, reward: 150, price: 1000, icon: '🌈', type: 'color' }
         ];
 
         let trialsState = {
             completed: {},
-            purchased: {}
+            attempts: {}
         };
 
         function loadTrialsState() {
@@ -1323,7 +482,7 @@
                     return;
                 }
             } catch(e) {}
-            trialsState = { completed: {}, purchased: {} };
+            trialsState = { completed: {}, attempts: {} };
             saveTrialsState();
         }
 
@@ -1369,7 +528,7 @@
 
             TRIALS_DATA.forEach((trial, index) => {
                 const isCompleted = trialsState.completed[trial.id] || false;
-                const isPurchased = trialsState.purchased[trial.id] || false;
+                const attempts = trialsState.attempts[trial.id] || 0;
                 const isFirst = index === 0;
 
                 let isUnlocked = false;
@@ -1378,8 +537,7 @@
                 } else {
                     const prevTrial = TRIALS_DATA[index - 1];
                     const prevCompleted = trialsState.completed[prevTrial.id] || false;
-                    const prevPurchased = trialsState.purchased[prevTrial.id] || false;
-                    if (prevCompleted || prevPurchased) {
+                    if (prevCompleted) {
                         isUnlocked = true;
                     }
                 }
@@ -1391,15 +549,13 @@
                 if (isCompleted) {
                     statusText = '✅ Пройдено';
                     statusClass = 'done';
-                    btnHtml = `<button class="trial-btn done" disabled>✅ Пройдено</button>`;
+                    btnHtml = `
+                        <button class="trial-btn replay" onclick="replayTrial(${trial.id})">🔄 За 100⭐</button>
+                    `;
                 } else if (!isUnlocked) {
                     statusText = '🔒 Заблокировано';
                     statusClass = 'locked';
                     btnHtml = `<button class="trial-btn" disabled>🔒 Заблокировано</button>`;
-                } else if (!isPurchased && !isFirst) {
-                    statusText = '💎 Купить';
-                    statusClass = 'available';
-                    btnHtml = `<button class="trial-btn buy" onclick="buyTrial(${trial.id})">⭐ ${trial.price}</button>`;
                 } else {
                     statusText = '▶️ Играть';
                     statusClass = 'available';
@@ -1413,6 +569,7 @@
                             <div class="trial-info">
                                 <div class="trial-name">${trial.name}</div>
                                 <div class="trial-desc">${trial.desc}</div>
+                                ${attempts > 0 ? '<div style="font-size:12px;color:rgba(255,255,255,0.3);">Попыток: ' + attempts + '</div>' : ''}
                             </div>
                         </div>
                         <div class="trial-right">
@@ -1430,54 +587,62 @@
         // ============================================================
         //  ИСПЫТАНИЯ - ЛОГИКА
         // ============================================================
-        function buyTrial(trialId) {
+        function replayTrial(trialId) {
             const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
             if (!user) { showToast('❌ Игрок не найден'); return; }
 
-            const trial = TRIALS_DATA.find(t => t.id === trialId);
-            if (!trial) return;
-
-            if (user.stars < trial.price) {
-                showToast('❌ Недостаточно звёзд! Нужно ' + trial.price + ' ⭐');
+            if (user.stars < 100) {
+                showToast('❌ Недостаточно звёзд! Нужно 100 ⭐');
                 return;
             }
 
-            user.stars -= trial.price;
+            user.stars -= 100;
             if (typeof saveAllData === 'function') saveAllData();
             if (typeof saveToServer === 'function') saveToServer();
 
-            trialsState.purchased[trialId] = true;
+            // Снимаем статус пройденного
+            delete trialsState.completed[trialId];
             saveTrialsState();
 
-            showToast('🎉 Испытание куплено!');
+            showToast('🔄 Испытание открыто заново!');
             renderTrials();
+            // Запускаем сразу
+            setTimeout(() => startTrial(trialId), 500);
         }
 
         let trialGame = {
             id: null,
+            type: null,
             target: 0,
             time: 0,
             count: 0,
             timer: null,
             isRunning: false,
-            reward: 0
+            reward: 0,
+            colorTarget: null,
+            colors: [],
+            memorySequence: [],
+            memoryIndex: 0,
+            memoryFlipped: []
         };
 
         function startTrial(trialId) {
             const trial = TRIALS_DATA.find(t => t.id === trialId);
             if (!trial) return;
 
-            const isCompleted = trialsState.completed[trial.id] || false;
-            if (isCompleted) {
-                showToast('✅ Уже пройдено!');
-                return;
-            }
-
-            // Закрываем список испытаний
+            // Закрываем список
             document.getElementById('trialsOverlay').classList.remove('active');
+
+            // Обновляем попытки
+            if (!trialsState.attempts[trialId]) {
+                trialsState.attempts[trialId] = 0;
+            }
+            trialsState.attempts[trialId]++;
+            saveTrialsState();
 
             // Настраиваем игру
             trialGame.id = trial.id;
+            trialGame.type = trial.type;
             trialGame.target = trial.target;
             trialGame.time = trial.time;
             trialGame.count = 0;
@@ -1487,29 +652,22 @@
             document.getElementById('trialTitle').textContent = trial.icon + ' ' + trial.name;
             document.getElementById('trialProgress').textContent = '0 / ' + trial.target;
             document.getElementById('trialTimer').textContent = '⏱️ ' + trial.time;
-            document.getElementById('trialFill').style.width = '0%';
+
+            // Очищаем контейнер
+            const container = document.getElementById('trialGameContainer');
+            container.innerHTML = '';
+
+            // Создаём игру в зависимости от типа
+            if (trial.type === 'click') {
+                createClickGame(container);
+            } else if (trial.type === 'color') {
+                createColorGame(container);
+            } else if (trial.type === 'memory') {
+                createMemoryGame(container);
+            }
 
             // Показываем игру
             document.getElementById('trialGameOverlay').classList.add('active');
-
-            // Обработчик клика
-            const star = document.getElementById('trialClickStar');
-            star.onclick = function() {
-                if (!trialGame.isRunning) return;
-                trialGame.count++;
-                document.getElementById('trialProgress').textContent = trialGame.count + ' / ' + trialGame.target;
-                const progress = (trialGame.count / trialGame.target) * 100;
-                document.getElementById('trialFill').style.width = Math.min(progress, 100) + '%';
-
-                // Анимация
-                this.classList.remove('pop');
-                void this.offsetWidth;
-                this.classList.add('pop');
-
-                if (trialGame.count >= trialGame.target) {
-                    endTrial(true);
-                }
-            };
 
             // Запускаем таймер
             let timeLeft = trialGame.time;
@@ -1527,6 +685,229 @@
             showToast('🎯 Начато испытание!');
         }
 
+        // ============================================================
+        //  ИГРА "КЛИКЕР"
+        // ============================================================
+        function createClickGame(container) {
+            const star = document.createElement('div');
+            star.className = 'trial-click-star';
+            star.textContent = '⭐';
+            star.id = 'trialClickStar';
+            star.onclick = function() {
+                if (!trialGame.isRunning) return;
+                trialGame.count++;
+                document.getElementById('trialProgress').textContent = trialGame.count + ' / ' + trialGame.target;
+                const progress = (trialGame.count / trialGame.target) * 100;
+                const fill = document.getElementById('trialFill');
+                if (fill) fill.style.width = Math.min(progress, 100) + '%';
+
+                this.classList.remove('pop');
+                void this.offsetWidth;
+                this.classList.add('pop');
+
+                if (trialGame.count >= trialGame.target) {
+                    endTrial(true);
+                }
+            };
+
+            const progressBar = document.createElement('div');
+            progressBar.className = 'trial-progress-bar';
+            progressBar.innerHTML = '<div class="fill" id="trialFill"></div>';
+
+            const hint = document.createElement('div');
+            hint.style.cssText = 'color:rgba(255,255,255,0.5);font-size:14px;margin-top:10px;';
+            hint.textContent = 'Кликай на звезду! ⭐';
+
+            container.appendChild(star);
+            container.appendChild(progressBar);
+            container.appendChild(hint);
+        }
+
+        // ============================================================
+        //  ИГРА "НАЙДИ ЦВЕТ"
+        // ============================================================
+        function createColorGame(container) {
+            const colors = ['#ff6b6b', '#ffd93d', '#6c5ce7', '#00b894', '#fd79a8', '#0984e3', '#fdcb6e', '#e17055'];
+            const colorNames = ['Красный', 'Жёлтый', 'Фиолетовый', 'Зелёный', 'Розовый', 'Синий', 'Оранжевый', 'Коралловый'];
+
+            // Выбираем целевой цвет
+            const targetIndex = Math.floor(Math.random() * colors.length);
+            trialGame.colorTarget = targetIndex;
+
+            const info = document.createElement('div');
+            info.style.cssText = 'color:#fff;font-size:20px;font-weight:700;margin-bottom:15px;';
+            info.textContent = 'Найди цвет: ' + colorNames[targetIndex];
+
+            const grid = document.createElement('div');
+            grid.className = 'color-grid';
+
+            // Перемешиваем цвета
+            const shuffled = [...colors];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+
+            shuffled.forEach((color, index) => {
+                const btn = document.createElement('div');
+                btn.className = 'color-btn';
+                btn.style.background = color;
+                btn.dataset.index = index;
+                btn.onclick = function() {
+                    if (!trialGame.isRunning) return;
+                    const isCorrect = colors.indexOf(color) === targetIndex;
+                    if (isCorrect) {
+                        this.classList.add('correct');
+                        trialGame.count++;
+                        document.getElementById('trialProgress').textContent = trialGame.count + ' / ' + trialGame.target;
+                        if (trialGame.count >= trialGame.target) {
+                            endTrial(true);
+                        } else {
+                            // Новый цвет
+                            const newTarget = Math.floor(Math.random() * colors.length);
+                            trialGame.colorTarget = newTarget;
+                            info.textContent = 'Найди цвет: ' + colorNames[newTarget];
+                            // Убираем подсветку
+                            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('correct'));
+                            showToast('✅ Правильно! Ищи следующий цвет!');
+                        }
+                    } else {
+                        this.style.transform = 'scale(0.9)';
+                        setTimeout(() => { this.style.transform = 'scale(1)'; }, 200);
+                        showToast('❌ Неправильно! Попробуй ещё!');
+                    }
+                };
+                grid.appendChild(btn);
+            });
+
+            const progressBar = document.createElement('div');
+            progressBar.className = 'trial-progress-bar';
+            progressBar.innerHTML = '<div class="fill" id="trialFill"></div>';
+
+            container.appendChild(info);
+            container.appendChild(grid);
+            container.appendChild(progressBar);
+        }
+
+        // ============================================================
+        //  ИГРА "ЗАПОМНИ"
+        // ============================================================
+        function createMemoryGame(container) {
+            const emojis = ['⭐', '🌟', '✨', '💫', '🌙', '☀️', '🌈', '🦄'];
+            const sequence = [];
+            const total = trialGame.target;
+
+            // Генерируем последовательность
+            for (let i = 0; i < total; i++) {
+                sequence.push(emojis[Math.floor(Math.random() * emojis.length)]);
+            }
+            trialGame.memorySequence = sequence;
+            trialGame.memoryIndex = 0;
+
+            const info = document.createElement('div');
+            info.style.cssText = 'color:#fff;font-size:18px;font-weight:700;margin-bottom:10px;text-align:center;';
+            info.textContent = 'Запомни последовательность!';
+
+            const display = document.createElement('div');
+            display.style.cssText = 'font-size:40px;padding:15px;text-align:center;min-height:60px;color:#ffd93d;';
+
+            const grid = document.createElement('div');
+            grid.className = 'memory-grid';
+
+            // Показываем последовательность
+            let showIndex = 0;
+            const showInterval = setInterval(() => {
+                if (showIndex >= sequence.length) {
+                    clearInterval(showInterval);
+                    display.textContent = '🔮 Теперь повтори!';
+                    // Создаём карточки для выбора
+                    const shuffledEmojis = [...emojis];
+                    for (let i = shuffledEmojis.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffledEmojis[i], shuffledEmojis[j]] = [shuffledEmojis[j], shuffledEmojis[i]];
+                    }
+
+                    const cardEmojis = [];
+                    // Берём уникальные эмодзи для карточек
+                    const uniqueEmojis = [...new Set(sequence)];
+                    const extra = shuffledEmojis.filter(e => !uniqueEmojis.includes(e)).slice(0, 6 - uniqueEmojis.length);
+                    const allEmojis = [...uniqueEmojis, ...extra];
+                    // Перемешиваем
+                    for (let i = allEmojis.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [allEmojis[i], allEmojis[j]] = [allEmojis[j], allEmojis[i]];
+                    }
+
+                    // Создаём карточки
+                    const cards = allEmojis.slice(0, 6);
+                    const gridContainer = document.getElementById('memoryGrid');
+                    if (gridContainer) {
+                        gridContainer.innerHTML = '';
+                        cards.forEach(emoji => {
+                            const card = document.createElement('div');
+                            card.className = 'memory-card';
+                            card.textContent = '❓';
+                            card.dataset.emoji = emoji;
+                            card.onclick = function() {
+                                if (!trialGame.isRunning) return;
+                                if (this.textContent !== '❓') return;
+                                if (trialGame.memoryIndex >= sequence.length) return;
+
+                                const expected = sequence[trialGame.memoryIndex];
+                                if (this.dataset.emoji === expected) {
+                                    this.textContent = this.dataset.emoji;
+                                    this.classList.add('flipped');
+                                    trialGame.memoryIndex++;
+                                    document.getElementById('trialProgress').textContent = trialGame.memoryIndex + ' / ' + trialGame.target;
+                                    if (trialGame.memoryIndex >= trialGame.target) {
+                                        endTrial(true);
+                                    }
+                                    showToast('✅ Правильно!');
+                                } else {
+                                    this.style.transform = 'scale(0.9)';
+                                    this.style.borderColor = '#ff4757';
+                                    setTimeout(() => {
+                                        this.style.transform = 'scale(1)';
+                                        this.style.borderColor = 'rgba(255,255,255,0.1)';
+                                    }, 300);
+                                    showToast('❌ Неправильно!');
+                                }
+                            };
+                            gridContainer.appendChild(card);
+                        });
+                    }
+                    return;
+                }
+
+                display.textContent = sequence[showIndex];
+                showIndex++;
+            }, 500);
+
+            // Создаём контейнер для карточек
+            const memoryGrid = document.createElement('div');
+            memoryGrid.id = 'memoryGrid';
+            memoryGrid.className = 'memory-grid';
+
+            const progressBar = document.createElement('div');
+            progressBar.className = 'trial-progress-bar';
+            progressBar.innerHTML = '<div class="fill" id="trialFill"></div>';
+
+            container.appendChild(info);
+            container.appendChild(display);
+            container.appendChild(memoryGrid);
+            container.appendChild(progressBar);
+
+            // Сохраняем ссылку для использования в таймауте
+            setTimeout(() => {
+                if (document.getElementById('memoryGrid')) {
+                    // Уже создано
+                }
+            }, 100);
+        }
+
+        // ============================================================
+        //  ЗАВЕРШЕНИЕ ИСПЫТАНИЯ
+        // ============================================================
         function endTrial(won) {
             trialGame.isRunning = false;
             if (trialGame.timer) {
@@ -1558,7 +939,7 @@
                 resultDiv.innerHTML = `
                     <div class="big">🎉</div>
                     <div class="title win">ПОБЕДА!</div>
-                    <div class="desc">Вы собрали ${trialGame.count} из ${trialGame.target} звёзд!</div>
+                    <div class="desc">Вы прошли испытание!</div>
                     <div class="reward">🎁 Награда: +${trialGame.reward} звёзд!</div>
                     <button class="trial-game-btn primary" onclick="closeTrialGame()">✅ Отлично!</button>
                 `;
@@ -1567,7 +948,7 @@
                 resultDiv.innerHTML = `
                     <div class="big">😢</div>
                     <div class="title lose">ВРЕМЯ ВЫШЛО!</div>
-                    <div class="desc">Вы собрали ${trialGame.count} из ${trialGame.target} звёзд</div>
+                    <div class="desc">Вы не успели завершить испытание</div>
                     <div class="reward">Попробуйте ещё раз!</div>
                     <button class="trial-game-btn primary" onclick="closeTrialGame()">🏠 Выйти</button>
                 `;
@@ -1580,7 +961,6 @@
         function closeTrialGame() {
             document.getElementById('trialGameOverlay').classList.remove('active');
             renderTrials();
-            // Открываем список испытаний
             document.getElementById('trialsOverlay').classList.add('active');
         }
 
@@ -1588,8 +968,9 @@
         //  ЗАПУСК
         // ============================================================
         console.log('🦄 Забава Игра загружена!');
-        console.log('⚡ Испытания активированы!');
+        console.log('⚡ Испытания с разнообразными механиками активированы!');
         console.log('📋 Доступно испытаний: ' + TRIALS_DATA.length);
+        console.log('🔄 Перепрохождение: 100⭐ за попытку');
     </script>
 </body>
 </html>
