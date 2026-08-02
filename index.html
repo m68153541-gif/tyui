@@ -502,7 +502,7 @@
         /* Стаканчики */
         .cups-container {
             display: flex;
-            gap: 20px;
+            gap: 30px;
             justify-content: center;
             align-items: flex-end;
             width: 100%;
@@ -512,14 +512,15 @@
         }
 
         .cup {
-            width: 80px;
-            height: 120px;
+            width: 90px;
+            height: 130px;
             position: relative;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             flex-direction: column;
             align-items: center;
+            flex-shrink: 0;
         }
 
         .cup:hover {
@@ -527,8 +528,8 @@
         }
 
         .cup-body {
-            width: 80px;
-            height: 100px;
+            width: 90px;
+            height: 110px;
             background: linear-gradient(180deg, #6c5ce7, #4834d4);
             border-radius: 0 0 20px 20px;
             border: 3px solid rgba(255, 255, 255, 0.2);
@@ -540,7 +541,7 @@
         }
 
         .cup-body .star-inside {
-            font-size: 40px;
+            font-size: 45px;
             opacity: 0;
             transition: opacity 0.3s ease;
             position: absolute;
@@ -554,7 +555,7 @@
         }
 
         .cup-lid {
-            width: 90px;
+            width: 100px;
             height: 15px;
             background: linear-gradient(180deg, #a29bfe, #6c5ce7);
             border-radius: 10px 10px 0 0;
@@ -604,16 +605,19 @@
             animation: starPop 0.5s ease;
         }
 
-        /* Анимация перемешивания */
         .cup.shuffling {
-            animation: shuffleCup 0.3s ease-in-out;
+            animation: cupShuffle 0.4s ease-in-out;
         }
 
-        @keyframes shuffleCup {
-            0% { transform: translateX(0) rotate(0deg); }
-            25% { transform: translateX(20px) rotate(10deg); }
-            75% { transform: translateX(-20px) rotate(-10deg); }
-            100% { transform: translateX(0) rotate(0deg); }
+        @keyframes cupShuffle {
+            0% { transform: translateX(0) scale(1); }
+            25% { transform: translateX(30px) scale(1.05); }
+            75% { transform: translateX(-30px) scale(1.05); }
+            100% { transform: translateX(0) scale(1); }
+        }
+
+        .cup.swap {
+            transition: all 0.4s ease-in-out;
         }
 
         #gameStatus {
@@ -1114,11 +1118,11 @@
             .loading-animation .sparkle-ring { width: 180px; height: 180px; }
             .loading-animation .sparkle-ring:nth-child(9) { width: 140px; height: 140px; }
             .loading-animation .sparkle-ring:nth-child(10) { width: 100px; height: 100px; }
-            .cups-container { gap: 10px; }
-            .cup { width: 60px; height: 100px; }
-            .cup-body { width: 60px; height: 80px; }
-            .cup-lid { width: 70px; height: 12px; }
-            .cup-body .star-inside { font-size: 30px; }
+            .cups-container { gap: 15px; }
+            .cup { width: 70px; height: 110px; }
+            .cup-body { width: 70px; height: 90px; }
+            .cup-lid { width: 80px; height: 12px; }
+            .cup-body .star-inside { font-size: 35px; }
         }
     </style>
 </head>
@@ -1197,7 +1201,6 @@
 
     <!-- Игра "Найди звезду" -->
     <div id="elinGameOverlay">
-        <!-- Украшения -->
         <div class="floating-decoration">🌸</div>
         <div class="floating-decoration">✨</div>
         <div class="floating-decoration">💖</div>
@@ -1214,7 +1217,6 @@
         </div>
 
         <div id="gameContainer">
-            <!-- Правила игры -->
             <div class="game-rules" id="gameRules">
                 <strong>🦊 Спасите звезду от космического вора!</strong><br>
                 <span class="emoji">⭐</span> Звезда спрятана под одним из трёх стаканчиков.<br>
@@ -1225,7 +1227,6 @@
 
             <div id="gameStatus">Нажмите <span class="highlight">"Начать"</span>, чтобы спасти звезду!</div>
 
-            <!-- Стаканчики -->
             <div class="cups-container" id="cupsContainer">
                 <div class="cup" data-index="0">
                     <div class="cup-lid"></div>
@@ -1583,7 +1584,7 @@
         }
 
         // ============================================================
-        //  ИГРА "НАЙДИ ЗВЕЗДУ" - НОВАЯ МЕХАНИКА
+        //  ИГРА "НАЙДИ ЗВЕЗДУ" - С ПЕРЕМЕШИВАНИЕМ
         // ============================================================
         let gameState = {
             round: 0,
@@ -1594,9 +1595,10 @@
             isPlaying: false,
             isGameOver: false,
             wins: 0,
-            shuffleSpeed: 1500, // начальная скорость
-            minShuffleSpeed: 300, // минимальная скорость
-            shuffleStep: 150 // уменьшение скорости за раунд
+            shuffleSpeed: 1200,
+            minShuffleSpeed: 400,
+            shuffleStep: 200,
+            shuffleCount: 0
         };
 
         const cups = document.querySelectorAll('.cup');
@@ -1604,42 +1606,47 @@
         const gameStatus = document.getElementById('gameStatus');
         const roundNumber = document.getElementById('roundNumber');
         const scoreDisplay = document.getElementById('elinScore');
-        const gameContainer = document.getElementById('gameContainer');
+
+        let cupsArray = [0, 1, 2]; // Индексы стаканчиков
+        let starPosition = 0;
 
         function startElinGame() {
             const overlay = document.getElementById('elinGameOverlay');
             overlay.classList.add('active');
 
-            // Сброс игры
             gameState.round = 0;
             gameState.wins = 0;
             gameState.isGameOver = false;
-            gameState.shuffleSpeed = 1500;
+            gameState.shuffleSpeed = 1200;
+            gameState.shuffleCount = 0;
+            cupsArray = [0, 1, 2];
 
             updateScore();
             updateRound();
 
-            // Убираем старые результаты
             const oldResult = document.querySelector('.elin-result');
             if (oldResult) oldResult.remove();
 
-            // Сбрасываем стаканчики
-            cups.forEach(cup => {
-                cup.classList.remove('selected', 'wrong', 'correct', 'shuffling');
-                const star = cup.querySelector('.star-inside');
-                star.classList.remove('show');
-            });
-
+            resetCups();
             gameStatus.innerHTML = 'Нажмите <span class="highlight">"Начать"</span>, чтобы спасти звезду!';
             startBtn.style.display = 'block';
             startBtn.textContent = '🌟 Начать';
             startBtn.onclick = startNewRound;
+        }
 
-            // Убираем все классы с стаканчиков
-            cups.forEach(c => {
-                c.style.cursor = 'default';
-                c.onclick = null;
+        function resetCups() {
+            cups.forEach((cup, i) => {
+                cup.classList.remove('selected', 'wrong', 'correct', 'shuffling', 'swap');
+                const star = cup.querySelector('.star-inside');
+                star.classList.remove('show');
+                cup.style.cursor = 'default';
+                cup.onclick = null;
+                // Обновляем номер
+                const number = cup.querySelector('.cup-number');
+                number.textContent = i + 1;
+                cup.dataset.index = i;
             });
+            cupsArray = [0, 1, 2];
         }
 
         function startNewRound() {
@@ -1649,7 +1656,6 @@
             gameState.isPlaying = true;
             gameState.selectedIndex = -1;
 
-            // Увеличиваем скорость с каждым раундом
             if (gameState.round > 1) {
                 gameState.shuffleSpeed = Math.max(
                     gameState.minShuffleSpeed,
@@ -1658,102 +1664,128 @@
             }
 
             updateRound();
-
-            // Сбрасываем стаканчики
-            cups.forEach(cup => {
-                cup.classList.remove('selected', 'wrong', 'correct', 'shuffling');
-                const star = cup.querySelector('.star-inside');
-                star.classList.remove('show');
-                cup.style.cursor = 'default';
-                cup.onclick = null;
-            });
-
+            resetCups();
             gameStatus.innerHTML = '🔄 Стаканчики перемешиваются...';
             startBtn.style.display = 'none';
 
             // Выбираем случайный стаканчик для звезды
-            gameState.starIndex = Math.floor(Math.random() * 3);
-            const starCup = cups[gameState.starIndex];
+            starPosition = Math.floor(Math.random() * 3);
+            gameState.starIndex = starPosition;
+
+            // Показываем звезду
+            const starCup = cups[starPosition];
             const star = starCup.querySelector('.star-inside');
             star.classList.add('show');
 
-            // Показываем звезду на секунду
+            // Ждём, пока игрок увидит звезду
             setTimeout(() => {
-                // Прячем звезду
                 star.classList.remove('show');
-
-                // Перемешиваем стаканчики
-                shuffleCups();
+                // Начинаем перемешивание
+                performShuffle(0);
             }, 800);
         }
 
-        function shuffleCups() {
-            gameState.isShuffling = true;
+        function performShuffle(step) {
+            if (!gameState.isPlaying || gameState.isGameOver) return;
 
-            // Добавляем анимацию перемешивания
-            cups.forEach(cup => {
-                cup.classList.add('shuffling');
-            });
+            const totalShuffles = 4 + Math.floor(gameState.round * 2); // 6, 8, 10 перемешиваний
 
-            // Перемешиваем позиции
-            const positions = [0, 1, 2];
-            // Перемешиваем массив
-            for (let i = positions.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [positions[i], positions[j]] = [positions[j], positions[i]];
-            }
-
-            // Применяем новые позиции
-            const cupsArray = Array.from(cups);
-            const shuffledCups = positions.map(index => cupsArray[index]);
-
-            // Переставляем элементы в DOM
-            const container = document.getElementById('cupsContainer');
-            shuffledCups.forEach(cup => {
-                container.appendChild(cup);
-                // Обновляем номер
-                const number = cup.querySelector('.cup-number');
-                number.textContent = shuffledCups.indexOf(cup) + 1;
-                cup.dataset.index = shuffledCups.indexOf(cup);
-            });
-
-            // Убираем анимацию перемешивания
-            setTimeout(() => {
-                cups.forEach(cup => {
-                    cup.classList.remove('shuffling');
-                });
+            if (step >= totalShuffles) {
+                // Перемешивание закончено
                 gameState.isShuffling = false;
-
-                // Теперь игрок может выбрать
                 gameStatus.innerHTML = '👆 Выберите стаканчик со звездой!';
                 enableCupSelection();
-            }, 500);
+                return;
+            }
+
+            gameState.isShuffling = true;
+
+            // Выбираем два случайных стаканчика для обмена
+            let idx1 = Math.floor(Math.random() * 3);
+            let idx2 = Math.floor(Math.random() * 3);
+            while (idx1 === idx2) {
+                idx2 = Math.floor(Math.random() * 3);
+            }
+
+            // Обновляем визуальное положение стаканчиков
+            swapCups(idx1, idx2);
+
+            // Обновляем starPosition если звезда была в одном из меняемых стаканчиков
+            if (starPosition === idx1) {
+                starPosition = idx2;
+            } else if (starPosition === idx2) {
+                starPosition = idx1;
+            }
+
+            // Скорость увеличивается с каждым шагом
+            const delay = gameState.shuffleSpeed / (1 + step * 0.15);
+
+            setTimeout(() => {
+                performShuffle(step + 1);
+            }, delay);
+        }
+
+        function swapCups(idx1, idx2) {
+            // Меняем местами стаканчики в DOM
+            const container = document.getElementById('cupsContainer');
+            const cup1 = cups[idx1];
+            const cup2 = cups[idx2];
+
+            // Добавляем анимацию
+            cup1.classList.add('shuffling');
+            cup2.classList.add('shuffling');
+
+            // Меняем местами
+            if (idx1 < idx2) {
+                container.insertBefore(cup2, cup1);
+                container.insertBefore(cup1, cup2.nextSibling);
+            } else {
+                container.insertBefore(cup1, cup2);
+                container.insertBefore(cup2, cup1.nextSibling);
+            }
+
+            // Обновляем индексы в массиве cups
+            const temp = cupsArray[idx1];
+            cupsArray[idx1] = cupsArray[idx2];
+            cupsArray[idx2] = temp;
+
+            // Обновляем data-index и номера
+            cups.forEach((cup, i) => {
+                const newIndex = cupsArray.indexOf(i);
+                cup.dataset.index = i;
+                const number = cup.querySelector('.cup-number');
+                number.textContent = i + 1;
+            });
+
+            // Убираем анимацию
+            setTimeout(() => {
+                cup1.classList.remove('shuffling');
+                cup2.classList.remove('shuffling');
+            }, 300);
         }
 
         function enableCupSelection() {
-            cups.forEach(cup => {
+            cups.forEach((cup, i) => {
                 cup.style.cursor = 'pointer';
                 cup.onclick = function() {
                     if (gameState.isShuffling || gameState.isGameOver || !gameState.isPlaying) return;
-                    selectCup(this);
+                    selectCup(i);
                 };
             });
 
             // Таймаут на случай, если игрок не выбрал
             setTimeout(() => {
                 if (gameState.isPlaying && !gameState.isGameOver && gameState.selectedIndex === -1) {
-                    // Автоматический выбор случайного стаканчика
-                    const randomCup = cups[Math.floor(Math.random() * 3)];
+                    const randomCup = Math.floor(Math.random() * 3);
                     selectCup(randomCup);
                 }
-            }, 5000);
+            }, 6000);
         }
 
-        function selectCup(cup) {
+        function selectCup(index) {
             if (gameState.isShuffling || gameState.isGameOver || !gameState.isPlaying) return;
-            if (cup.classList.contains('selected')) return;
+            if (cups[index].classList.contains('selected')) return;
 
-            const index = parseInt(cup.dataset.index);
             gameState.selectedIndex = index;
 
             // Отключаем клики
@@ -1763,12 +1795,12 @@
             });
 
             // Проверяем, правильный ли выбор
-            const isCorrect = (index === gameState.starIndex);
+            const isCorrect = (index === starPosition);
 
             // Показываем все стаканчики
             cups.forEach((c, i) => {
                 const star = c.querySelector('.star-inside');
-                if (i === gameState.starIndex) {
+                if (i === starPosition) {
                     star.classList.add('show');
                 }
                 if (i === index) {
@@ -1784,34 +1816,26 @@
 
             if (isCorrect) {
                 gameStatus.innerHTML = '✅ <span class="highlight">Правильно!</span> Звезда спасена!';
-                // Правильный выбор, добавляем эффект
-                const starCup = cups[gameState.starIndex];
+                const starCup = cups[starPosition];
                 const star = starCup.querySelector('.star-inside');
                 star.style.animation = 'starPop 0.5s ease';
-                setTimeout(() => {
-                    star.style.animation = '';
-                }, 500);
+                setTimeout(() => { star.style.animation = ''; }, 500);
             } else {
                 gameStatus.innerHTML = '❌ <span style="color:#ff4757;">Неправильно!</span> Попробуйте ещё раз!';
-                // Показываем правильный ответ
-                const correctCup = cups[gameState.starIndex];
+                const correctCup = cups[starPosition];
                 correctCup.classList.add('correct');
             }
 
-            // Проверяем, закончилась ли игра
             setTimeout(() => {
                 if (gameState.wins >= 3) {
                     endElinGame(true);
                 } else if (gameState.round >= 3) {
-                    // Три раунда сыграно, но не все выиграны
                     if (gameState.wins >= 2) {
-                        // 2 победы из 3 - тоже успех!
                         endElinGame(true);
                     } else {
                         endElinGame(false);
                     }
                 } else {
-                    // Переходим к следующему раунду
                     startBtn.style.display = 'block';
                     startBtn.textContent = '➡️ Следующий раунд';
                     startBtn.onclick = startNewRound;
