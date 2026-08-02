@@ -395,22 +395,9 @@
             pointer-events: none;
         }
 
-        /* Кнопки для новых функций */
+        /* Стили для новых кнопок */
         #btnShop {
             background: linear-gradient(135deg, #fd79a8, #e84393) !important;
-            border: 2px solid rgba(255, 215, 0, 0.2) !important;
-            font-size: 16px !important;
-            padding: 14px !important;
-            grid-column: span 3 !important;
-            color: white !important;
-            border-radius: 20px !important;
-            cursor: pointer !important;
-            font-weight: 700 !important;
-            transition: all 0.3s ease !important;
-        }
-
-        #btnQuests {
-            background: linear-gradient(135deg, #a29bfe, #6c5ce7) !important;
             border: 2px solid rgba(255, 215, 0, 0.2) !important;
             font-size: 16px !important;
             padding: 14px !important;
@@ -847,6 +834,8 @@
             <button class="btn full small" id="btnRules">📜 Правила</button>
             <button class="btn full small danger" id="btnSupport">🆘 Жалобы</button>
             <button class="btn full small" id="btnAdmin">🔧 Админ</button>
+            <!-- КНОПКА МАГАЗИНА ДОБАВЛЕНА ВРУЧНУЮ -->
+            <button class="btn full small" id="btnShop">🛍️ Магазин</button>
         </div>
     </div>
 
@@ -877,9 +866,6 @@
 
     <button id="musicBtn" title="Вкл/Выкл музыку">🎵</button>
 
-    <!-- ============================================================ -->
-    <!--  ПОДКЛЮЧАЕМ СКРИПТЫ                                            -->
-    <!-- ============================================================ -->
     <script src="game.js"></script>
     <script src="features.js"></script>
 
@@ -926,6 +912,28 @@
                     loadingScreen.classList.add('hidden');
                     setTimeout(() => {
                         app.classList.add('show');
+                        // Добавляем обработчик для кнопки магазина после загрузки
+                        setTimeout(function() {
+                            const shopBtn = document.getElementById('btnShop');
+                            if (shopBtn) {
+                                shopBtn.onclick = function() {
+                                    if (typeof openShop === 'function') {
+                                        openShop();
+                                    } else {
+                                        showToast('🛍️ Магазин загружается...');
+                                        // Пробуем ещё раз через секунду
+                                        setTimeout(function() {
+                                            if (typeof openShop === 'function') {
+                                                openShop();
+                                            } else {
+                                                showToast('⚠️ Магазин временно недоступен');
+                                            }
+                                        }, 1000);
+                                    }
+                                };
+                                console.log('✅ Кнопка магазина активна');
+                            }
+                        }, 500);
                     }, 300);
                 }, 500);
             }
@@ -1003,7 +1011,7 @@
         };
 
         console.log('🦄 Забава Игра загружена!');
-        console.log('🛍️ Магазин скинов активирован!');
+        console.log('🛍️ Кнопка магазина добавлена!');
     </script>
 </body>
 </html>
