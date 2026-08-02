@@ -413,7 +413,7 @@
             100% { background-position: 0% 50%; }
         }
 
-        /* ===== СТИЛИ ДЛЯ ИГРЫ ЭЛИН ===== */
+        /* ===== СТИЛИ ДЛЯ ИГРЫ "НАЙДИ ЗВЕЗДУ" ===== */
         #elinGameOverlay {
             position: fixed;
             top: 0;
@@ -465,35 +465,6 @@
             75% { transform: translateY(-15px) rotate(5deg); opacity: 0.4; }
         }
 
-        .bg-star-elin {
-            position: absolute;
-            color: rgba(255, 255, 255, 0.05);
-            font-size: 20px;
-            animation: sparkleElin linear infinite;
-            pointer-events: none;
-        }
-
-        @keyframes sparkleElin {
-            0% { transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0.8; }
-            100% { transform: translateY(110vh) translateX(50px) rotate(720deg); opacity: 0; }
-        }
-
-        @keyframes elinFall {
-            0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
-            100% { transform: translateY(calc(100% + 150px)) rotate(720deg); opacity: 0.3; }
-        }
-
-        @keyframes elinCatch {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(2) rotate(180deg); opacity: 0.8; }
-            100% { transform: scale(0); opacity: 0; }
-        }
-
-        @keyframes pulseBtn {
-            0%, 100% { box-shadow: 0 0 60px rgba(255,105,180,0.3); }
-            50% { box-shadow: 0 0 80px rgba(255,105,180,0.6); }
-        }
-
         #elinTopPanel {
             width: 100%;
             max-width: 500px;
@@ -509,10 +480,10 @@
             margin-bottom: 15px;
         }
 
-        #elinTopPanel .timer { color: #fff; font-weight: 700; }
+        #elinTopPanel .round-info { color: #fff; font-weight: 700; }
         #elinTopPanel .score { color: #ffd93d; font-weight: 700; font-size: 20px; }
 
-        #elinStarsContainer {
+        #gameContainer {
             width: 100%;
             max-width: 500px;
             flex: 1;
@@ -521,49 +492,202 @@
             overflow: hidden;
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
 
-        .elin-falling-star {
-            position: absolute;
+        /* Стаканчики */
+        .cups-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-end;
+            width: 100%;
+            padding: 20px 0;
+            position: relative;
+            min-height: 250px;
+        }
+
+        .cup {
+            width: 80px;
+            height: 120px;
+            position: relative;
             cursor: pointer;
-            z-index: 1;
-            user-select: none;
-            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-            animation: elinFall 3s linear forwards;
-            transition: transform 0.1s;
-            font-size: 30px;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        .elin-falling-star:hover {
-            transform: scale(1.2) !important;
+        .cup:hover {
+            transform: translateY(-5px);
         }
 
-        .elin-falling-star.caught {
-            animation: elinCatch 0.4s ease forwards;
+        .cup-body {
+            width: 80px;
+            height: 100px;
+            background: linear-gradient(180deg, #6c5ce7, #4834d4);
+            border-radius: 0 0 20px 20px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
         }
 
-        #elinStartBtn {
+        .cup-body .star-inside {
+            font-size: 40px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            padding: 20px 50px;
-            border: none;
-            border-radius: 30px;
-            background: linear-gradient(135deg, #ff6b9d, #ff2e63);
-            color: #ffffff;
-            font-size: 24px;
-            font-weight: 700;
-            cursor: pointer;
-            z-index: 10;
-            box-shadow: 0 0 60px rgba(255, 105, 180, 0.3);
-            animation: pulseBtn 2s ease-in-out infinite;
-            transition: transform 0.3s;
         }
 
-        #elinStartBtn:hover {
-            transform: translate(-50%, -50%) scale(1.05);
+        .cup-body .star-inside.show {
+            opacity: 1;
+        }
+
+        .cup-lid {
+            width: 90px;
+            height: 15px;
+            background: linear-gradient(180deg, #a29bfe, #6c5ce7);
+            border-radius: 10px 10px 0 0;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-bottom: none;
+        }
+
+        .cup-number {
+            margin-top: 8px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .cup.selected .cup-body {
+            border-color: #ffd93d;
+            box-shadow: 0 0 30px rgba(255, 217, 61, 0.3);
+        }
+
+        .cup.selected .cup-body .star-inside.show {
+            opacity: 1;
+            animation: starPop 0.5s ease;
+        }
+
+        @keyframes starPop {
+            0% { transform: translate(-50%, -50%) scale(0); }
+            50% { transform: translate(-50%, -50%) scale(1.5); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .cup.wrong .cup-body {
+            border-color: #ff4757;
+            box-shadow: 0 0 30px rgba(255, 71, 87, 0.3);
+        }
+
+        .cup.wrong .cup-body .star-inside {
+            display: none;
+        }
+
+        .cup.correct .cup-body {
+            border-color: #ffd93d;
+            box-shadow: 0 0 30px rgba(255, 217, 61, 0.3);
+        }
+
+        .cup.correct .cup-body .star-inside.show {
+            opacity: 1;
+            animation: starPop 0.5s ease;
+        }
+
+        /* Анимация перемешивания */
+        .cup.shuffling {
+            animation: shuffleCup 0.3s ease-in-out;
+        }
+
+        @keyframes shuffleCup {
+            0% { transform: translateX(0) rotate(0deg); }
+            25% { transform: translateX(20px) rotate(10deg); }
+            75% { transform: translateX(-20px) rotate(-10deg); }
+            100% { transform: translateX(0) rotate(0deg); }
+        }
+
+        #gameStatus {
+            text-align: center;
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.8);
+            margin: 10px 0;
+            min-height: 30px;
+        }
+
+        #gameStatus .highlight {
+            color: #ffd93d;
+            font-weight: 700;
+        }
+
+        .game-btn {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 30px;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .game-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .game-btn.primary {
+            background: linear-gradient(135deg, #ff6b9d, #ff2e63);
+            color: #fff;
+            box-shadow: 0 0 40px rgba(255, 105, 180, 0.3);
+        }
+
+        .game-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .game-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .game-rules {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 15px 20px;
+            margin: 10px 0;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            max-width: 100%;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+        }
+
+        .game-rules strong {
+            color: #ffd93d;
+        }
+
+        .game-rules .emoji {
+            font-size: 18px;
+        }
+
+        .game-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 10px;
         }
 
         .elin-result {
@@ -990,6 +1114,11 @@
             .loading-animation .sparkle-ring { width: 180px; height: 180px; }
             .loading-animation .sparkle-ring:nth-child(9) { width: 140px; height: 140px; }
             .loading-animation .sparkle-ring:nth-child(10) { width: 100px; height: 100px; }
+            .cups-container { gap: 10px; }
+            .cup { width: 60px; height: 100px; }
+            .cup-body { width: 60px; height: 80px; }
+            .cup-lid { width: 70px; height: 12px; }
+            .cup-body .star-inside { font-size: 30px; }
         }
     </style>
 </head>
@@ -1066,7 +1195,7 @@
         </div>
     </div>
 
-    <!-- Игра Элин -->
+    <!-- Игра "Найди звезду" -->
     <div id="elinGameOverlay">
         <!-- Украшения -->
         <div class="floating-decoration">🌸</div>
@@ -1079,12 +1208,51 @@
         <div class="floating-decoration">🌺</div>
 
         <div id="elinTopPanel">
-            <div class="timer">⏱️ <span id="elinTimer">02:00</span></div>
-            <div class="score">⭐ <span id="elinScore">0</span> / 200</div>
+            <div class="round-info">🎯 Раунд <span id="roundNumber">1</span>/3</div>
+            <div class="score">⭐ <span id="elinScore">0</span></div>
             <button id="elinBackBtn">✖</button>
         </div>
-        <div id="elinStarsContainer">
-            <button id="elinStartBtn">🌟 НАЧАТЬ</button>
+
+        <div id="gameContainer">
+            <!-- Правила игры -->
+            <div class="game-rules" id="gameRules">
+                <strong>🦊 Спасите звезду от космического вора!</strong><br>
+                <span class="emoji">⭐</span> Звезда спрятана под одним из трёх стаканчиков.<br>
+                <span class="emoji">🔄</span> Стаканчики перемешиваются с ускорением!<br>
+                <span class="emoji">👆</span> Угадайте, где звезда — 3 раунда подряд!<br>
+                <span class="emoji">🏆</span> 3 победы — миссия пройдена!
+            </div>
+
+            <div id="gameStatus">Нажмите <span class="highlight">"Начать"</span>, чтобы спасти звезду!</div>
+
+            <!-- Стаканчики -->
+            <div class="cups-container" id="cupsContainer">
+                <div class="cup" data-index="0">
+                    <div class="cup-lid"></div>
+                    <div class="cup-body">
+                        <div class="star-inside">⭐</div>
+                    </div>
+                    <div class="cup-number">1</div>
+                </div>
+                <div class="cup" data-index="1">
+                    <div class="cup-lid"></div>
+                    <div class="cup-body">
+                        <div class="star-inside">⭐</div>
+                    </div>
+                    <div class="cup-number">2</div>
+                </div>
+                <div class="cup" data-index="2">
+                    <div class="cup-lid"></div>
+                    <div class="cup-body">
+                        <div class="star-inside">⭐</div>
+                    </div>
+                    <div class="cup-number">3</div>
+                </div>
+            </div>
+
+            <div class="game-buttons">
+                <button class="game-btn primary" id="startGameBtn">🌟 Начать</button>
+            </div>
         </div>
     </div>
 
@@ -1241,7 +1409,7 @@
         };
 
         // ============================================================
-        //  ГЕРОИ - ВСЯ ЛОГИКА
+        //  ГЕРОИ
         // ============================================================
         let heroesProgress = { elin: false, mark: false, comics: false, evna: false };
 
@@ -1353,7 +1521,7 @@
             container.appendChild(title);
 
             const heroes = [
-                { id: 'elin', name: 'Элин', emoji: '👩‍🚀', desc: 'Собери 200 звёзд за 2 минуты' },
+                { id: 'elin', name: 'Элин', emoji: '👩‍🚀', desc: 'Спаси звезду от космического вора!' },
                 { id: 'mark', name: 'Марк', emoji: '🧑‍🚀', desc: 'В разработке...' },
                 { id: 'comics', name: 'Комикс', emoji: '🦸', desc: 'В разработке...' },
                 { id: 'evna', name: 'Евна', emoji: '👩‍💻', desc: 'В разработке...' }
@@ -1415,183 +1583,262 @@
         }
 
         // ============================================================
-        //  ИГРА ЭЛИН - ОБНОВЛЕННАЯ (2 МИНУТЫ, 200 ЗВЁЗД)
+        //  ИГРА "НАЙДИ ЗВЕЗДУ" - НОВАЯ МЕХАНИКА
         // ============================================================
-        let elinInterval = null;
-        let elinStarInt = null;
-        let elinStars = [];
-        let elinCollected = 0;
-        let elinTimeLeft = 120; // 2 минуты
-        let elinActive = false;
-        let elinOver = false;
-        let totalStarsSpawned = 0;
+        let gameState = {
+            round: 0,
+            maxRounds: 3,
+            starIndex: 0,
+            selectedIndex: -1,
+            isShuffling: false,
+            isPlaying: false,
+            isGameOver: false,
+            wins: 0,
+            shuffleSpeed: 1500, // начальная скорость
+            minShuffleSpeed: 300, // минимальная скорость
+            shuffleStep: 150 // уменьшение скорости за раунд
+        };
+
+        const cups = document.querySelectorAll('.cup');
+        const startBtn = document.getElementById('startGameBtn');
+        const gameStatus = document.getElementById('gameStatus');
+        const roundNumber = document.getElementById('roundNumber');
+        const scoreDisplay = document.getElementById('elinScore');
+        const gameContainer = document.getElementById('gameContainer');
 
         function startElinGame() {
             const overlay = document.getElementById('elinGameOverlay');
             overlay.classList.add('active');
 
-            // Добавляем фоновые звёзды
-            const container = document.getElementById('elinStarsContainer');
-            const existingBg = container.querySelectorAll('.bg-star-elin');
-            existingBg.forEach(s => s.remove());
-            for (let i = 0; i < 30; i++) {
-                const star = document.createElement('div');
-                star.className = 'bg-star-elin';
-                star.textContent = '✦';
-                star.style.left = Math.random() * 100 + '%';
-                star.style.top = Math.random() * 100 + '%';
-                star.style.fontSize = (Math.random() * 15 + 10) + 'px';
-                star.style.animationDuration = (Math.random() * 20 + 15) + 's';
-                star.style.animationDelay = (Math.random() * 10) + 's';
-                container.appendChild(star);
-            }
+            // Сброс игры
+            gameState.round = 0;
+            gameState.wins = 0;
+            gameState.isGameOver = false;
+            gameState.shuffleSpeed = 1500;
 
-            // Сброс
-            elinCollected = 0;
-            elinTimeLeft = 120;
-            elinActive = false;
-            elinOver = false;
-            elinStars = [];
-            totalStarsSpawned = 0;
+            updateScore();
+            updateRound();
 
-            document.getElementById('elinScore').textContent = '0';
-            updateElinTimer();
-
-            // Удаляем старые звёзды и результаты
-            document.querySelectorAll('.elin-falling-star').forEach(s => s.remove());
+            // Убираем старые результаты
             const oldResult = document.querySelector('.elin-result');
             if (oldResult) oldResult.remove();
 
-            // Показываем кнопку "Начать"
-            const startBtn = document.getElementById('elinStartBtn');
+            // Сбрасываем стаканчики
+            cups.forEach(cup => {
+                cup.classList.remove('selected', 'wrong', 'correct', 'shuffling');
+                const star = cup.querySelector('.star-inside');
+                star.classList.remove('show');
+            });
+
+            gameStatus.innerHTML = 'Нажмите <span class="highlight">"Начать"</span>, чтобы спасти звезду!';
             startBtn.style.display = 'block';
-            startBtn.onclick = function() {
-                startElinGameplay();
-            };
+            startBtn.textContent = '🌟 Начать';
+            startBtn.onclick = startNewRound;
+
+            // Убираем все классы с стаканчиков
+            cups.forEach(c => {
+                c.style.cursor = 'default';
+                c.onclick = null;
+            });
         }
 
-        function startElinGameplay() {
-            const startBtn = document.getElementById('elinStartBtn');
-            startBtn.style.display = 'none';
+        function startNewRound() {
+            if (gameState.isGameOver) return;
 
-            elinCollected = 0;
-            elinTimeLeft = 120;
-            elinActive = true;
-            elinOver = false;
-            elinStars = [];
-            totalStarsSpawned = 0;
+            gameState.round++;
+            gameState.isPlaying = true;
+            gameState.selectedIndex = -1;
 
-            document.getElementById('elinScore').textContent = '0';
-            updateElinTimer();
-
-            // Таймер (2 минуты)
-            if (elinInterval) clearInterval(elinInterval);
-            elinInterval = setInterval(function() {
-                elinTimeLeft--;
-                updateElinTimer();
-                if (elinTimeLeft <= 0) {
-                    endElinGame(false);
-                }
-            }, 1000);
-
-            // Создание звёзд - реже, но быстрее (каждые 350мс)
-            if (elinStarInt) clearInterval(elinStarInt);
-            elinStarInt = setInterval(function() {
-                if (elinActive && !elinOver) {
-                    createElinStar();
-                    totalStarsSpawned++;
-                }
-            }, 350);
-
-            // Начальные звёзды
-            for (let i = 0; i < 10; i++) {
-                setTimeout(function() { 
-                    if (elinActive && !elinOver) {
-                        createElinStar();
-                        totalStarsSpawned++;
-                    }
-                }, i * 200);
+            // Увеличиваем скорость с каждым раундом
+            if (gameState.round > 1) {
+                gameState.shuffleSpeed = Math.max(
+                    gameState.minShuffleSpeed,
+                    gameState.shuffleSpeed - gameState.shuffleStep
+                );
             }
 
-            showToast('🌟 Собирайте звёзды! Нужно 200 за 2 минуты!');
+            updateRound();
+
+            // Сбрасываем стаканчики
+            cups.forEach(cup => {
+                cup.classList.remove('selected', 'wrong', 'correct', 'shuffling');
+                const star = cup.querySelector('.star-inside');
+                star.classList.remove('show');
+                cup.style.cursor = 'default';
+                cup.onclick = null;
+            });
+
+            gameStatus.innerHTML = '🔄 Стаканчики перемешиваются...';
+            startBtn.style.display = 'none';
+
+            // Выбираем случайный стаканчик для звезды
+            gameState.starIndex = Math.floor(Math.random() * 3);
+            const starCup = cups[gameState.starIndex];
+            const star = starCup.querySelector('.star-inside');
+            star.classList.add('show');
+
+            // Показываем звезду на секунду
+            setTimeout(() => {
+                // Прячем звезду
+                star.classList.remove('show');
+
+                // Перемешиваем стаканчики
+                shuffleCups();
+            }, 800);
         }
 
-        function createElinStar() {
-            if (!elinActive || elinOver) return;
+        function shuffleCups() {
+            gameState.isShuffling = true;
 
-            const container = document.getElementById('elinStarsContainer');
-            if (!container) return;
+            // Добавляем анимацию перемешивания
+            cups.forEach(cup => {
+                cup.classList.add('shuffling');
+            });
 
-            // Ограничиваем количество звёзд на экране
-            const existing = container.querySelectorAll('.elin-falling-star');
-            if (existing.length > 30) return;
+            // Перемешиваем позиции
+            const positions = [0, 1, 2];
+            // Перемешиваем массив
+            for (let i = positions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [positions[i], positions[j]] = [positions[j], positions[i]];
+            }
 
-            const star = document.createElement('div');
-            star.className = 'elin-falling-star';
-            const emojis = ['⭐', '🌟', '✨', '💫'];
-            star.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-            star.style.left = (Math.random() * 90 + 5) + '%';
-            star.style.top = '-50px';
-            star.style.fontSize = (Math.random() * 20 + 25) + 'px';
-            star.style.animationDuration = (Math.random() * 2 + 2.5) + 's'; // 2.5-4.5 секунды
-            star.dataset.caught = 'false';
+            // Применяем новые позиции
+            const cupsArray = Array.from(cups);
+            const shuffledCups = positions.map(index => cupsArray[index]);
 
-            star.onclick = function(e) {
-                e.stopPropagation();
-                if (this.dataset.caught === 'true') return;
-                if (!elinActive || elinOver) return;
+            // Переставляем элементы в DOM
+            const container = document.getElementById('cupsContainer');
+            shuffledCups.forEach(cup => {
+                container.appendChild(cup);
+                // Обновляем номер
+                const number = cup.querySelector('.cup-number');
+                number.textContent = shuffledCups.indexOf(cup) + 1;
+                cup.dataset.index = shuffledCups.indexOf(cup);
+            });
 
-                this.dataset.caught = 'true';
-                this.classList.add('caught');
-                elinCollected++;
-                document.getElementById('elinScore').textContent = elinCollected;
+            // Убираем анимацию перемешивания
+            setTimeout(() => {
+                cups.forEach(cup => {
+                    cup.classList.remove('shuffling');
+                });
+                gameState.isShuffling = false;
 
-                this.style.color = '#ffd93d';
-                this.style.textShadow = '0 0 40px rgba(255,215,0,0.8)';
+                // Теперь игрок может выбрать
+                gameStatus.innerHTML = '👆 Выберите стаканчик со звездой!';
+                enableCupSelection();
+            }, 500);
+        }
 
-                setTimeout(function() { if (this && this.parentNode) this.remove(); }, 400);
+        function enableCupSelection() {
+            cups.forEach(cup => {
+                cup.style.cursor = 'pointer';
+                cup.onclick = function() {
+                    if (gameState.isShuffling || gameState.isGameOver || !gameState.isPlaying) return;
+                    selectCup(this);
+                };
+            });
 
-                if (elinCollected >= 200) {
-                    endElinGame(true);
-                }
-            };
-
-            container.appendChild(star);
-            elinStars.push(star);
-
-            // Автоудаление если звезда упала за экран
-            setTimeout(function() {
-                if (star.parentNode && star.dataset.caught === 'false') {
-                    star.remove();
-                    const index = elinStars.indexOf(star);
-                    if (index > -1) elinStars.splice(index, 1);
+            // Таймаут на случай, если игрок не выбрал
+            setTimeout(() => {
+                if (gameState.isPlaying && !gameState.isGameOver && gameState.selectedIndex === -1) {
+                    // Автоматический выбор случайного стаканчика
+                    const randomCup = cups[Math.floor(Math.random() * 3)];
+                    selectCup(randomCup);
                 }
             }, 5000);
         }
 
-        function updateElinTimer() {
-            const timerEl = document.getElementById('elinTimer');
-            if (!timerEl) return;
-            const minutes = Math.floor(elinTimeLeft / 60);
-            const seconds = elinTimeLeft % 60;
-            timerEl.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-            timerEl.style.color = elinTimeLeft < 30 ? '#ff4757' : '#ffffff';
+        function selectCup(cup) {
+            if (gameState.isShuffling || gameState.isGameOver || !gameState.isPlaying) return;
+            if (cup.classList.contains('selected')) return;
+
+            const index = parseInt(cup.dataset.index);
+            gameState.selectedIndex = index;
+
+            // Отключаем клики
+            cups.forEach(c => {
+                c.style.cursor = 'default';
+                c.onclick = null;
+            });
+
+            // Проверяем, правильный ли выбор
+            const isCorrect = (index === gameState.starIndex);
+
+            // Показываем все стаканчики
+            cups.forEach((c, i) => {
+                const star = c.querySelector('.star-inside');
+                if (i === gameState.starIndex) {
+                    star.classList.add('show');
+                }
+                if (i === index) {
+                    if (isCorrect) {
+                        c.classList.add('correct');
+                        gameState.wins++;
+                        updateScore();
+                    } else {
+                        c.classList.add('wrong');
+                    }
+                }
+            });
+
+            if (isCorrect) {
+                gameStatus.innerHTML = '✅ <span class="highlight">Правильно!</span> Звезда спасена!';
+                // Правильный выбор, добавляем эффект
+                const starCup = cups[gameState.starIndex];
+                const star = starCup.querySelector('.star-inside');
+                star.style.animation = 'starPop 0.5s ease';
+                setTimeout(() => {
+                    star.style.animation = '';
+                }, 500);
+            } else {
+                gameStatus.innerHTML = '❌ <span style="color:#ff4757;">Неправильно!</span> Попробуйте ещё раз!';
+                // Показываем правильный ответ
+                const correctCup = cups[gameState.starIndex];
+                correctCup.classList.add('correct');
+            }
+
+            // Проверяем, закончилась ли игра
+            setTimeout(() => {
+                if (gameState.wins >= 3) {
+                    endElinGame(true);
+                } else if (gameState.round >= 3) {
+                    // Три раунда сыграно, но не все выиграны
+                    if (gameState.wins >= 2) {
+                        // 2 победы из 3 - тоже успех!
+                        endElinGame(true);
+                    } else {
+                        endElinGame(false);
+                    }
+                } else {
+                    // Переходим к следующему раунду
+                    startBtn.style.display = 'block';
+                    startBtn.textContent = '➡️ Следующий раунд';
+                    startBtn.onclick = startNewRound;
+                    gameState.isPlaying = false;
+                }
+            }, 1500);
+        }
+
+        function updateRound() {
+            roundNumber.textContent = Math.min(gameState.round, gameState.maxRounds);
+            if (gameState.round > gameState.maxRounds) {
+                roundNumber.textContent = gameState.maxRounds;
+            }
+        }
+
+        function updateScore() {
+            scoreDisplay.textContent = gameState.wins;
         }
 
         function endElinGame(won) {
-            if (elinOver) return;
-            elinOver = true;
-            elinActive = false;
+            if (gameState.isGameOver) return;
+            gameState.isGameOver = true;
+            gameState.isPlaying = false;
 
-            if (elinInterval) { clearInterval(elinInterval);
-                elinInterval = null; }
-            if (elinStarInt) { clearInterval(elinStarInt);
-                elinStarInt = null; }
+            startBtn.style.display = 'none';
 
-            document.querySelectorAll('.elin-falling-star').forEach(function(s) { s.remove(); });
-            elinStars = [];
-
-            const container = document.getElementById('elinStarsContainer');
+            const container = document.getElementById('gameContainer');
             const oldResult = container.querySelector('.elin-result');
             if (oldResult) oldResult.remove();
 
@@ -1616,15 +1863,15 @@
                 resultDiv.innerHTML = `
                     <div class="big">🎉</div>
                     <div class="title win">ПОБЕДА!</div>
-                    <div class="desc">Вы собрали ${elinCollected} ⭐ за 2 минуты!</div>
+                    <div class="desc">Вы спасли звезду от космического вора!</div>
                     <div class="reward">🎁 Награда: +50 звёзд на аккаунт!</div>
                     <button class="btn-result win" onclick="closeElinGame(true)">✅ Отлично!</button>
                 `;
             } else {
                 resultDiv.innerHTML = `
                     <div class="big">😢</div>
-                    <div class="title lose">ВРЕМЯ ВЫШЛО!</div>
-                    <div class="desc">Вы собрали ${elinCollected} ⭐ из 200</div>
+                    <div class="title lose">ПОРАЖЕНИЕ!</div>
+                    <div class="desc">Вы спасли ${gameState.wins} из 3 звёзд</div>
                     <div class="reward">Попробуйте ещё раз!</div>
                     <button class="btn-result retry" onclick="retryElinGame()" style="margin-right:10px;">🔄 Попробовать снова</button>
                     <button class="btn-result exit" onclick="closeElinGame(false)">🏠 Выйти</button>
@@ -1637,7 +1884,7 @@
         function closeElinGame(won) {
             document.getElementById('elinGameOverlay').classList.remove('active');
             if (won) {
-                showToast('🎉 Вы прошли миссию Элин! +50 звёзд!');
+                showToast('🎉 Вы спасли звезду! +50 звёзд!');
             }
             openHeroesMenu();
         }
@@ -1651,14 +1898,8 @@
 
         // Кнопка назад в игре
         document.getElementById('elinBackBtn').onclick = function() {
-            if (elinActive) {
+            if (gameState.isPlaying && !gameState.isGameOver) {
                 if (confirm('Вы уверены, что хотите выйти? Прогресс будет потерян!')) {
-                    elinActive = false;
-                    elinOver = true;
-                    if (elinInterval) { clearInterval(elinInterval);
-                        elinInterval = null; }
-                    if (elinStarInt) { clearInterval(elinStarInt);
-                        elinStarInt = null; }
                     document.getElementById('elinGameOverlay').classList.remove('active');
                     openHeroesMenu();
                 }
